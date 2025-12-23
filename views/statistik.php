@@ -200,6 +200,7 @@ $queryAllRanks = "
     )
     SELECT 
         rs.peserta_id,
+        p.nama_peserta, 
         rs.rank_pos,
         rs.total_participants,
         k.nama_kegiatan,
@@ -209,13 +210,14 @@ $queryAllRanks = "
     JOIN kegiatan k ON rs.kegiatan_id = k.id
     JOIN categories c ON rs.category_id = c.id
     JOIN score_boards sb ON rs.score_board_id = sb.id
+    JOIN peserta p ON rs.peserta_id = p.id
     ORDER BY sb.created DESC
 ";
 
 $resultAllRanks = $conn->query($queryAllRanks);
 if ($resultAllRanks) {
     while ($row = $resultAllRanks->fetch_assoc()) {
-        $allRankings[$row['peserta_id']][] = [
+        $allRankings[$row['nama_peserta']][] = [
             'ranking' => $row['rank_pos'],
             'turnamen' => $row['nama_kegiatan'],
             'kategori' => $row['category_name'],
@@ -269,8 +271,8 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
 
     $no = 1;
     while ($peserta = $result->fetch_assoc()) {
-        // OPTIMIZED: Use pre-fetched rankings
-        $rankings = $allRankings[$peserta['id']] ?? [];
+        // OPTIMIZED: Use pre-fetched rankings (by name)
+        $rankings = $allRankings[$peserta['nama_peserta']] ?? [];
 
         $juara1 = 0;
         $juara2 = 0;
@@ -388,8 +390,8 @@ while ($peserta = $result->fetch_assoc()) {
 
     $processedPeserta[$peserta['id']] = true;
 
-    // OPTIMIZED: Use pre-fetched rankings
-    $rankings = $allRankings[$peserta['id']] ?? [];
+    // OPTIMIZED: Use pre-fetched rankings (by name)
+    $rankings = $allRankings[$peserta['nama_peserta']] ?? [];
 
     $juara1 = 0;
     $juara2 = 0;
@@ -803,7 +805,7 @@ if ($sortByKategori) {
             <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filter Pencarian</h5>
             <form method="get">
                 <?php if ($sortByKategori): ?>
-                            <input type="hidden" name="sortByKategori" value="1">
+                    <input type="hidden" name="sortByKategori" value="1">
                 <?php endif; ?>
                 <div class="row g-3">
                     <div class="col-md-3">
@@ -824,9 +826,9 @@ if ($sortByKategori) {
                         <select class="form-select" name="club">
                             <option value="">Semua Club</option>
                             <?php foreach ($clubs as $clubName): ?>
-                                        <option value="<?= htmlspecialchars($clubName) ?>" <?= $club == $clubName ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($clubName) ?>
-                                        </option>
+                                <option value="<?= htmlspecialchars($clubName) ?>" <?= $club == $clubName ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($clubName) ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -849,15 +851,15 @@ if ($sortByKategori) {
                             <i class="fas fa-redo me-2"></i>Reset
                         </a>
                         <?php if ($sortByKategori): ?>
-                                    <a href="?<?= !empty($gender) ? 'gender=' . $gender . '&' : '' ?><?= !empty($nama) ? 'nama=' . $nama . '&' : '' ?><?= !empty($club) ? 'club=' . $club . '&' : '' ?><?= !empty($kategori_filter) ? 'kategori=' . $kategori_filter : '' ?>"
-                                        class="btn btn-warning" title="Kembali ke urutan A-Z">
-                                        <i class="fas fa-sort-alpha-down"></i>
-                                    </a>
+                            <a href="?<?= !empty($gender) ? 'gender=' . $gender . '&' : '' ?><?= !empty($nama) ? 'nama=' . $nama . '&' : '' ?><?= !empty($club) ? 'club=' . $club . '&' : '' ?><?= !empty($kategori_filter) ? 'kategori=' . $kategori_filter : '' ?>"
+                                class="btn btn-warning" title="Kembali ke urutan A-Z">
+                                <i class="fas fa-sort-alpha-down"></i>
+                            </a>
                         <?php else: ?>
-                                    <a href="?sortByKategori=1<?= !empty($gender) ? '&gender=' . $gender : '' ?><?= !empty($nama) ? '&nama=' . $nama : '' ?><?= !empty($club) ? '&club=' . $club : '' ?><?= !empty($kategori_filter) ? '&kategori=' . $kategori_filter : '' ?>"
-                                        class="btn btn-primary" title="Rekap berdasarkan kategori A-E">
-                                        <i class="fas fa-layer-group"></i>
-                                    </a>
+                            <a href="?sortByKategori=1<?= !empty($gender) ? '&gender=' . $gender : '' ?><?= !empty($nama) ? '&nama=' . $nama : '' ?><?= !empty($club) ? '&club=' . $club : '' ?><?= !empty($kategori_filter) ? '&kategori=' . $kategori_filter : '' ?>"
+                                class="btn btn-primary" title="Rekap berdasarkan kategori A-E">
+                                <i class="fas fa-layer-group"></i>
+                            </a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -887,107 +889,107 @@ if ($sortByKategori) {
                     </thead>
                     <tbody>
                         <?php if (empty($pesertaData)): ?>
-                                    <tr>
-                                        <td colspan="14" class="text-center text-muted py-5">
-                                            <i class="fas fa-inbox fa-3x mb-3"></i><br>
-                                            <h5>Tidak ada data peserta yang ditemukan</h5>
-                                            <p>Silakan ubah filter atau pastikan peserta telah mengikuti turnamen.</p>
-                                        </td>
-                                    </tr>
+                            <tr>
+                                <td colspan="14" class="text-center text-muted py-5">
+                                    <i class="fas fa-inbox fa-3x mb-3"></i><br>
+                                    <h5>Tidak ada data peserta yang ditemukan</h5>
+                                    <p>Silakan ubah filter atau pastikan peserta telah mengikuti turnamen.</p>
+                                </td>
+                            </tr>
                         <?php else: ?>
-                                    <?php
-                                    $no = 1;
-                                    foreach ($pesertaData as $p):
-                                        ?>
-                                                <tr>
-                                                    <td class="text-center"><?= $no++ ?></td>
-                                                    <td>
-                                                        <strong><?= htmlspecialchars($p['nama']) ?></strong><br>
-                                                        <small class="text-muted"><?= htmlspecialchars($p['sekolah'] ?? '-') ?></small>
-                                                    </td>
-                                                    <td>
-                                                        <span class="badge <?= $p['gender'] == 'Laki-laki' ? 'bg-primary' : 'bg-danger' ?>">
-                                                            <i class="fas <?= $p['gender'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?> me-1"></i>
-                                                            <?= htmlspecialchars($p['gender'] ?? '') ?>
-                                                        </span>
-                                                    </td>
-                                                    <td><?= $p['umur'] > 0 ? $p['umur'] . ' tahun' : '-' ?></td>
-                                                    <td class="small"><?= htmlspecialchars($p['club'] ?? '-') ?></td>
-                                                    <td>
-                                                        <span class="badge badge-kategori bg-<?= $p['kategori_dominan']['color'] ?> text-white">
-                                                            <?= $p['kategori_dominan']['icon'] ?>
-                                                            Kategori <?= $p['kategori_dominan']['kategori'] ?>
-                                                        </span>
-                                                        <br>
-                                                        <small class="text-muted"><?= $p['kategori_dominan']['label'] ?></small>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <strong class="text-primary"><?= $p['total_turnamen'] ?></strong>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <?php if ($p['avg_ranking'] > 0): ?>
-                                                                    <span class="badge bg-secondary">#<?= $p['avg_ranking'] ?></span>
-                                                        <?php else: ?>
-                                                                    <span class="text-muted">-</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <?php if ($p['juara1'] > 0): ?>
-                                                                    <span class="badge bg-warning text-dark">
-                                                                        <span class="trophy-icon">🥇</span><?= $p['juara1'] ?>
-                                                                    </span>
-                                                        <?php else: ?>
-                                                                    <span class="text-muted">-</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <?php if ($p['juara2'] > 0): ?>
-                                                                    <span class="badge bg-secondary text-white">
-                                                                        <span class="trophy-icon">🥈</span><?= $p['juara2'] ?>
-                                                                    </span>
-                                                        <?php else: ?>
-                                                                    <span class="text-muted">-</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <?php if ($p['juara3'] > 0): ?>
-                                                                    <span class="badge bg-info text-white">
-                                                                        <span class="trophy-icon">🥉</span><?= $p['juara3'] ?>
-                                                                    </span>
-                                                        <?php else: ?>
-                                                                    <span class="text-muted">-</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <?php if ($p['top10'] > 0): ?>
-                                                                    <span class="badge bg-primary"><?= $p['top10'] ?>x</span>
-                                                        <?php else: ?>
-                                                                    <span class="text-muted">-</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <?php if ($p['bracket_stats']['total_bracket'] > 0): ?>
-                                                                    <span class="bracket-stats-badge bg-warning text-dark" title="Champion">
-                                                                        🏆 <?= $p['bracket_stats']['bracket_champion'] ?>
-                                                                    </span><br>
-                                                                    <span class="bracket-stats-badge bg-secondary text-white" title="Runner Up">
-                                                                        🥈 <?= $p['bracket_stats']['bracket_runner_up'] ?>
-                                                                    </span><br>
-                                                                    <span class="bracket-stats-badge bg-info text-white" title="3rd Place">
-                                                                        🥉 <?= $p['bracket_stats']['bracket_third_place'] ?>
-                                                                    </span>
-                                                        <?php else: ?>
-                                                                    <span class="text-muted">-</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <button class="btn btn-sm btn-info"
-                                                            onclick="showDetail(<?= htmlspecialchars(json_encode($p)) ?>)">
-                                                            <i class="fas fa-eye"></i> Detail
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                    <?php endforeach; ?>
+                            <?php
+                            $no = 1;
+                            foreach ($pesertaData as $p):
+                                ?>
+                                <tr>
+                                    <td class="text-center"><?= $no++ ?></td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($p['nama']) ?></strong><br>
+                                        <small class="text-muted"><?= htmlspecialchars($p['sekolah'] ?? '-') ?></small>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?= $p['gender'] == 'Laki-laki' ? 'bg-primary' : 'bg-danger' ?>">
+                                            <i class="fas <?= $p['gender'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?> me-1"></i>
+                                            <?= htmlspecialchars($p['gender'] ?? '') ?>
+                                        </span>
+                                    </td>
+                                    <td><?= $p['umur'] > 0 ? $p['umur'] . ' tahun' : '-' ?></td>
+                                    <td class="small"><?= htmlspecialchars($p['club'] ?? '-') ?></td>
+                                    <td>
+                                        <span class="badge badge-kategori bg-<?= $p['kategori_dominan']['color'] ?> text-white">
+                                            <?= $p['kategori_dominan']['icon'] ?>
+                                            Kategori <?= $p['kategori_dominan']['kategori'] ?>
+                                        </span>
+                                        <br>
+                                        <small class="text-muted"><?= $p['kategori_dominan']['label'] ?></small>
+                                    </td>
+                                    <td class="text-center">
+                                        <strong class="text-primary"><?= $p['total_turnamen'] ?></strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <?php if ($p['avg_ranking'] > 0): ?>
+                                            <span class="badge bg-secondary">#<?= $p['avg_ranking'] ?></span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <?php if ($p['juara1'] > 0): ?>
+                                            <span class="badge bg-warning text-dark">
+                                                <span class="trophy-icon">🥇</span><?= $p['juara1'] ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <?php if ($p['juara2'] > 0): ?>
+                                            <span class="badge bg-secondary text-white">
+                                                <span class="trophy-icon">🥈</span><?= $p['juara2'] ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <?php if ($p['juara3'] > 0): ?>
+                                            <span class="badge bg-info text-white">
+                                                <span class="trophy-icon">🥉</span><?= $p['juara3'] ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <?php if ($p['top10'] > 0): ?>
+                                            <span class="badge bg-primary"><?= $p['top10'] ?>x</span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <?php if ($p['bracket_stats']['total_bracket'] > 0): ?>
+                                            <span class="bracket-stats-badge bg-warning text-dark" title="Champion">
+                                                🏆 <?= $p['bracket_stats']['bracket_champion'] ?>
+                                            </span><br>
+                                            <span class="bracket-stats-badge bg-secondary text-white" title="Runner Up">
+                                                🥈 <?= $p['bracket_stats']['bracket_runner_up'] ?>
+                                            </span><br>
+                                            <span class="bracket-stats-badge bg-info text-white" title="3rd Place">
+                                                🥉 <?= $p['bracket_stats']['bracket_third_place'] ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-info"
+                                            onclick="showDetail(<?= htmlspecialchars(json_encode($p)) ?>)">
+                                            <i class="fas fa-eye"></i> Detail
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -995,13 +997,13 @@ if ($sortByKategori) {
         </div>
 
         <?php if (!empty($pesertaData)): ?>
-                    <div class="mt-3 text-end">
-                        <small class="text-muted">Menampilkan <?= count($pesertaData) ?> peserta
-                            <?php if ($sortByKategori): ?>
-                                        <span class="badge bg-primary ms-2">Diurutkan berdasarkan Kategori A-E</span>
-                            <?php endif; ?>
-                        </small>
-                    </div>
+            <div class="mt-3 text-end">
+                <small class="text-muted">Menampilkan <?= count($pesertaData) ?> peserta
+                    <?php if ($sortByKategori): ?>
+                        <span class="badge bg-primary ms-2">Diurutkan berdasarkan Kategori A-E</span>
+                    <?php endif; ?>
+                </small>
+            </div>
         <?php endif; ?>
     </div>
 
