@@ -1,0 +1,22 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Compressed archives
+*.zip
+
+# Environment files
+.env
+.env.local
+
+# Logs
+*.log
+
+# Uploads (if sensitive)
+uploads/pembayaran/*
+!uploads/pembayaran/.gitkeep
