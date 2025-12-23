@@ -1275,6 +1275,42 @@ usort($atletKurangPrestasi, function ($a, $b) {
     <!--        }-->
     <!--    }-->
     <!--</script>-->
+
+    <script>
+        function toggleDropdown(button) {
+            const content = button.nextElementSibling;
+            const allDropdowns = document.querySelectorAll('.dropdown-content');
+
+            allDropdowns.forEach(d => {
+                if (d !== content) {
+                    d.classList.remove('active');
+                }
+            });
+
+            content.classList.toggle('active');
+
+            if (content.classList.contains('active')) {
+                button.textContent = button.textContent.replace('▾', '▴');
+            } else {
+                button.textContent = button.textContent.replace('▴', '▾');
+            }
+        }
+
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.overlay');
+
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        // Close sidebar on mobile when clicking a link
+        if (window.innerWidth <= 768) {
+            document.querySelectorAll('.menu-item a, .dropdown-content a').forEach(link => {
+                link.addEventListener('click', toggleMenu);
+            });
+        }
+    </script>
 </body>
 
 </html>

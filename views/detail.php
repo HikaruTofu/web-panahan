@@ -463,8 +463,8 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
             }
 
             /* ============================================
-       RESPONSIVE BREAKPOINTS
-       ============================================ */
+               RESPONSIVE BREAKPOINTS
+               ============================================ */
 
             /* Large Tablet - 1024px and below */
             @media (max-width: 1024px) {
@@ -3437,7 +3437,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
         <div class="container">
             <?php if (isset($_GET['resource'])) { ?>
                 <?php if ($_GET['resource'] == 'form') { ?>
-                    <a class="back-btn" href="detail.php?id=<?= $kegiatan_id ?>&filter_kategori=<?= $category_id ?>">←</a>
+                    <a class="back-btn"
+                        href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>">←</a>
                     <form action="" method="post">
                         <div class="setup-form" id="setupForm">
                             <input type="hidden" id="local_time" name="local_time">
@@ -3482,7 +3483,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     <?php if (!isset($_GET['scoreboard'])) { ?>
                         <div class="setup-form" id="setupForm">
                             <div class="header-bar">
-                                <button class="back-btn" onclick="goBack()">←</button>
+                                <a class="back-btn"
+                                    href="detail.php?kegiatan_id=<?= $kegiatan_id ?>&filter_kategori=<?= $category_id ?>">←</a>
                                 <div class="header-actions">
                                     <a href="detail.php?action=scorecard&resource=form&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
                                         class="add-link">Tambah data +</a>
@@ -3546,16 +3548,19 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                             <div class="category-icon">🎯</div>
                             <div>
                                 <div class="category-name" style="font-size: 14px; margin: 0;">
-                                    <?= htmlspecialchars($kategoriData['name']) ?></div>
+                                    <?= htmlspecialchars($kategoriData['name']) ?>
+                                </div>
                                 <div style="font-size: 12px; color: #ddd;">
-                                    <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></div>
+                                    <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?>
+                                </div>
                             </div>
                         </div>
                         <div class="category-header-info">
                             <div class="category-icon">👥</div>
                             <div>
                                 <div class="category-name" style="font-size: 14px; margin: 0;" id="pesertaCount">
-                                    <?= count($pesertaList) ?></div>
+                                    <?= count($pesertaList) ?>
+                                </div>
                                 <div style="font-size: 12px; color: #ddd;">Peserta</div>
                             </div>
                         </div>
@@ -3615,16 +3620,19 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                             <div class="category-icon">🎯</div>
                             <div>
                                 <div class="category-name" style="font-size: 14px; margin: 0;">
-                                    <?= htmlspecialchars($kategoriData['name']) ?></div>
+                                    <?= htmlspecialchars($kategoriData['name']) ?>
+                                </div>
                                 <div style="font-size: 12px; color: #ddd;">
-                                    <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></div>
+                                    <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?>
+                                </div>
                             </div>
                         </div>
                         <div class="category-header-info">
                             <div class="category-icon">👥</div>
                             <div>
                                 <div class="category-name" style="font-size: 14px; margin: 0;" id="pesertaCount">
-                                    <?= count($pesertaList) ?></div>
+                                    <?= count($pesertaList) ?>
+                                </div>
                                 <div style="font-size: 12px; color: #ddd;">Peserta</div>
                             </div>
                         </div>
@@ -3648,241 +3656,59 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             <?php } ?>
         </div>
 
-        <script>
-            <?php if ($_GET['resource'] == 'form') { ?>
-                let now = new Date();
-                let formatted = now.getFullYear() + "-"
-                    + String(now.getMonth() + 1).padStart(2, '0') + "-"
-                    + String(now.getDate()).padStart(2, '0') + " "
-                    + String(now.getHours()).padStart(2, '0') + ":"
-                    + String(now.getMinutes()).padStart(2, '0') + ":"
-                    + String(now.getSeconds()).padStart(2, '0');
-
-                document.getElementById("local_time").value = formatted;
-            <?php } ?>
-
-            const pesertaData = <?= json_encode($pesertaList) ?>;
-            let selectedPesertaId = null;
-            let saveTimeout = null;
-            let inputTimeout = null;
-            const SAVE_DELAY = 500; // 500ms delay sebelum save
-            const INPUT_DELAY = 500;
-
-            <?php if (isset($_GET['rangking'])) { ?>
-                const peserta_score = <?= json_encode($peserta_score) ?>;
-                function tambahAtributById(id, key, value) {
-                    const peserta = pesertaData.find(p => p.id === id);
-                    if (peserta) {
-                        peserta[key] = value;
-                    }
-                }
-
-                for (let i = 0; i < peserta_score.length; i++) {
-                    tambahAtributById(peserta_score[i]['id'], "total_score", peserta_score[i]['total_score']);
-                    tambahAtributById(peserta_score[i]['id'], "x_score", peserta_score[i]['total_x']);
-                }
-
-                pesertaData.sort((a, b) => {
-                    if (b.total_score !== a.total_score) {
-                        return b.total_score - a.total_score;
-                    }
-                    return b.x_score - a.x_score;
-                });
-            <?php } ?>
-
-            <?php if (isset($_GET['scoreboard'])) { ?>
-                <?php if (isset($_GET['rangking'])) { ?>
-                    openScoreBoard("<?= $show_score_board['jumlah_sesi'] ?>", "<?= $show_score_board['jumlah_anak_panah'] ?>");
-                <?php } else { ?>
-                    // Initialize dropdown untuk mode input
-                    document.addEventListener('DOMContentLoaded', function () {
-                        init();
-                    });
-                <?php } ?>
-            <?php } ?>
-
-            function delete_score_board(kegiatan_id, category_id, id) {
-                if (confirm("Apakah anda yakin akan menghapus data ini?")) {
-                    window.location.href = `detail.php?action=scorecard&resource=index&kegiatan_id=${kegiatan_id}&category_id=${category_id}&delete_score_board=${id}`;
-                }
-            }
-
-            <?php
-            if (isset($mysql_data_score)) {
-                while ($jatuh = mysqli_fetch_array($mysql_data_score)) { ?>
-                    if (document.getElementById("peserta_<?= $jatuh['peserta_id'] ?>_a<?= $jatuh['arrow'] ?>_s<?= $jatuh['session'] ?>")) {
-                        document.getElementById("peserta_<?= $jatuh['peserta_id'] ?>_a<?= $jatuh['arrow'] ?>_s<?= $jatuh['session'] ?>").value = "<?= $jatuh['score'] ?>";
-                        hitungPerArrow('peserta_<?= $jatuh['peserta_id'] ?>', '<?= $jatuh['arrow'] ?>', '<?= $jatuh['session'] ?>', '<?= $show_score_board['jumlah_anak_panah'] ?>');
-                    }
-                <?php } ?>
-            <?php }
-            ?>
-
-            // Initialize
-            function init() {
-                renderDropdownMenu();
-
-                // Close dropdown when clicking outside
-                document.addEventListener('click', function (event) {
-                    const dropdown = document.getElementById('dropdownMenu');
-                    const dropdownBtn = document.getElementById('dropdownBtn');
-
-                    if (dropdown && dropdownBtn && !dropdownBtn.contains(event.target) && !dropdown.contains(event.target)) {
-                        dropdown.classList.add('hidden');
-                        dropdownBtn.classList.remove('active');
-                    }
-                });
-            }
-
-            function renderDropdownMenu() {
-                const menu = document.getElementById('dropdownMenu');
-                if (!menu) return;
-
-                menu.innerHTML = '';
-
-                pesertaData.forEach(peserta => {
-                    const item = document.createElement('div');
-                    item.className = 'dropdown-item';
-                    item.onclick = () => selectPeserta(peserta.id);
-
-                    item.innerHTML = `
+        <script>         <?php if ($_GET['resource'] == 'form') { ?>         let now = new Date();         let formatted = now.getFullYear() + "-"             + String(now.getMonth() + 1).padStart(2, '0') + "-"             + String(now.getDate()).padStart(2, '0') + " "             + String(now.getHours()).padStart(2, '0') + ":"             + String(now.getMinutes()).padStart(2, '0') + ":"             + String(now.getSeconds()).padStart(2, '0');
+                 document.getElementById("local_time").value = formatted;         <?php } ?>
+             const pesertaData = <?= json_encode($pesertaList) ?>;         let selectedPesertaId = null;         let saveTimeout = null;         let inputTimeout = null;         const SAVE_DELAY = 500; // 500ms delay sebelum save         const INPUT_DELAY = 500;
+             <?php if (isset($_GET['rangking'])) { ?>         const peserta_score = <?= json_encode($peserta_score) ?>;         function tambahAtributById(id, key, value) {             const peserta = pesertaData.find(p => p.id === id);             if (peserta) {                 peserta[key] = value;             }         }
+                 for (let i = 0; i < peserta_score.length; i++) {             tambahAtributById(peserta_score[i]['id'], "total_score", peserta_score[i]['total_score']);             tambahAtributById(peserta_score[i]['id'], "x_score", peserta_score[i]['total_x']);         }
+                 pesertaData.sort((a, b) => {             if (b.total_score !== a.total_score) {                 return b.total_score - a.total_score;             }             return b.x_score - a.x_score;         });         <?php } ?>
+             <?php if (isset($_GET['scoreboard'])) { ?>                 <?php if (isset($_GET['rangking'])) { ?>         openScoreBoard("<?= $show_score_board['jumlah_sesi'] ?>", "<?= $show_score_board['jumlah_anak_panah'] ?>");         <?php } else { ?>         // Initialize dropdown untuk mode input         document.addEventListener('DOMContentLoaded', function () {             init();         });         <?php } ?>             <?php } ?>
+             function delete_score_board(kegiatan_id, category_id, id) {             if (confirm("Apakah anda yakin akan menghapus data ini?")) {                 window.location.href = `detail.php?action=scorecard&resource=index&kegiatan_id=${kegiatan_id}&category_id=${category_id}&delete_score_board=${id}`;             }         }
+             <?php
+             if (isset($mysql_data_score)) {
+                 while ($jatuh = mysqli_fetch_array($mysql_data_score)) { ?>         if (document.getElementById("peserta_<?= $jatuh['peserta_id'] ?>_a<?= $jatuh['arrow'] ?>_s<?= $jatuh['session'] ?>")) {             document.getElementById("peserta_<?= $jatuh['peserta_id'] ?>_a<?= $jatuh['arrow'] ?>_s<?= $jatuh['session'] ?>").value = "<?= $jatuh['score'] ?>";             hitungPerArrow('peserta_<?= $jatuh['peserta_id'] ?>', '<?= $jatuh['arrow'] ?>', '<?= $jatuh['session'] ?>', '<?= $show_score_board['jumlah_anak_panah'] ?>');         }         <?php } ?>             <?php }
+             ?>
+             // Initialize         function init() {             renderDropdownMenu();
+                 // Close dropdown when clicking outside             document.addEventListener('click', function (event) {                 const dropdown = document.getElementById('dropdownMenu');                 const dropdownBtn = document.getElementById('dropdownBtn');
+                     if (dropdown && dropdownBtn && !dropdownBtn.contains(event.target) && !dropdown.contains(event.target)) {                     dropdown.classList.add('hidden');                     dropdownBtn.classList.remove('active');                 }             });         }
+             function renderDropdownMenu() {             const menu = document.getElementById('dropdownMenu');             if (!menu) return;
+                 menu.innerHTML = '';
+                 pesertaData.forEach(peserta => {                 const item = document.createElement('div');                 item.className = 'dropdown-item';                 item.onclick = () => selectPeserta(peserta.id);
+                     item.innerHTML = `
             <div class="dropdown-item-icon">${peserta.jenis_kelamin === 'P' ? '👧' : '👦'}</div>
             <div class="dropdown-item-info">
                 <div class="dropdown-item-name">${peserta.nama_peserta}</div>
                 <div class="dropdown-item-gender">${peserta.jenis_kelamin === 'P' ? 'Putri' : 'Putra'}</div>
             </div>
         `;
+                     menu.appendChild(item);             });         }
+             function toggleDropdown() {             const dropdown = document.getElementById('dropdownMenu');             const dropdownBtn = document.getElementById('dropdownBtn');
+                 if (dropdown && dropdownBtn) {                 dropdown.classList.toggle('hidden');                 dropdownBtn.classList.toggle('active');             }         }
+             function selectPeserta(pesertaId) {             selectedPesertaId = pesertaId;             const peserta = pesertaData.find(p => p.id === pesertaId);
+                 if (peserta) {                 // Close dropdown                 const dropdown = document.getElementById('dropdownMenu');                 const dropdownBtn = document.getElementById('dropdownBtn');                 if (dropdown) dropdown.classList.add('hidden');                 if (dropdownBtn) dropdownBtn.classList.remove('active');
+                     // Update selected info                 const selectedName = document.getElementById('selectedPesertaName');                 const selectedInfo = document.getElementById('selectedPesertaInfo');                 if (selectedName) selectedName.textContent = peserta.nama_peserta;                 if (selectedInfo) selectedInfo.classList.remove('hidden');
+                     // Hide selector, show scorecard content                 const selectorInline = document.getElementById('pesertaSelectorInline');                 const scorecardTitle = document.getElementById('scorecardTitle');                 const exportBtn = document.getElementById('exportBtn');
+                     if (selectorInline) selectorInline.style.display = 'none';                 if (scorecardTitle) scorecardTitle.style.display = 'block';                 if (exportBtn) exportBtn.style.visibility = 'visible';
+                     // Generate scorecard untuk peserta ini                 const jumlahSesi = parseInt("<?= $show_score_board['jumlah_sesi'] ?? 9 ?>");                 const jumlahPanah = parseInt("<?= $show_score_board['jumlah_anak_panah'] ?? 3 ?>");                 document.getElementById('panahCount').textContent = jumlahSesi * jumlahPanah;                 generatePlayerSection(peserta, jumlahSesi, jumlahPanah);
+                     // LOAD DATA SCORE YANG SUDAH ADA untuk peserta ini                 setTimeout(() => {                     loadExistingScores(pesertaId, jumlahPanah);                 }, 100);             }         }
+             // Fungsi untuk load data score yang sudah tersimpan         function loadExistingScores(pesertaId, jumlahPanah) {             const playerId = `peserta_${pesertaId}`;
+                 <?php
+                 if (isset($mysql_data_score)) {
+                     // Reset pointer ke awal
+                     mysqli_data_seek($mysql_data_score, 0);
 
-                    menu.appendChild(item);
-                });
-            }
-
-            function toggleDropdown() {
-                const dropdown = document.getElementById('dropdownMenu');
-                const dropdownBtn = document.getElementById('dropdownBtn');
-
-                if (dropdown && dropdownBtn) {
-                    dropdown.classList.toggle('hidden');
-                    dropdownBtn.classList.toggle('active');
-                }
-            }
-
-            function selectPeserta(pesertaId) {
-                selectedPesertaId = pesertaId;
-                const peserta = pesertaData.find(p => p.id === pesertaId);
-
-                if (peserta) {
-                    // Close dropdown
-                    const dropdown = document.getElementById('dropdownMenu');
-                    const dropdownBtn = document.getElementById('dropdownBtn');
-                    if (dropdown) dropdown.classList.add('hidden');
-                    if (dropdownBtn) dropdownBtn.classList.remove('active');
-
-                    // Update selected info
-                    const selectedName = document.getElementById('selectedPesertaName');
-                    const selectedInfo = document.getElementById('selectedPesertaInfo');
-                    if (selectedName) selectedName.textContent = peserta.nama_peserta;
-                    if (selectedInfo) selectedInfo.classList.remove('hidden');
-
-                    // Hide selector, show scorecard content
-                    const selectorInline = document.getElementById('pesertaSelectorInline');
-                    const scorecardTitle = document.getElementById('scorecardTitle');
-                    const exportBtn = document.getElementById('exportBtn');
-
-                    if (selectorInline) selectorInline.style.display = 'none';
-                    if (scorecardTitle) scorecardTitle.style.display = 'block';
-                    if (exportBtn) exportBtn.style.visibility = 'visible';
-
-                    // Generate scorecard untuk peserta ini
-                    const jumlahSesi = parseInt("<?= $show_score_board['jumlah_sesi'] ?? 9 ?>");
-                    const jumlahPanah = parseInt("<?= $show_score_board['jumlah_anak_panah'] ?? 3 ?>");
-                    document.getElementById('panahCount').textContent = jumlahSesi * jumlahPanah;
-                    generatePlayerSection(peserta, jumlahSesi, jumlahPanah);
-
-                    // LOAD DATA SCORE YANG SUDAH ADA untuk peserta ini
-                    setTimeout(() => {
-                        loadExistingScores(pesertaId, jumlahPanah);
-                    }, 100);
-                }
-            }
-
-            // Fungsi untuk load data score yang sudah tersimpan
-            function loadExistingScores(pesertaId, jumlahPanah) {
-                const playerId = `peserta_${pesertaId}`;
-
-                <?php
-                if (isset($mysql_data_score)) {
-                    // Reset pointer ke awal
-                    mysqli_data_seek($mysql_data_score, 0);
-
-                    while ($jatuh = mysqli_fetch_array($mysql_data_score)) { ?>
-                        // Cek apakah data ini untuk peserta yang dipilih
-                        if (<?= $jatuh['peserta_id'] ?> == pesertaId) {
-                            const inputElement = document.getElementById("peserta_<?= $jatuh['peserta_id'] ?>_a<?= $jatuh['arrow'] ?>_s<?= $jatuh['session'] ?>");
-                            if (inputElement) {
-                                inputElement.value = "<?= $jatuh['score'] ?>";
-                                validateArrowInput(inputElement); // Apply styling
-                                hitungPerArrow('peserta_<?= $jatuh['peserta_id'] ?>', '<?= $jatuh['arrow'] ?>', '<?= $jatuh['session'] ?>', jumlahPanah, null);
-                            }
-                        }
-                    <?php } ?>
-                <?php }
-                ?>
-                console.log("✅ Data loaded for peserta:", pesertaId);
-            }
-
-            function changePeserta() {
-                // Reset selection
-                selectedPesertaId = null;
-
-                // Reset dropdown text
-                const dropdownText = document.getElementById('dropdownText');
-                if (dropdownText) dropdownText.textContent = 'Pilih Peserta';
-
-                // Show selector, hide scorecard content
-                const selectorInline = document.getElementById('pesertaSelectorInline');
-                const selectedInfo = document.getElementById('selectedPesertaInfo');
-                const scorecardTitle = document.getElementById('scorecardTitle');
-                const exportBtn = document.getElementById('exportBtn');
-
-                if (selectorInline) selectorInline.style.display = 'block';
-                if (selectedInfo) selectedInfo.classList.add('hidden');
-                if (scorecardTitle) scorecardTitle.style.display = 'none';
-                if (exportBtn) exportBtn.style.visibility = 'hidden';
-
-                // Clear scorecard
-                const container = document.getElementById('playersContainer');
-                if (container) container.innerHTML = '';
-            }
-
-            function goBack() {
-                window.history.back();
-            }
-
-            function openScoreBoard(jumlahSesi_data, jumlahPanah_data) {
-                const jumlahSesi = parseInt(jumlahSesi_data);
-                const jumlahPanah = parseInt(jumlahPanah_data);
-                document.getElementById('panahCount').textContent = jumlahSesi * jumlahPanah;
-                generatePlayerSections(jumlahSesi, jumlahPanah);
-                const setupForm = document.getElementById('setupForm');
-                const scorecardContainer = document.getElementById('scorecardContainer');
-                if (setupForm) setupForm.style.display = 'none';
-                if (scorecardContainer) scorecardContainer.style.display = 'block';
-                document.querySelector('.container').style.maxWidth = '1200px';
-            }
-
-            function generatePlayerSections(jumlahSesi, jumlahPanah) {
-                const playersContainer = document.getElementById('playersContainer');
-                if (!playersContainer) return;
-                playersContainer.innerHTML = '';
-
-                pesertaData.forEach((peserta, index) => {
-                    const playerId = `peserta_${peserta.id}`;
-                    const playerName = peserta.nama_peserta;
-
-                    const playerSection = document.createElement('div');
-                    playerSection.className = 'player-section';
-                    playerSection.innerHTML = `
+                     while ($jatuh = mysqli_fetch_array($mysql_data_score)) { ?>             // Cek apakah data ini untuk peserta yang dipilih             if (<?= $jatuh['peserta_id'] ?> == pesertaId) {                 const inputElement = document.getElementById("peserta_<?= $jatuh['peserta_id'] ?>_a<?= $jatuh['arrow'] ?>_s<?= $jatuh['session'] ?>");                 if (inputElement) {                     inputElement.value = "<?= $jatuh['score'] ?>";                     validateArrowInput(inputElement); // Apply styling                     hitungPerArrow('peserta_<?= $jatuh['peserta_id'] ?>', '<?= $jatuh['arrow'] ?>', '<?= $jatuh['session'] ?>', jumlahPanah, null);                 }             }             <?php } ?>                 <?php }
+                 ?>             console.log("✅ Data loaded for peserta:", pesertaId);         }
+             function changePeserta() {             // Reset selection             selectedPesertaId = null;
+                 // Reset dropdown text             const dropdownText = document.getElementById('dropdownText');             if (dropdownText) dropdownText.textContent = 'Pilih Peserta';
+                 // Show selector, hide scorecard content             const selectorInline = document.getElementById('pesertaSelectorInline');             const selectedInfo = document.getElementById('selectedPesertaInfo');             const scorecardTitle = document.getElementById('scorecardTitle');             const exportBtn = document.getElementById('exportBtn');
+                 if (selectorInline) selectorInline.style.display = 'block';             if (selectedInfo) selectedInfo.classList.add('hidden');             if (scorecardTitle) scorecardTitle.style.display = 'none';             if (exportBtn) exportBtn.style.visibility = 'hidden';
+                 // Clear scorecard             const container = document.getElementById('playersContainer');             if (container) container.innerHTML = '';         }
+             function goBack() {             window.history.back();         }
+             function openScoreBoard(jumlahSesi_data, jumlahPanah_data) {             const jumlahSesi = parseInt(jumlahSesi_data);             const jumlahPanah = parseInt(jumlahPanah_data);             document.getElementById('panahCount').textContent = jumlahSesi * jumlahPanah;             generatePlayerSections(jumlahSesi, jumlahPanah);             const setupForm = document.getElementById('setupForm');             const scorecardContainer = document.getElementById('scorecardContainer');             if (setupForm) setupForm.style.display = 'none';             if (scorecardContainer) scorecardContainer.style.display = 'block';             document.querySelector('.container').style.maxWidth = '1200px';         }
+             function generatePlayerSections(jumlahSesi, jumlahPanah) {             const playersContainer = document.getElementById('playersContainer');             if (!playersContainer) return;             playersContainer.innerHTML = '';
+                 pesertaData.forEach((peserta, index) => {                 const playerId = `peserta_${peserta.id}`;                 const playerName = peserta.nama_peserta;
+                     const playerSection = document.createElement('div');                 playerSection.className = 'player-section';                 playerSection.innerHTML = `
             <div class="player-header">
                 ${playerName} (${peserta.jenis_kelamin}) ${typeof peserta.total_score !== 'undefined' ? ` - Juara ${index + 1}` : ''}
             </div>
@@ -3910,19 +3736,10 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 ${typeof peserta.x_score !== 'undefined' ? `<div class="x-count">X Score: ${peserta.x_score}</div>` : ''}
             </div>
         `;
-
-                    playersContainer.appendChild(playerSection);
-                });
-            }
-
-            function generatePlayerSection(peserta, jumlahSesi, jumlahPanah) {
-                const playerId = `peserta_${peserta.id}`;
-                const playerName = peserta.nama_peserta;
-
-                const playersContainer = document.getElementById('playersContainer');
-                if (!playersContainer) return;
-
-                playersContainer.innerHTML = `
+                     playersContainer.appendChild(playerSection);             });         }
+             function generatePlayerSection(peserta, jumlahSesi, jumlahPanah) {             const playerId = `peserta_${peserta.id}`;             const playerName = peserta.nama_peserta;
+                 const playersContainer = document.getElementById('playersContainer');             if (!playersContainer) return;
+                 playersContainer.innerHTML = `
         <div class="player-section">
             <div class="player-header">
                 ${playerName} (${peserta.jenis_kelamin})
@@ -3950,14 +3767,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 <div class="grand-total" id="${playerId}_grand_total">0 poin</div>
             </div>
         </div>
-    `;
-            }
-
-            function generateTableRows(playerId, jumlahSesi, jumlahPanah) {
-                let rowsHtml = '';
-
-                for (let session = 1; session <= jumlahSesi; session++) {
-                    const arrowInputs = Array.from({ length: jumlahPanah }, (_, arrow) => `
+    `;         }
+             function generateTableRows(playerId, jumlahSesi, jumlahPanah) {             let rowsHtml = '';
+                 for (let session = 1; session <= jumlahSesi; session++) {                 const arrowInputs = Array.from({ length: jumlahPanah }, (_, arrow) => `
             <td>
                 <input type="text" 
                        class="arrow-input" 
@@ -3972,8 +3784,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                        onkeydown="handleArrowKeydown(event, this)">
             </td>
         `).join('');
-
-                    rowsHtml += `
+                     rowsHtml += `
             <tr class="session-row">
                 <td class="session-label">S${session}</td>
                 ${arrowInputs}
@@ -3992,246 +3803,42 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                            style="background: rgba(0, 184, 148, 0.1); border-color: #00b894;">
                 </td>
             </tr>
-        `;
-                }
-
-                return rowsHtml;
-            }
-
-            // Handler untuk input dengan auto-move (3 detik timeout)
-            function handleArrowInput(el) {
-                const playerId = el.getAttribute('data-player-id');
-                const arrow = el.getAttribute('data-arrow');
-                const session = el.getAttribute('data-session');
-                const totalArrow = parseInt(el.getAttribute('data-total-arrow'));
-
-                validateArrowInput(el);
-                hitungPerArrow(playerId, arrow, session, totalArrow, el);
-
-                // Clear timeout sebelumnya
-                if (inputTimeout) {
-                    clearTimeout(inputTimeout);
-                }
-
-                // Set timeout baru untuk auto-move setelah 3 detik
-                const val = el.value.trim().toLowerCase();
-                if (val !== '') {
-                    inputTimeout = setTimeout(() => {
-                        moveToNextInput(el, playerId, arrow, session, totalArrow);
-                    }, INPUT_DELAY);
-                }
-            }
-
-            function changePeserta() {
-                // Konfirmasi sebelum ganti peserta
-                if (confirm('Yakin ingin ganti peserta? Data yang telah diinput sudah tersimpan.')) {
-                    // Refresh halaman untuk reset state
-                    location.reload();
-                }
-            }
-
-            function hitungPerArrow(playerId, arrow, session, totalArrow, el) {
-                let sessionTotal = 0;
-
-                // Hitung total untuk session ini
-                for (let a = 1; a <= totalArrow; a++) {
-                    const input = document.getElementById(`${playerId}_a${a}_s${session}`);
-                    if (input && input.value) {
-                        let val = input.value.trim().toLowerCase();
-                        let score = 0;
-                        if (val === "x") {
-                            score = 10;
-                        } else if (val === "m") {
-                            score = 0;
-                        } else if (!isNaN(val) && val !== "") {
-                            score = parseInt(val);
-                        }
-                        sessionTotal += score;
-                    }
-                }
-
-                // Update total session
-                const totalInput = document.getElementById(`${playerId}_total_a${session}`);
-                if (totalInput) {
-                    totalInput.value = sessionTotal;
-                }
-
-                // Update running total (End)
-                let maxSession = 20;
-                let runningTotal = 0;
-
-                for (let s = 1; s <= maxSession; s++) {
-                    const sessionTotalInput = document.getElementById(`${playerId}_total_a${s}`);
-                    const sessionEndInput = document.getElementById(`${playerId}_end_a${s}`);
-
-                    if (sessionTotalInput && sessionEndInput) {
-                        if (sessionTotalInput.value && sessionTotalInput.value !== '') {
-                            runningTotal += parseInt(sessionTotalInput.value) || 0;
-                        }
-                        sessionEndInput.value = runningTotal;
-                    } else {
-                        break;
-                    }
-                }
-
-                // Update grand total
-                const grandTotalElement = document.getElementById(`${playerId}_grand_total`);
-                if (grandTotalElement) {
-                    grandTotalElement.innerText = runningTotal + " poin";
-                }
-
-                // AUTO SAVE dengan debounce jika ada element
-                if (el != null) {
-                    // Clear timeout sebelumnya
-                    if (saveTimeout) {
-                        clearTimeout(saveTimeout);
-                    }
-
-                    // Tampilkan indikator loading
-                    el.style.borderColor = '#ffa500';
-                    el.style.opacity = '0.7';
-
-                    // Set timeout baru untuk save
-                    saveTimeout = setTimeout(() => {
-                        saveScoreToDatabase(playerId, arrow, session, el);
-                    }, SAVE_DELAY);
-                }
-
-                return 0;
-            }
-
-            // Fungsi terpisah untuk save ke database
-            function saveScoreToDatabase(playerId, arrow, session, el) {
-                let arr_playerID = playerId.split("_");
-                let scoreValue = el.value.trim();
-
-                fetch("", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/x-www-form-urlencoded"
-                    },
-                    body: "save_score=1" +
-                        "&peserta_id=" + encodeURIComponent(arr_playerID[1]) +
-                        "&arrow=" + encodeURIComponent(arrow) +
-                        "&session=" + encodeURIComponent(session) +
-                        "&score=" + encodeURIComponent(scoreValue)
-                })
-                    .then(response => response.text())
-                    .then(text => {
-                        try {
-                            return JSON.parse(text);
-                        } catch (e) {
-                            return { status: 'success', message: text };
-                        }
-                    })
-                    .then(data => {
-                        console.log("✅ Score saved:", data);
-
-                        // Tampilkan indikator berhasil
-                        el.style.borderColor = '#28a745';
-                        el.style.opacity = '1';
-
-                        // Kembalikan style setelah 1 detik
-                        setTimeout(() => {
-                            validateArrowInput(el);
-                        }, 1000);
-                    })
-                    .catch(err => {
-                        console.error("❌ Save error:", err);
-
-                        // Tampilkan indikator error
-                        el.style.borderColor = '#dc3545';
-                        el.style.opacity = '1';
-
-                        // Kembalikan style setelah 2 detik
-                        setTimeout(() => {
-                            validateArrowInput(el);
-                        }, 2000);
-                    });
-            }
-
-            // Fungsi untuk auto-move ke input berikutnya
-            function moveToNextInput(currentElement, playerId, currentArrow, currentSession, totalArrow) {
-                // Cari input berikutnya
-                let nextArrow = parseInt(currentArrow);
-                let nextSession = parseInt(currentSession);
-
-                if (nextArrow < totalArrow) {
-                    // Pindah ke arrow berikutnya di session yang sama
-                    nextArrow++;
-                } else {
-                    // Pindah ke arrow pertama di session berikutnya
-                    nextArrow = 1;
-                    nextSession++;
-                }
-
-                const nextInput = document.getElementById(`${playerId}_a${nextArrow}_s${nextSession}`);
-
-                if (nextInput && !nextInput.disabled) {
-                    setTimeout(() => {
-                        nextInput.focus();
-                        nextInput.select();
-                    }, 100);
-                }
-            }
-
-            function validateArrowInput(el) {
-                let val = el.value.trim().toLowerCase();
-
-                if (!/^(10|[0-9]|x|m)?$/i.test(val)) {
-                    el.value = "";
-                    return;
-                }
-
-                if (val === 'x' || val === 'X') {
-                    el.style.background = 'rgba(40, 167, 69, 0.1)';
-                    el.style.borderColor = '#28a745';
-                    el.style.color = '#28a745';
-                    el.style.fontWeight = '700';
-                } else if (val === 'm' || val === 'M') {
-                    el.style.background = 'rgba(220, 53, 69, 0.1)';
-                    el.style.borderColor = '#dc3545';
-                    el.style.color = '#dc3545';
-                    el.style.fontWeight = '700';
-                } else if (val === '10') {
-                    el.style.background = 'rgba(40, 167, 69, 0.1)';
-                    el.style.borderColor = '#28a745';
-                    el.style.color = '#28a745';
-                    el.style.fontWeight = '700';
-                } else if (val === '9' || val === '8') {
-                    el.style.background = 'rgba(255, 193, 7, 0.1)';
-                    el.style.borderColor = '#ffc107';
-                    el.style.color = '#856404';
-                    el.style.fontWeight = '600';
-                } else {
-                    el.style.background = 'transparent';
-                    el.style.borderColor = 'transparent';
-                    el.style.color = '#333';
-                    el.style.fontWeight = '600';
-                }
-            }
-
-            function editScorecard() {
-                document.getElementById('setupForm').style.display = 'block';
-                document.getElementById('scorecardContainer').style.display = 'none';
-                document.querySelector('.container').style.maxWidth = '500px';
-            }
-
-            // FUNGSI EXPORT EXCEL UNTUK TABLE LIST
-            // FUNGSI EXPORT EXCEL UNTUK TABLE LIST
-            function exportTableToExcel() {
-                const table = document.getElementById('scorecardTable');
-                if (!table) return;
-
-                // Clone table untuk modifikasi
-                const tableClone = table.cloneNode(true);
-
-                // Hapus kolom Aksi
-                tableClone.querySelectorAll('thead th:last-child').forEach(th => th.remove());
-                tableClone.querySelectorAll('tbody td:last-child').forEach(td => td.remove());
-
-                // Buat HTML dengan styling
-                const htmlContent = `
+        `;             }
+                 return rowsHtml;         }
+             // Handler untuk input dengan auto-move (3 detik timeout)         function handleArrowInput(el) {             const playerId = el.getAttribute('data-player-id');             const arrow = el.getAttribute('data-arrow');             const session = el.getAttribute('data-session');             const totalArrow = parseInt(el.getAttribute('data-total-arrow'));
+                 validateArrowInput(el);             hitungPerArrow(playerId, arrow, session, totalArrow, el);
+                 // Clear timeout sebelumnya             if (inputTimeout) {                 clearTimeout(inputTimeout);             }
+                 // Set timeout baru untuk auto-move setelah 3 detik             const val = el.value.trim().toLowerCase();             if (val !== '') {                 inputTimeout = setTimeout(() => {                     moveToNextInput(el, playerId, arrow, session, totalArrow);                 }, INPUT_DELAY);             }         }
+             function changePeserta() {             // Konfirmasi sebelum ganti peserta             if (confirm('Yakin ingin ganti peserta? Data yang telah diinput sudah tersimpan.')) {                 // Refresh halaman untuk reset state                 location.reload();             }         }
+             function hitungPerArrow(playerId, arrow, session, totalArrow, el) {             let sessionTotal = 0;
+                 // Hitung total untuk session ini             for (let a = 1; a <= totalArrow; a++) {                 const input = document.getElementById(`${playerId}_a${a}_s${session}`);                 if (input && input.value) {                     let val = input.value.trim().toLowerCase();                     let score = 0;                     if (val === "x") {                         score = 10;                     } else if (val === "m") {                         score = 0;                     } else if (!isNaN(val) && val !== "") {                         score = parseInt(val);                     }                     sessionTotal += score;                 }             }
+                 // Update total session             const totalInput = document.getElementById(`${playerId}_total_a${session}`);             if (totalInput) {                 totalInput.value = sessionTotal;             }
+                 // Update running total (End)             let maxSession = 20;             let runningTotal = 0;
+                 for (let s = 1; s <= maxSession; s++) {                 const sessionTotalInput = document.getElementById(`${playerId}_total_a${s}`);                 const sessionEndInput = document.getElementById(`${playerId}_end_a${s}`);
+                     if (sessionTotalInput && sessionEndInput) {                     if (sessionTotalInput.value && sessionTotalInput.value !== '') {                         runningTotal += parseInt(sessionTotalInput.value) || 0;                     }                     sessionEndInput.value = runningTotal;                 } else {                     break;                 }             }
+                 // Update grand total             const grandTotalElement = document.getElementById(`${playerId}_grand_total`);             if (grandTotalElement) {                 grandTotalElement.innerText = runningTotal + " poin";             }
+                 // AUTO SAVE dengan debounce jika ada element             if (el != null) {                 // Clear timeout sebelumnya                 if (saveTimeout) {                     clearTimeout(saveTimeout);                 }
+                     // Tampilkan indikator loading                 el.style.borderColor = '#ffa500';                 el.style.opacity = '0.7';
+                     // Set timeout baru untuk save                 saveTimeout = setTimeout(() => {                     saveScoreToDatabase(playerId, arrow, session, el);                 }, SAVE_DELAY);             }
+                 return 0;         }
+             // Fungsi terpisah untuk save ke database         function saveScoreToDatabase(playerId, arrow, session, el) {             let arr_playerID = playerId.split("_");             let scoreValue = el.value.trim();
+                 fetch("", {                 method: "POST",                 headers: {                     "Content-Type": "application/x-www-form-urlencoded"                 },                 body: "save_score=1" +                     "&peserta_id=" + encodeURIComponent(arr_playerID[1]) +                     "&arrow=" + encodeURIComponent(arrow) +                     "&session=" + encodeURIComponent(session) +                     "&score=" + encodeURIComponent(scoreValue)             })                 .then(response => response.text())                 .then(text => {                     try {                         return JSON.parse(text);                     } catch (e) {                         return { status: 'success', message: text };                     }                 })                 .then(data => {                     console.log("✅ Score saved:", data);
+                         // Tampilkan indikator berhasil                     el.style.borderColor = '#28a745';                     el.style.opacity = '1';
+                         // Kembalikan style setelah 1 detik                     setTimeout(() => {                         validateArrowInput(el);                     }, 1000);                 })                 .catch(err => {                     console.error("❌ Save error:", err);
+                         // Tampilkan indikator error                     el.style.borderColor = '#dc3545';                     el.style.opacity = '1';
+                         // Kembalikan style setelah 2 detik                     setTimeout(() => {                         validateArrowInput(el);                     }, 2000);                 });         }
+             // Fungsi untuk auto-move ke input berikutnya         function moveToNextInput(currentElement, playerId, currentArrow, currentSession, totalArrow) {             // Cari input berikutnya             let nextArrow = parseInt(currentArrow);             let nextSession = parseInt(currentSession);
+                 if (nextArrow < totalArrow) {                 // Pindah ke arrow berikutnya di session yang sama                 nextArrow++;             } else {                 // Pindah ke arrow pertama di session berikutnya                 nextArrow = 1;                 nextSession++;             }
+                 const nextInput = document.getElementById(`${playerId}_a${nextArrow}_s${nextSession}`);
+                 if (nextInput && !nextInput.disabled) {                 setTimeout(() => {                     nextInput.focus();                     nextInput.select();                 }, 100);             }         }
+             function validateArrowInput(el) {             let val = el.value.trim().toLowerCase();
+                 if (!/^(10|[0-9]|x|m)?$/i.test(val)) {                 el.value = "";                 return;             }
+                 if (val === 'x' || val === 'X') {                 el.style.background = 'rgba(40, 167, 69, 0.1)';                 el.style.borderColor = '#28a745';                 el.style.color = '#28a745';                 el.style.fontWeight = '700';             } else if (val === 'm' || val === 'M') {                 el.style.background = 'rgba(220, 53, 69, 0.1)';                 el.style.borderColor = '#dc3545';                 el.style.color = '#dc3545';                 el.style.fontWeight = '700';             } else if (val === '10') {                 el.style.background = 'rgba(40, 167, 69, 0.1)';                 el.style.borderColor = '#28a745';                 el.style.color = '#28a745';                 el.style.fontWeight = '700';             } else if (val === '9' || val === '8') {                 el.style.background = 'rgba(255, 193, 7, 0.1)';                 el.style.borderColor = '#ffc107';                 el.style.color = '#856404';                 el.style.fontWeight = '600';             } else {                 el.style.background = 'transparent';                 el.style.borderColor = 'transparent';                 el.style.color = '#333';                 el.style.fontWeight = '600';             }         }
+             function editScorecard() {             document.getElementById('setupForm').style.display = 'block';             document.getElementById('scorecardContainer').style.display = 'none';             document.querySelector('.container').style.maxWidth = '500px';         }
+             // FUNGSI EXPORT EXCEL UNTUK TABLE LIST         // FUNGSI EXPORT EXCEL UNTUK TABLE LIST         function exportTableToExcel() {             const table = document.getElementById('scorecardTable');             if (!table) return;
+                 // Clone table untuk modifikasi             const tableClone = table.cloneNode(true);
+                 // Hapus kolom Aksi             tableClone.querySelectorAll('thead th:last-child').forEach(th => th.remove());             tableClone.querySelectorAll('tbody td:last-child').forEach(td => td.remove());
+                 // Buat HTML dengan styling             const htmlContent = `
         <html xmlns:x="urn:schemas-microsoft-com:office:excel">
         <head>
             <meta charset="UTF-8">

@@ -4,8 +4,10 @@ include '../config/panggil.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 $category = mysqli_query($conn, "SELECT * FROM `categories` WHERE id = " . $_GET['category_id']);
 $category_fetch = mysqli_fetch_assoc($category);
@@ -100,8 +102,8 @@ foreach ($peserta as $p) {
     $sheet->setCellValue($col . $row, 'Total');
     $col++;
     $sheet->setCellValue($col . $row, 'End');
-    $sheet->getStyle('A' . $row . ':' . $col . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-    $sheet->getStyle('A' . $row . ':' . $col . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+    $sheet->getStyle('A' . $row . ':' . $col . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sheet->getStyle('A' . $row . ':' . $col . $row)->getFill()->setFillType(Fill::FILL_SOLID)
         ->getStartColor()->setARGB('CCCACA'); // HEX: kuning
     $sheet->getStyle('A' . $row . ':' . $col . $row)->getBorders()->getOutline()->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB(Color::COLOR_BLACK);
 
@@ -153,7 +155,7 @@ foreach ($peserta as $p) {
             $end_value_total[] = $total_score;
         }
         $sheet->setCellValue($col . $row, $end_value);
-        $sheet->getStyle('A' . $row . ':' . $col . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A' . $row . ':' . $col . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A' . $row . ':' . $col . $row)->getBorders()->getOutline()->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB(Color::COLOR_BLACK);
 
         $row++;
@@ -199,7 +201,7 @@ $row++;
 // Data peserta
 foreach ($total_score_peserta as $i_tsp => $tsp) {
     $col = 'A';
-    $sheet2->getStyle($col . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+    $sheet2->getStyle($col . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     $sheet2->setCellValue($col . $row, $i_tsp + 1);
     $col++;
     $sheet2->setCellValue($col . $row, $tsp['nama']);
@@ -208,14 +210,14 @@ foreach ($total_score_peserta as $i_tsp => $tsp) {
     $total_tsp = 0;
     for ($a = 1; $a <= $scoreboard_fetch['jumlah_sesi']; $a++) {
         $nilai = $tsp['rambahan_' . $a] ?? 0;
-        $sheet2->getStyle($col . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet2->getStyle($col . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet2->setCellValue($col . $row, $nilai);
         $total_tsp += $nilai;
         $col++;
     }
 
     // tulis total
-    $sheet2->getStyle($col . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+    $sheet2->getStyle($col . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     $sheet2->setCellValue($col . $row, $total_tsp);
     $row++;
 }
@@ -225,14 +227,14 @@ $lastCol = chr(ord('A') + $scoreboard_fetch['jumlah_sesi'] + 2);
 $headerRange = "A4:{$lastCol}4";
 
 $sheet2->getStyle($headerRange)->getFont()->setBold(true);
-$sheet2->getStyle($headerRange)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-$sheet2->getStyle($headerRange)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+$sheet2->getStyle($headerRange)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+$sheet2->getStyle($headerRange)->getFill()->setFillType(Fill::FILL_SOLID)
     ->getStartColor()->setARGB('DDDDDD');
 
 // Border seluruh tabel
 $tableRange = "A4:{$lastCol}" . ($row - 1);
 $sheet2->getStyle($tableRange)->getBorders()->getAllBorders()
-    ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+    ->setBorderStyle(Border::BORDER_THIN);
 
 
 
