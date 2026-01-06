@@ -705,7 +705,7 @@ $role = $_SESSION['role'] ?? 'user';
 
     <!-- Mobile Sidebar -->
     <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
-    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden">
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden flex flex-col">
         <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
             <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
                 <i class="fas fa-bullseye text-white"></i>

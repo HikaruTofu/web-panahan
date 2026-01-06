@@ -217,7 +217,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Tournament Eliminasi / Aduan <?= htmlspecialchars($kategoriData['name']) ?></title>
+        <title>Bracket <?= htmlspecialchars($kategoriData['name']) ?></title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {
@@ -238,83 +238,65 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
         <style>
             .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
             .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
-            .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(253,203,110,0.5); border-radius: 3px; }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(253,203,110,0.7); }
+            .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.5); border-radius: 3px; }
 
-            .player-card { transition: all 0.2s ease; }
-            .player-card:hover:not(.empty) { transform: translateX(4px); }
-            .player-card.winner { border-color: #16a34a !important; box-shadow: 0 0 20px rgba(22,163,74,0.4); }
-            .player-card.empty { background: rgba(255,255,255,0.1) !important; cursor: default; }
+            .player-card { transition: all 0.15s ease; }
+            .player-card:hover:not(.empty):not(.winner):not(.eliminated) { background: #e2e8f0 !important; }
+            .player-card.winner { background: #dcfce7 !important; border-color: #16a34a !important; color: #15803d !important; }
+            .player-card.eliminated { opacity: 0.4; text-decoration: line-through; }
+            .player-card.empty { background: #1e293b !important; color: #64748b !important; cursor: default; }
+            .player-card.ready { background: #fef3c7 !important; border-color: #f59e0b !important; }
 
-            .size-btn.active { background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%) !important; }
+            .size-btn.active { background: #16a34a !important; border-color: #16a34a !important; }
 
             @media print { .no-print { display: none !important; } }
         </style>
     </head>
 
-    <body class="min-h-screen bg-gradient-to-br from-zinc-800 to-zinc-950 text-white p-4 md:p-6">
+    <body class="min-h-screen bg-zinc-900 text-white p-4 md:p-6">
         <div class="max-w-7xl mx-auto">
-            <!-- Back Button -->
-            <a href="detail.php?id=<?= $kegiatan_id ?>"
-               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-white text-sm font-medium hover:bg-white/20 transition-colors mb-6 no-print">
-                <i class="fas fa-arrow-left"></i> Kembali
-            </a>
-
-            <!-- Header -->
-            <div class="bg-white/5 rounded-2xl p-6 mb-6 text-center border border-white/10">
-                <div class="w-14 h-14 rounded-xl bg-amber-500/20 flex items-center justify-center mx-auto mb-3">
-                    <i class="fas fa-sitemap text-amber-400 text-2xl"></i>
+            <!-- Header Bar -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-4">
+                    <a href="detail.php?id=<?= $kegiatan_id ?>"
+                       class="p-2 rounded-lg text-slate-400 hover:bg-white/10 transition-colors no-print">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h1 class="font-semibold text-white">Bracket Eliminasi</h1>
+                        <p class="text-sm text-slate-400"><?= htmlspecialchars($kategoriData['name']) ?> • <?= count($pesertaList) ?> peserta</p>
+                    </div>
                 </div>
-                <h1 class="text-2xl font-bold text-white mb-1">Tournament Eliminasi / Aduan</h1>
-                <h3 class="text-lg font-semibold text-amber-400"><?= htmlspecialchars($kategoriData['name']) ?></h3>
-                <p class="text-sm text-slate-400 mt-1"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
-                <p class="text-sm text-cyan-400 mt-3">
-                    <i class="fas fa-users mr-1"></i> Total Peserta: <?= count($pesertaList) ?> orang
-                </p>
             </div>
 
             <!-- Setup Container -->
-            <div class="bg-white/5 rounded-2xl p-8 text-center max-w-xl mx-auto border border-white/10" id="setupContainer">
-                <h2 class="text-xl md:text-2xl font-bold text-white mb-6">Pilih Jumlah Peserta Eliminasi / Aduan</h2>
+            <div class="bg-zinc-800 rounded-xl p-8 text-center max-w-md mx-auto border border-zinc-700" id="setupContainer">
+                <p class="text-slate-400 mb-6">Pilih ukuran bracket</p>
 
-                <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
-                    <button class="size-btn px-10 py-5 rounded-xl text-2xl font-bold text-white cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all"
-                            style="background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);"
+                <div class="flex gap-3 justify-center mb-6">
+                    <button class="size-btn px-8 py-4 rounded-lg text-xl font-bold text-white border-2 border-zinc-600 hover:border-zinc-500 transition-colors"
                             onclick="selectBracketSize(16)" id="size16">16</button>
-                    <button class="size-btn px-10 py-5 rounded-xl text-2xl font-bold text-white cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all"
-                            style="background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);"
+                    <button class="size-btn px-8 py-4 rounded-lg text-xl font-bold text-white border-2 border-zinc-600 hover:border-zinc-500 transition-colors"
                             onclick="selectBracketSize(32)" id="size32">32</button>
                 </div>
 
-                <p class="text-sm text-slate-400 mb-6">
-                    Pilih jumlah peserta untuk Eliminasi / Aduan
-                </p>
-
-                <button class="w-full sm:w-auto px-12 py-4 rounded-xl text-lg font-semibold text-white cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                        style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);"
+                <button class="w-full px-6 py-3 rounded-lg text-base font-medium bg-archery-600 text-white hover:bg-archery-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         id="startBracketBtn" onclick="startBracket()" disabled>
-                    <i class="fas fa-trophy mr-2"></i> Masuk ke Eliminasi / Aduan
+                    Mulai Bracket
                 </button>
             </div>
 
             <!-- Bracket Container -->
-            <div class="hidden mt-8 overflow-x-auto custom-scrollbar p-4" id="bracketContainer">
-                <div class="text-center mb-8 no-print">
-                    <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                        <button class="px-8 py-3 rounded-xl text-base font-semibold text-white cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all"
-                                style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);"
-                                id="generateBtn" onclick="generateBracket()">
-                            <i class="fas fa-random mr-2"></i> Generate & Acak Eliminasi / Aduan
-                        </button>
-                        <button class="px-6 py-3 rounded-xl text-base font-semibold text-white cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all"
-                                style="background: linear-gradient(135deg, #52525b 0%, #27272a 100%);"
-                                onclick="backToSetup()">
-                            <i class="fas fa-arrow-left mr-2"></i> Kembali
-                        </button>
-                    </div>
-                    <p class="text-sm text-slate-400 mt-4">
-                        Klik tombol "Generate & Acak Eliminasi / Aduan" untuk mengacak posisi peserta secara random
-                    </p>
+            <div class="hidden mt-6 overflow-x-auto custom-scrollbar" id="bracketContainer">
+                <div class="flex items-center justify-between mb-6 no-print">
+                    <button class="px-4 py-2 rounded-lg text-sm font-medium bg-archery-600 text-white hover:bg-archery-700 transition-colors"
+                            id="generateBtn" onclick="generateBracket()">
+                        <i class="fas fa-random mr-2"></i> Acak Bracket
+                    </button>
+                    <button class="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:bg-white/10 transition-colors"
+                            onclick="backToSetup()">
+                        <i class="fas fa-redo mr-2"></i> Reset
+                    </button>
                 </div>
 
                 <div id="bracketContent">
@@ -322,18 +304,12 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 </div>
 
                 <!-- Third Place Section -->
-                <div class="hidden bg-amber-900/20 border-2 border-amber-600/30 rounded-2xl p-6 mt-10 text-center max-w-lg mx-auto" id="thirdPlaceSection">
-                    <div class="text-xl font-bold text-amber-500 mb-6 flex items-center justify-center gap-3">
-                        <span>🥉</span>
-                        <span>PEREBUTAN JUARA 3</span>
-                        <span>🥉</span>
-                    </div>
-                    <div class="bg-black/20 rounded-xl p-5 inline-block min-w-[300px] md:min-w-[400px]">
-                        <div id="thirdPlaceMatch">
-                            <div class="match flex flex-col gap-2">
-                                <div class="player-card empty px-4 py-3 rounded-lg text-sm font-semibold text-center text-slate-500">Menunggu Semifinal</div>
-                                <div class="player-card empty px-4 py-3 rounded-lg text-sm font-semibold text-center text-slate-500">Menunggu Semifinal</div>
-                            </div>
+                <div class="hidden bg-zinc-800 border border-zinc-700 rounded-xl p-6 mt-8 text-center max-w-sm mx-auto" id="thirdPlaceSection">
+                    <p class="text-sm text-slate-400 mb-4">Perebutan Juara 3</p>
+                    <div id="thirdPlaceMatch">
+                        <div class="match flex flex-col gap-2">
+                            <div class="player-card empty px-4 py-3 rounded-lg text-sm font-medium text-center">Menunggu SF</div>
+                            <div class="player-card empty px-4 py-3 rounded-lg text-sm font-medium text-center">Menunggu SF</div>
                         </div>
                     </div>
                 </div>
@@ -399,27 +375,27 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 
             function showPlaceholder16Bracket() {
                 const bracketHTML = `
-                    <div class="flex justify-around gap-8 min-w-fit py-4">
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 16</div>
+                    <div class="flex gap-6 min-w-fit py-4">
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Round of 16</div>
                             ${generatePlaceholderMatches(8)}
                         </div>
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Quarter Finals</div>
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Quarter</div>
                             ${generatePlaceholderMatches(4)}
                         </div>
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Semi Finals</div>
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Semi</div>
                             ${generatePlaceholderMatches(2)}
                         </div>
-                        <div class="flex flex-col items-center justify-center min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Finals</div>
-                            <div class="text-[80px] my-5">🏆</div>
-                            <div class="flex flex-col gap-1.5 my-2.5">
-                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">Finalist 1</div>
-                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">Finalist 2</div>
+                        <div class="flex flex-col items-center justify-center flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Final</div>
+                            <div class="text-4xl mb-4">🏆</div>
+                            <div class="flex flex-col gap-2">
+                                <div class="player-card empty px-4 py-2 rounded-lg min-w-[140px] text-sm font-medium text-center">Finalist 1</div>
+                                <div class="player-card empty px-4 py-2 rounded-lg min-w-[140px] text-sm font-medium text-center">Finalist 2</div>
                             </div>
-                            <div class="hidden mt-8 px-10 py-5 rounded-xl text-2xl font-bold text-slate-900 shadow-lg" style="background: linear-gradient(135deg, #ffd700 0%, #fde68a 100%);" id="champion">Champion</div>
+                            <div class="hidden mt-6 px-6 py-3 rounded-lg text-lg font-bold bg-amber-400 text-zinc-900" id="champion">Champion</div>
                         </div>
                     </div>
                 `;
@@ -428,31 +404,31 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 
             function showPlaceholder32Bracket() {
                 const bracketHTML = `
-                    <div class="flex justify-around gap-8 min-w-fit py-4">
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 32</div>
+                    <div class="flex gap-6 min-w-fit py-4">
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Round of 32</div>
                             ${generatePlaceholderMatches(16)}
                         </div>
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 16</div>
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Round of 16</div>
                             ${generatePlaceholderMatches(8)}
                         </div>
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Quarter Finals</div>
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Quarter</div>
                             ${generatePlaceholderMatches(4)}
                         </div>
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Semi Finals</div>
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Semi</div>
                             ${generatePlaceholderMatches(2)}
                         </div>
-                        <div class="flex flex-col items-center justify-center min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Finals</div>
-                            <div class="text-[80px] my-5">🏆</div>
-                            <div class="flex flex-col gap-1.5 my-2.5">
-                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">Finalist 1</div>
-                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">Finalist 2</div>
+                        <div class="flex flex-col items-center justify-center flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Final</div>
+                            <div class="text-4xl mb-4">🏆</div>
+                            <div class="flex flex-col gap-2">
+                                <div class="player-card empty px-4 py-2 rounded-lg min-w-[140px] text-sm font-medium text-center">Finalist 1</div>
+                                <div class="player-card empty px-4 py-2 rounded-lg min-w-[140px] text-sm font-medium text-center">Finalist 2</div>
                             </div>
-                            <div class="hidden mt-8 px-10 py-5 rounded-xl text-2xl font-bold text-slate-900 shadow-lg" style="background: linear-gradient(135deg, #ffd700 0%, #fde68a 100%);" id="champion">Champion</div>
+                            <div class="hidden mt-6 px-6 py-3 rounded-lg text-lg font-bold bg-amber-400 text-zinc-900" id="champion">Champion</div>
                         </div>
                     </div>
                 `;
@@ -463,9 +439,9 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 let html = '';
                 for (let i = 0; i < numMatches; i++) {
                     html += `
-                        <div class="flex flex-col gap-1.5 my-2.5">
-                            <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">TBD</div>
-                            <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">TBD</div>
+                        <div class="flex flex-col gap-1 my-2">
+                            <div class="player-card empty px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center">TBD</div>
+                            <div class="player-card empty px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center">TBD</div>
                         </div>
                     `;
                 }
@@ -519,27 +495,27 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 
             function generate16Bracket() {
                 const bracketHTML = `
-                    <div class="flex justify-around gap-8 min-w-fit py-4">
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 16</div>
+                    <div class="flex gap-6 min-w-fit py-4">
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Round of 16</div>
                             ${generateMatches(0, 16, 1, 'r16')}
                         </div>
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Quarter Finals</div>
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Quarter</div>
                             ${generateEmptyMatches(4, 2, 'qf')}
                         </div>
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Semi Finals</div>
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Semi</div>
                             ${generateEmptyMatches(2, 3, 'sf')}
                         </div>
-                        <div class="flex flex-col items-center justify-center min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Finals</div>
-                            <div class="text-[80px] my-5">🏆</div>
-                            <div class="flex flex-col gap-1.5 my-2.5" data-match="final">
-                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="final-1">Finalist 1</div>
-                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="final-2">Finalist 2</div>
+                        <div class="flex flex-col items-center justify-center flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Final</div>
+                            <div class="text-4xl mb-4">🏆</div>
+                            <div class="flex flex-col gap-2" data-match="final">
+                                <div class="player-card empty px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center border-2 border-transparent" data-slot="final-1">Finalist 1</div>
+                                <div class="player-card empty px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center border-2 border-transparent" data-slot="final-2">Finalist 2</div>
                             </div>
-                            <div class="hidden mt-8 px-10 py-5 rounded-xl text-2xl font-bold text-slate-900 shadow-lg" style="background: linear-gradient(135deg, #ffd700 0%, #fde68a 100%);" id="champion">Champion</div>
+                            <div class="hidden mt-6 px-6 py-3 rounded-lg text-lg font-bold bg-amber-400 text-zinc-900" id="champion">Champion</div>
                         </div>
                     </div>
                 `;
@@ -548,31 +524,31 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 
             function generate32Bracket() {
                 const bracketHTML = `
-                    <div class="flex justify-around gap-8 min-w-fit py-4">
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 32</div>
+                    <div class="flex gap-6 min-w-fit py-4">
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Round of 32</div>
                             ${generateMatches(0, 32, 1, 'r32')}
                         </div>
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 16</div>
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Round of 16</div>
                             ${generateEmptyMatches(8, 2, 'r16')}
                         </div>
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Quarter Finals</div>
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Quarter</div>
                             ${generateEmptyMatches(4, 3, 'qf')}
                         </div>
-                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Semi Finals</div>
+                        <div class="flex flex-col justify-around flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Semi</div>
                             ${generateEmptyMatches(2, 4, 'sf')}
                         </div>
-                        <div class="flex flex-col items-center justify-center min-h-[500px] flex-1">
-                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Finals</div>
-                            <div class="text-[80px] my-5">🏆</div>
-                            <div class="flex flex-col gap-1.5 my-2.5" data-match="final">
-                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="final-1">Finalist 1</div>
-                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="final-2">Finalist 2</div>
+                        <div class="flex flex-col items-center justify-center flex-1 min-w-[160px]">
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Final</div>
+                            <div class="text-4xl mb-4">🏆</div>
+                            <div class="flex flex-col gap-2" data-match="final">
+                                <div class="player-card empty px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center border-2 border-transparent" data-slot="final-1">Finalist 1</div>
+                                <div class="player-card empty px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center border-2 border-transparent" data-slot="final-2">Finalist 2</div>
                             </div>
-                            <div class="hidden mt-8 px-10 py-5 rounded-xl text-2xl font-bold text-slate-900 shadow-lg" style="background: linear-gradient(135deg, #ffd700 0%, #fde68a 100%);" id="champion">Champion</div>
+                            <div class="hidden mt-6 px-6 py-3 rounded-lg text-lg font-bold bg-amber-400 text-zinc-900" id="champion">Champion</div>
                         </div>
                     </div>
                 `;
@@ -589,17 +565,15 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     const matchId = `${prefix}-m${matchIndex}`;
 
                     html += `
-                        <div class="flex flex-col gap-1.5 my-2.5" data-match="${matchId}">
-                            <div class="player-card ${player1.empty ? 'empty' : ''} px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-white border-2 border-transparent break-words cursor-pointer"
-                                 style="${player1.empty ? '' : 'background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);'}"
+                        <div class="flex flex-col gap-1 my-2" data-match="${matchId}">
+                            <div class="player-card ${player1.empty ? 'empty' : 'bg-zinc-700 hover:bg-zinc-600'} px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center text-white border-2 border-transparent cursor-pointer transition-colors"
                                  data-slot="${matchId}-1"
                                  data-player-index="${i}"
                                  data-player-id="${player1.id || ''}"
                                  onclick="${player1.empty ? '' : `selectWinner('${matchId}', 1, ${i})`}">
                                 ${player1.nama_peserta}
                             </div>
-                            <div class="player-card ${player2.empty ? 'empty' : ''} px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-white border-2 border-transparent break-words cursor-pointer"
-                                 style="${player2.empty ? '' : 'background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);'}"
+                            <div class="player-card ${player2.empty ? 'empty' : 'bg-zinc-700 hover:bg-zinc-600'} px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center text-white border-2 border-transparent cursor-pointer transition-colors"
                                  data-slot="${matchId}-2"
                                  data-player-index="${i + 1}"
                                  data-player-id="${player2.id || ''}"
@@ -618,9 +592,9 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 for (let i = 0; i < count; i++) {
                     const matchId = `${prefix}-m${i}`;
                     html += `
-                        <div class="flex flex-col gap-1.5 my-2.5" data-match="${matchId}">
-                            <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="${matchId}-1">TBD</div>
-                            <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="${matchId}-2">TBD</div>
+                        <div class="flex flex-col gap-1 my-2" data-match="${matchId}">
+                            <div class="player-card empty px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center border-2 border-transparent" data-slot="${matchId}-1">TBD</div>
+                            <div class="player-card empty px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center border-2 border-transparent" data-slot="${matchId}-2">TBD</div>
                         </div>
                     `;
                 }
@@ -772,16 +746,14 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     const thirdPlaceMatch = document.getElementById('thirdPlaceMatch');
                     thirdPlaceMatch.innerHTML = `
                         <div class="flex flex-col gap-2" data-match="third-place">
-                            <div class="player-card px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-white border-2 border-transparent break-words cursor-pointer mx-auto"
-                                 style="background: linear-gradient(135deg, #cd7f32 0%, #b87333 100%);"
+                            <div class="player-card bg-zinc-700 hover:bg-zinc-600 px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center text-white border-2 border-transparent cursor-pointer transition-colors mx-auto"
                                  data-slot="third-1"
                                  data-player-id="${semifinalLosers[0].id}"
                                  data-player-index="${semifinalLosers[0].index}"
                                  onclick="selectThirdPlace(0)">
                                 ${semifinalLosers[0].nama_peserta}
                             </div>
-                            <div class="player-card px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-white border-2 border-transparent break-words cursor-pointer mx-auto"
-                                 style="background: linear-gradient(135deg, #cd7f32 0%, #b87333 100%);"
+                            <div class="player-card bg-zinc-700 hover:bg-zinc-600 px-3 py-2 rounded min-w-[140px] text-sm font-medium text-center text-white border-2 border-transparent cursor-pointer transition-colors mx-auto"
                                  data-slot="third-2"
                                  data-player-id="${semifinalLosers[1].id}"
                                  data-player-index="${semifinalLosers[1].index}"
@@ -1080,6 +1052,31 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 }
                 $peserta_score[] = ['id' => $a['id'], 'total_score' => $score, 'total_x' => $x_score];
             }
+
+            // Fetch all individual scores for detailed view (ranking mode)
+            if (isset($_GET['rangking'])) {
+                $allScores = [];
+                $queryAllScores = "SELECT peserta_id, arrow, session, score
+                                   FROM score
+                                   WHERE kegiatan_id = ? AND category_id = ? AND score_board_id = ?
+                                   ORDER BY peserta_id, session, arrow";
+                $stmtAllScores = $conn->prepare($queryAllScores);
+                $stmtAllScores->bind_param("iii", $kegiatan_id, $category_id, $_GET['scoreboard']);
+                $stmtAllScores->execute();
+                $resultAllScores = $stmtAllScores->get_result();
+                while ($row = $resultAllScores->fetch_assoc()) {
+                    $pid = $row['peserta_id'];
+                    if (!isset($allScores[$pid])) {
+                        $allScores[$pid] = [];
+                    }
+                    $allScores[$pid][] = [
+                        'arrow' => $row['arrow'],
+                        'session' => $row['session'],
+                        'score' => $row['score']
+                    ];
+                }
+                $stmtAllScores->close();
+            }
         }
 
         $stmtPeserta->close();
@@ -1179,7 +1176,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
             .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
             .dropdown-menu { display: none; }
-            .dropdown-menu.show { display: block; }
+            #dropdownMenu.show { 
+                display: block !important;
+                opacity: 1 !important;
+                scale: 100% !important;
+                pointer-events: auto !important;
+                transform: translateY(0) !important;
+            }
+            #dropdownMenu {
+                transform: translateY(-10px);
+                transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            }
             .hidden { display: none !important; }
 
             /* Score input styling */
@@ -1315,19 +1322,19 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                                 <td class="px-4 py-3 no-print">
                                                     <div class="flex items-center justify-center gap-1 flex-wrap">
                                                         <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>&rangking=true"
-                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium hover:bg-amber-200 transition-colors">
+                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors">
                                                             <i class="fas fa-trophy text-xs"></i> Ranking
                                                         </a>
                                                         <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>"
-                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200 transition-colors">
-                                                            <i class="fas fa-edit text-xs"></i> Detail
+                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-archery-600 text-white text-xs font-medium hover:bg-archery-700 transition-colors">
+                                                            <i class="fas fa-edit text-xs"></i> Input
                                                         </a>
                                                         <a href="detail.php?aduan=true&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>"
-                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-100 text-purple-700 text-xs font-medium hover:bg-purple-200 transition-colors">
+                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors">
                                                             <i class="fas fa-sitemap text-xs"></i> Aduan
                                                         </a>
                                                         <button onclick="delete_score_board('<?= $kegiatan_id ?>', '<?= $category_id ?>', '<?= $a['id'] ?>')"
-                                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors">
+                                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 text-xs font-medium transition-colors">
                                                             <i class="fas fa-trash text-xs"></i>
                                                         </button>
                                                     </div>
@@ -1361,7 +1368,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
             <!-- Scorecard Detail / Input Mode -->
             <?php if (isset($_GET['scoreboard']) && !isset($_GET['rangking'])) { ?>
-                <div id="scorecardContainer" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div id="scorecardContainer" class="bg-white rounded-xl border border-slate-200 shadow-sm">
                     <div class="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div class="flex items-center gap-3">
                             <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
@@ -1378,49 +1385,33 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         </button>
                     </div>
 
-                    <!-- Stats Header -->
-                    <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
-                        <div class="grid grid-cols-3 gap-4 text-center">
-                            <div>
-                                <div class="w-10 h-10 rounded-lg bg-archery-100 flex items-center justify-center mx-auto mb-1">
-                                    <i class="fas fa-bullseye text-archery-600"></i>
-                                </div>
-                                <p class="text-sm font-medium text-slate-900"><?= htmlspecialchars($kategoriData['name']) ?></p>
-                                <p class="text-xs text-slate-500"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
+                    <!-- Stats Header - Minimal -->
+                    <div class="px-6 py-3 bg-slate-50 border-b border-slate-200">
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center gap-4">
+                                <span class="text-slate-500"><?= htmlspecialchars($kategoriData['name']) ?></span>
+                                <span class="text-slate-300">•</span>
+                                <span class="text-slate-500"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></span>
                             </div>
-                            <div>
-                                <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mx-auto mb-1">
-                                    <i class="fas fa-users text-blue-600"></i>
-                                </div>
-                                <p class="text-sm font-medium text-slate-900" id="pesertaCount"><?= count($pesertaList) ?></p>
-                                <p class="text-xs text-slate-500">Peserta</p>
-                            </div>
-                            <div>
-                                <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mx-auto mb-1">
-                                    <i class="fas fa-crosshairs text-amber-600"></i>
-                                </div>
-                                <p class="text-sm font-medium text-slate-900" id="panahCount">-</p>
-                                <p class="text-xs text-slate-500">Anak Panah</p>
+                            <div class="flex items-center gap-4 text-slate-500">
+                                <span><span class="font-medium text-slate-700" id="pesertaCount"><?= count($pesertaList) ?></span> Peserta</span>
+                                <span><span class="font-medium text-slate-700" id="panahCount">-</span> Panah</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Peserta Selector Dropdown -->
                     <div id="pesertaSelectorInline" class="p-6">
-                        <div class="bg-archery-50 border-2 border-dashed border-archery-300 rounded-xl p-6 text-center">
-                            <div class="w-14 h-14 rounded-full bg-archery-100 flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-bullseye text-archery-600 text-xl"></i>
-                            </div>
-                            <h3 class="font-semibold text-slate-900 mb-1">Pilih Peserta untuk Input Score</h3>
-                            <p class="text-sm text-slate-500 mb-4">Pilih peserta dari dropdown untuk mulai mengisi score</p>
+                        <div class="bg-white border border-slate-200 rounded-xl p-8 text-center max-w-md mx-auto">
+                            <p class="text-slate-500 text-sm mb-4">Pilih peserta untuk mulai input skor</p>
 
-                            <div class="relative max-w-sm mx-auto">
+                            <div class="relative">
                                 <button id="dropdownBtn" onclick="toggleDropdown()"
                                         class="w-full px-4 py-3 rounded-lg bg-archery-600 text-white font-medium flex items-center justify-between hover:bg-archery-700 transition-colors">
                                     <span id="dropdownText">Pilih Peserta</span>
                                     <i class="fas fa-chevron-down dropdown-arrow transition-transform"></i>
                                 </button>
-                                <div id="dropdownMenu" class="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto z-50">
+                                <div id="dropdownMenu" class="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-[100] transition-all origin-top scale-95 opacity-0 pointer-events-none display-none-initial">
                                     <!-- Populated by JavaScript -->
                                 </div>
                             </div>
@@ -1429,17 +1420,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                     <!-- Selected Peserta Info -->
                     <div id="selectedPesertaInfo" class="hidden px-6 pb-4">
-                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-                            <p class="text-sm text-slate-600 mb-1">Sedang mengisi score untuk:</p>
-                            <p class="font-bold text-amber-700 text-lg" id="selectedPesertaName"></p>
-                            <button onclick="changePeserta()" class="mt-3 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors no-print">
-                                <i class="fas fa-sync-alt mr-1"></i> Ganti Peserta
+                        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm text-slate-500">Peserta:</span>
+                                <span class="font-semibold text-slate-900" id="selectedPesertaName"></span>
+                            </div>
+                            <button onclick="changePeserta()" class="px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-200 text-sm font-medium transition-colors no-print">
+                                <i class="fas fa-exchange-alt mr-1"></i> Ganti
                             </button>
                         </div>
-                    </div>
-
-                    <div id="scorecardTitle" class="hidden px-6 pb-2">
-                        <h3 class="font-semibold text-slate-700 text-center">Informasi Skor</h3>
                     </div>
 
                     <div id="playersContainer" class="px-6 pb-6"></div>
@@ -1456,58 +1445,43 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                 <i class="fas fa-arrow-left"></i>
                             </a>
                             <div>
-                                <h2 class="font-semibold text-slate-900">Score Board - Ranking</h2>
-                                <p class="text-sm text-slate-500"><?= htmlspecialchars($kategoriData['name']) ?></p>
+                                <h2 class="font-semibold text-slate-900">Ranking</h2>
+                                <p class="text-sm text-slate-500"><?= htmlspecialchars($kategoriData['name']) ?> • <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
                             </div>
                         </div>
-                        <button onclick="exportScorecardToExcel()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors no-print">
-                            <i class="fas fa-file-excel"></i> Export
-                        </button>
-                    </div>
-
-                    <!-- Stats Header -->
-                    <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
-                        <div class="grid grid-cols-3 gap-4 text-center">
-                            <div>
-                                <div class="w-10 h-10 rounded-lg bg-archery-100 flex items-center justify-center mx-auto mb-1">
-                                    <i class="fas fa-bullseye text-archery-600"></i>
-                                </div>
-                                <p class="text-sm font-medium text-slate-900"><?= htmlspecialchars($kategoriData['name']) ?></p>
-                                <p class="text-xs text-slate-500"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
+                        <div class="flex items-center gap-2 no-print">
+                            <!-- View Toggle -->
+                            <div class="flex items-center bg-slate-100 rounded-lg p-1">
+                                <button onclick="setRankingView('leaderboard')" id="viewLeaderboard"
+                                    class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors bg-white text-slate-900 shadow-sm">
+                                    <i class="fas fa-trophy mr-1"></i> Ringkas
+                                </button>
+                                <button onclick="setRankingView('detail')" id="viewDetail"
+                                    class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-slate-500 hover:text-slate-700">
+                                    <i class="fas fa-table mr-1"></i> Detail
+                                </button>
                             </div>
-                            <div>
-                                <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mx-auto mb-1">
-                                    <i class="fas fa-users text-blue-600"></i>
-                                </div>
-                                <p class="text-sm font-medium text-slate-900" id="pesertaCount"><?= count($pesertaList) ?></p>
-                                <p class="text-xs text-slate-500">Peserta</p>
-                            </div>
-                            <div>
-                                <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mx-auto mb-1">
-                                    <i class="fas fa-crosshairs text-amber-600"></i>
-                                </div>
-                                <p class="text-sm font-medium text-slate-900" id="panahCount">-</p>
-                                <p class="text-xs text-slate-500">Anak Panah</p>
-                            </div>
+                            <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $_GET['scoreboard'] ?>"
+                               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                <i class="fas fa-edit"></i> Input Skor
+                            </a>
+                            <button onclick="exportScorecardToExcel()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">
+                                <i class="fas fa-file-excel"></i> Export
+                            </button>
                         </div>
                     </div>
 
-                    <div class="px-6 py-4">
-                        <h3 class="font-semibold text-slate-700 text-center mb-4">Informasi Skor</h3>
+                    <!-- Leaderboard Container -->
+                    <div class="p-6">
+                        <!-- PHP DEBUG: pesertaList count = <?= count($pesertaList) ?>, peserta_score count = <?= count($peserta_score) ?> -->
                         <div id="playersContainer"></div>
-                    </div>
-
-                    <div class="px-6 pb-6 no-print">
-                        <button onclick="editScorecard()" class="w-full px-4 py-3 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors">
-                            <i class="fas fa-cog mr-2"></i> Edit Setup
-                        </button>
                     </div>
                 </div>
             <?php } ?>
         </div>
 
         <script>
-            <?php if ($_GET['resource'] == 'form') { ?>
+            <?php if (isset($_GET['resource']) && $_GET['resource'] == 'form') { ?>
                 let now = new Date();
                 let formatted = now.getFullYear() + "-"
                     + String(now.getMonth() + 1).padStart(2, '0') + "-"
@@ -1528,10 +1502,24 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
             <?php if (isset($_GET['rangking'])) { ?>
                 const peserta_score = <?= json_encode($peserta_score) ?>;
+                const allScoresData = <?= json_encode($allScores ?? []) ?>;
+                const jumlahSesiRanking = <?= $show_score_board['jumlah_sesi'] ?? 9 ?>;
+                const jumlahPanahRanking = <?= $show_score_board['jumlah_anak_panah'] ?? 3 ?>;
+                let currentRankingView = 'leaderboard';
+
+                // Debug output
+                console.log('=== RANKING DEBUG ===');
+                console.log('pesertaData:', pesertaData);
+                console.log('peserta_score:', peserta_score);
+                console.log('allScoresData:', allScoresData);
+
                 function tambahAtributById(id, key, value) {
-                    const peserta = pesertaData.find(p => p.id === id);
+                    // Use == for type coercion (PHP may encode IDs as strings or integers)
+                    const peserta = pesertaData.find(p => p.id == id);
                     if (peserta) {
                         peserta[key] = value;
+                    } else {
+                        console.warn('Could not find peserta with id:', id, typeof id);
                     }
                 }
 
@@ -1541,11 +1529,157 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 }
 
                 pesertaData.sort((a, b) => {
-                    if (b.total_score !== a.total_score) {
-                        return b.total_score - a.total_score;
+                    // Handle undefined scores
+                    const scoreA = a.total_score || 0;
+                    const scoreB = b.total_score || 0;
+                    const xA = a.x_score || 0;
+                    const xB = b.x_score || 0;
+
+                    if (scoreB !== scoreA) {
+                        return scoreB - scoreA;
                     }
-                    return b.x_score - a.x_score;
+                    return xB - xA;
                 });
+
+                console.log('pesertaData after merge:', pesertaData);
+
+                function setRankingView(view) {
+                    currentRankingView = view;
+                    const leaderboardBtn = document.getElementById('viewLeaderboard');
+                    const detailBtn = document.getElementById('viewDetail');
+
+                    if (view === 'leaderboard') {
+                        leaderboardBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors bg-white text-slate-900 shadow-sm';
+                        detailBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-slate-500 hover:text-slate-700';
+                        generatePlayerSections(jumlahSesiRanking, jumlahPanahRanking);
+                    } else {
+                        leaderboardBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-slate-500 hover:text-slate-700';
+                        detailBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors bg-white text-slate-900 shadow-sm';
+                        generateDetailedView(jumlahSesiRanking, jumlahPanahRanking);
+                    }
+                }
+
+                function generateDetailedView(jumlahSesi, jumlahPanah) {
+                    const playersContainer = document.getElementById('playersContainer');
+                    if (!playersContainer) return;
+                    playersContainer.innerHTML = '';
+
+                    if (pesertaData.length === 0) {
+                        playersContainer.innerHTML = `
+                            <div class="text-center py-12">
+                                <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-users text-slate-400 text-2xl"></i>
+                                </div>
+                                <p class="text-slate-500 font-medium">Tidak ada data peserta</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    let html = '<div class="space-y-6">';
+
+                    pesertaData.forEach((peserta, index) => {
+                        const playerId = `peserta_${peserta.id}`;
+                        const medals = ['🥇', '🥈', '🥉'];
+                        const rankDisplay = index < 3 ? medals[index] : `#${index + 1}`;
+                        const isTop3 = index < 3;
+                        const headerBg = index === 0 ? 'bg-archery-600' : (isTop3 ? 'bg-zinc-700' : 'bg-zinc-800');
+
+                        // Get this peserta's scores
+                        const pesertaScores = allScoresData[peserta.id] || [];
+
+                        html += `
+                            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                                <div class="${headerBg} px-4 py-3 flex items-center justify-between text-white">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xl">${rankDisplay}</span>
+                                        <span class="font-semibold">${peserta.nama_peserta}</span>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-sm">
+                                        <span class="opacity-75">${peserta.x_score || 0}× X</span>
+                                        <span class="font-bold text-lg">${peserta.total_score || 0} pts</span>
+                                    </div>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full min-w-[400px]">
+                                        <thead>
+                                            <tr class="bg-slate-100">
+                                                <th class="px-3 py-2 text-xs font-semibold text-slate-600 text-center w-14">Sesi</th>
+                                                ${generateArrowHeaders(jumlahPanah)}
+                                                <th class="px-3 py-2 text-xs font-semibold text-slate-600 text-center w-14">Sub</th>
+                                                <th class="px-3 py-2 text-xs font-semibold text-slate-600 text-center w-14">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100">
+                                            ${generateDetailRows(peserta.id, jumlahSesi, jumlahPanah, pesertaScores)}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                    playersContainer.innerHTML = html;
+                }
+
+                function generateArrowHeaders(jumlahPanah) {
+                    let headers = '';
+                    for (let a = 1; a <= jumlahPanah; a++) {
+                        headers += `<th class="px-2 py-2 text-xs font-semibold text-slate-600 text-center w-10">${a}</th>`;
+                    }
+                    return headers;
+                }
+
+                function generateDetailRows(pesertaId, jumlahSesi, jumlahPanah, pesertaScores) {
+                    let rows = '';
+                    let runningTotal = 0;
+
+                    for (let s = 1; s <= jumlahSesi; s++) {
+                        let sessionTotal = 0;
+                        let arrowCells = '';
+
+                        for (let a = 1; a <= jumlahPanah; a++) {
+                            // Find score for this session/arrow
+                            const scoreEntry = pesertaScores.find(sc => sc.session == s && sc.arrow == a);
+                            const scoreVal = scoreEntry ? scoreEntry.score : '';
+
+                            // Calculate numeric value
+                            let numericScore = 0;
+                            let cellClass = 'text-slate-700';
+
+                            if (scoreVal) {
+                                const lowerScore = scoreVal.toLowerCase();
+                                if (lowerScore === 'x') {
+                                    numericScore = 10;
+                                    cellClass = 'text-archery-600 font-bold';
+                                } else if (lowerScore === 'm') {
+                                    numericScore = 0;
+                                    cellClass = 'text-red-500';
+                                } else {
+                                    numericScore = parseInt(scoreVal) || 0;
+                                    if (numericScore >= 9) cellClass = 'text-amber-600 font-semibold';
+                                }
+                                sessionTotal += numericScore;
+                            }
+
+                            arrowCells += `<td class="px-2 py-2 text-center text-sm ${cellClass}">${scoreVal.toUpperCase()}</td>`;
+                        }
+
+                        runningTotal += sessionTotal;
+
+                        rows += `
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-3 py-2 text-center text-sm font-medium text-slate-500 bg-slate-50">${s}</td>
+                                ${arrowCells}
+                                <td class="px-2 py-2 text-center text-sm font-semibold text-slate-700 bg-slate-50">${sessionTotal}</td>
+                                <td class="px-2 py-2 text-center text-sm font-bold text-slate-900 bg-slate-100">${runningTotal}</td>
+                            </tr>
+                        `;
+                    }
+
+                    return rows;
+                }
             <?php } ?>
 
             <?php if (isset($_GET['scoreboard'])) { ?>
@@ -1597,7 +1731,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                 pesertaData.forEach(peserta => {
                     const item = document.createElement('div');
-                    item.className = 'px-4 py-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 last:border-0';
+                    item.className = 'px-5 py-3 hover:bg-slate-50 cursor-pointer flex items-center gap-4 border-b border-slate-100 last:border-0 transition-colors';
                     item.onclick = () => selectPeserta(peserta.id);
 
                     item.innerHTML = `
@@ -1641,11 +1775,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     if (selectedInfo) selectedInfo.classList.remove('hidden');
 
                     const selectorInline = document.getElementById('pesertaSelectorInline');
-                    const scorecardTitle = document.getElementById('scorecardTitle');
                     const exportBtn = document.getElementById('exportBtn');
 
                     if (selectorInline) selectorInline.style.display = 'none';
-                    if (scorecardTitle) scorecardTitle.classList.remove('hidden');
                     if (exportBtn) exportBtn.classList.remove('hidden');
 
                     const jumlahSesi = parseInt("<?= $show_score_board['jumlah_sesi'] ?? 9 ?>");
@@ -1692,63 +1824,123 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             }
 
             function openScoreBoard(jumlahSesi_data, jumlahPanah_data) {
+                console.log('openScoreBoard called with:', jumlahSesi_data, jumlahPanah_data);
+                console.log('pesertaData.length:', pesertaData.length);
+
                 const jumlahSesi = parseInt(jumlahSesi_data);
                 const jumlahPanah = parseInt(jumlahPanah_data);
-                document.getElementById('panahCount').textContent = jumlahSesi * jumlahPanah;
+
+                const panahCountEl = document.getElementById('panahCount');
+                if (panahCountEl) {
+                    panahCountEl.textContent = jumlahSesi * jumlahPanah;
+                }
+
                 generatePlayerSections(jumlahSesi, jumlahPanah);
             }
 
             function generatePlayerSections(jumlahSesi, jumlahPanah) {
                 const playersContainer = document.getElementById('playersContainer');
-                if (!playersContainer) return;
+                if (!playersContainer) {
+                    console.error('playersContainer not found!');
+                    return;
+                }
                 playersContainer.innerHTML = '';
 
-                pesertaData.forEach((peserta, index) => {
-                    const playerId = `peserta_${peserta.id}`;
-                    const playerName = peserta.nama_peserta;
-                    const rankBadge = index < 3 ? ['bg-amber-500', 'bg-slate-400', 'bg-amber-700'][index] : 'bg-slate-200';
-                    const rankText = index < 3 ? 'text-white' : 'text-slate-600';
+                console.log('generatePlayerSections - pesertaData:', pesertaData);
 
-                    const playerSection = document.createElement('div');
-                    playerSection.className = 'bg-slate-50 rounded-xl border border-slate-200 p-4 mb-4';
-                    playerSection.innerHTML = `
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-full ${rankBadge} ${rankText} flex items-center justify-center font-bold">
-                                ${index + 1}
+                // Empty state
+                if (pesertaData.length === 0) {
+                    playersContainer.innerHTML = `
+                        <div class="text-center py-12">
+                            <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-users text-slate-400 text-2xl"></i>
                             </div>
-                            <div>
-                                <p class="font-semibold text-slate-900">${playerName}</p>
-                                <p class="text-sm text-slate-500">${peserta.jenis_kelamin === 'P' ? 'Putri' : 'Putra'}</p>
+                            <p class="text-slate-500 font-medium">Tidak ada data peserta</p>
+                            <p class="text-slate-400 text-sm mt-1">Pastikan peserta sudah terdaftar di kategori ini</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Build Top 3 Hero Section
+                const top3 = pesertaData.slice(0, 3);
+                const rest = pesertaData.slice(3);
+
+                if (top3.length > 0) {
+                    const heroSection = document.createElement('div');
+                    heroSection.className = 'mb-6';
+
+                    let heroHTML = '<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">';
+
+                    top3.forEach((peserta, index) => {
+                        const medals = ['🥇', '🥈', '🥉'];
+                        const bgColors = ['bg-archery-50 border-archery-200', 'bg-slate-50 border-slate-200', 'bg-amber-50 border-amber-200'];
+                        const textColors = ['text-archery-700', 'text-slate-700', 'text-amber-700'];
+
+                        heroHTML += `
+                            <div class="border ${bgColors[index]} rounded-xl p-4 text-center ${index === 0 ? 'ring-2 ring-archery-500 ring-offset-2' : ''}">
+                                <div class="text-3xl mb-2">${medals[index]}</div>
+                                <p class="font-bold text-lg text-slate-900 mb-1">${peserta.nama_peserta}</p>
+                                <p class="text-3xl font-bold ${textColors[index]}">${peserta.total_score || 0}</p>
+                                <p class="text-xs text-slate-500 mt-1">${peserta.x_score || 0} × X</p>
                             </div>
-                            ${typeof peserta.total_score !== 'undefined' ? `<span class="ml-auto px-3 py-1 rounded-full bg-archery-100 text-archery-700 text-sm font-semibold">${peserta.total_score} poin</span>` : ''}
-                        </div>
-                        <div class="overflow-x-auto custom-scrollbar">
-                            <table class="w-full min-w-[500px]">
-                                <thead>
-                                    <tr class="bg-zinc-800 text-white">
-                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">Sesi</th>
-                                        <th colspan="${jumlahPanah}" class="px-3 py-2 text-xs font-semibold text-center">Anak Panah</th>
-                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">Total</th>
-                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">End</th>
-                                    </tr>
-                                    <tr class="bg-zinc-700 text-white">
-                                        ${Array.from({ length: jumlahPanah }, (_, i) => `<th class="px-2 py-1 text-xs font-medium text-center w-12">${i + 1}</th>`).join('')}
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-slate-100">
-                                    ${generateTableRows(playerId, jumlahSesi, jumlahPanah)}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="mt-4 bg-gradient-to-r from-archery-500 to-archery-600 rounded-lg p-4 text-white text-center">
-                            <p class="text-sm opacity-80">Total Keseluruhan</p>
-                            <p class="text-2xl font-bold" id="${playerId}_grand_total">${typeof peserta.total_score !== 'undefined' ? peserta.total_score + ' poin' : '0 poin'}</p>
-                            ${typeof peserta.x_score !== 'undefined' ? `<p class="text-sm opacity-80">X Score: ${peserta.x_score}</p>` : ''}
+                        `;
+                    });
+
+                    heroHTML += '</div>';
+                    heroSection.innerHTML = heroHTML;
+                    playersContainer.appendChild(heroSection);
+                }
+
+                // Build compact table for all participants
+                if (pesertaData.length > 0) {
+                    const tableSection = document.createElement('div');
+                    tableSection.className = 'border border-slate-200 rounded-xl overflow-hidden';
+
+                    let tableHTML = `
+                        <table class="w-full">
+                            <thead class="bg-zinc-800 text-white">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-20">X</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-24">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                    `;
+
+                    pesertaData.forEach((peserta, index) => {
+                        const isTop3 = index < 3;
+                        const rowClass = index === 0 ? 'bg-archery-50' : (isTop3 ? 'bg-slate-50' : 'bg-white hover:bg-slate-50');
+                        const rankDisplay = isTop3 ? ['🥇', '🥈', '🥉'][index] : (index + 1);
+                        const nameWeight = isTop3 ? 'font-semibold' : 'font-medium';
+                        const scoreWeight = isTop3 ? 'font-bold text-lg' : 'font-semibold';
+                        const scoreColor = index === 0 ? 'text-archery-700' : 'text-slate-900';
+
+                        tableHTML += `
+                            <tr class="${rowClass} transition-colors">
+                                <td class="px-4 py-3 text-center text-lg">${rankDisplay}</td>
+                                <td class="px-4 py-3">
+                                    <span class="${nameWeight} text-slate-900">${peserta.nama_peserta}</span>
+                                </td>
+                                <td class="px-4 py-3 text-right text-slate-500 text-sm">${peserta.x_score || 0}</td>
+                                <td class="px-4 py-3 text-right ${scoreWeight} ${scoreColor}">${peserta.total_score || 0}</td>
+                            </tr>
+                        `;
+                    });
+
+                    tableHTML += `
+                            </tbody>
+                        </table>
+                        <div class="bg-slate-50 px-4 py-3 text-sm text-slate-500 border-t border-slate-200">
+                            ${pesertaData.length} peserta • ${jumlahSesi} sesi × ${jumlahPanah} panah
                         </div>
                     `;
 
-                    playersContainer.appendChild(playerSection);
-                });
+                    tableSection.innerHTML = tableHTML;
+                    playersContainer.appendChild(tableSection);
+                }
             }
 
             function generatePlayerSection(peserta, jumlahSesi, jumlahPanah) {
@@ -1759,24 +1951,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 if (!playersContainer) return;
 
                 playersContainer.innerHTML = `
-                    <div class="bg-slate-50 rounded-xl border border-slate-200 p-4">
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-full ${peserta.jenis_kelamin === 'P' ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'} flex items-center justify-center">
-                                <i class="fas ${peserta.jenis_kelamin === 'P' ? 'fa-venus' : 'fa-mars'}"></i>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-slate-900">${playerName}</p>
-                                <p class="text-sm text-slate-500">${peserta.jenis_kelamin === 'P' ? 'Putri' : 'Putra'}</p>
-                            </div>
-                        </div>
+                    <div class="border border-slate-200 rounded-xl overflow-hidden">
                         <div class="overflow-x-auto custom-scrollbar">
                             <table class="w-full min-w-[500px]">
                                 <thead>
                                     <tr class="bg-zinc-800 text-white">
                                         <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">Sesi</th>
                                         <th colspan="${jumlahPanah}" class="px-3 py-2 text-xs font-semibold text-center">Anak Panah</th>
-                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">Total</th>
-                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">End</th>
+                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-14">Sub</th>
+                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-14">Total</th>
                                     </tr>
                                     <tr class="bg-zinc-700 text-white">
                                         ${Array.from({ length: jumlahPanah }, (_, i) => `<th class="px-2 py-1 text-xs font-medium text-center w-12">${i + 1}</th>`).join('')}
@@ -1787,9 +1970,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                 </tbody>
                             </table>
                         </div>
-                        <div class="mt-4 bg-gradient-to-r from-archery-500 to-archery-600 rounded-lg p-4 text-white text-center">
-                            <p class="text-sm opacity-80">Total Keseluruhan</p>
-                            <p class="text-2xl font-bold" id="${playerId}_grand_total">0 poin</p>
+                        <div class="bg-zinc-900 px-6 py-5 text-center">
+                            <p class="text-xs text-zinc-400 uppercase tracking-wide mb-1">Total Skor</p>
+                            <p class="text-3xl font-bold text-white" id="${playerId}_grand_total">0</p>
                         </div>
                     </div>
                 `;
@@ -1817,17 +2000,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                     rowsHtml += `
                         <tr class="hover:bg-slate-50">
-                            <td class="px-3 py-2 text-center font-semibold text-slate-700 bg-slate-100">S${session}</td>
+                            <td class="px-3 py-2 text-center font-medium text-slate-500 bg-slate-50 text-sm">${session}</td>
                             ${arrowInputs}
                             <td class="px-1 py-2 text-center">
                                 <input type="text"
-                                       class="w-10 h-8 text-center text-sm font-bold rounded bg-amber-50 border border-amber-300 text-amber-700"
+                                       class="w-10 h-8 text-center text-sm font-semibold rounded bg-slate-100 border border-slate-200 text-slate-700"
                                        id="${playerId}_total_a${session}"
                                        readonly>
                             </td>
                             <td class="px-1 py-2 text-center">
                                 <input type="text"
-                                       class="w-10 h-8 text-center text-sm font-bold rounded bg-archery-50 border border-archery-300 text-archery-700"
+                                       class="w-10 h-8 text-center text-sm font-semibold rounded bg-slate-100 border border-slate-200 text-slate-900"
                                        id="${playerId}_end_a${session}"
                                        readonly>
                             </td>
@@ -1902,7 +2085,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                 const grandTotalElement = document.getElementById(`${playerId}_grand_total`);
                 if (grandTotalElement) {
-                    grandTotalElement.innerText = runningTotal + " poin";
+                    grandTotalElement.innerText = runningTotal;
                 }
 
                 if (el != null) {
@@ -2415,67 +2598,82 @@ foreach ($pesertaList as $peserta) {
 
 <body class="min-h-screen bg-slate-50">
     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <!-- Header Card -->
-        <div class="bg-gradient-to-br from-archery-600 to-archery-800 rounded-t-2xl px-6 py-8 text-white">
-            <h1 class="text-2xl sm:text-3xl font-bold mb-2">Daftar Peserta Terdaftar</h1>
-            <p class="text-white/80 mb-4">Kelola dan pantau peserta yang telah mendaftar</p>
-            <div class="bg-white/20 rounded-lg px-4 py-3 inline-block">
-                <h3 class="font-semibold"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></h3>
-                <p class="text-sm text-white/70">Total Peserta Terdaftar: <?= $totalPeserta ?> orang</p>
+        <!-- Compact Header -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
+            <div class="px-6 py-4 border-b border-slate-100">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <a href="kegiatan.view.php" class="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                            <i class="fas fa-arrow-left"></i>
+                        </a>
+                        <div>
+                            <h1 class="text-lg font-semibold text-slate-900"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></h1>
+                            <p class="text-sm text-slate-500">Daftar Peserta Terdaftar</p>
+                        </div>
+                    </div>
+                    <?php if ($totalPeserta > 0): ?>
+                    <a href="?export=excel&kegiatan_id=<?= $kegiatan_id ?>&search=<?= urlencode($search) ?>&filter_kategori=<?= $filter_kategori ?>&filter_gender=<?= urlencode($filter_gender) ?>"
+                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors" target="_blank">
+                        <i class="fas fa-file-excel text-emerald-600"></i> Export Excel
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Metrics Bar -->
+            <div class="px-6 py-3 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl font-bold text-slate-900"><?= $statistik['total'] ?></span>
+                    <span class="text-slate-500">Total</span>
+                </div>
+                <span class="text-slate-300 hidden sm:inline">|</span>
+                <div class="flex items-center gap-1.5">
+                    <i class="fas fa-mars text-blue-500 text-xs"></i>
+                    <span class="font-medium text-slate-700"><?= $statistik['laki_laki'] ?></span>
+                    <span class="text-slate-400">Putra</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <i class="fas fa-venus text-pink-500 text-xs"></i>
+                    <span class="font-medium text-slate-700"><?= $statistik['perempuan'] ?></span>
+                    <span class="text-slate-400">Putri</span>
+                </div>
+                <span class="text-slate-300 hidden sm:inline">|</span>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-emerald-600">✓</span>
+                    <span class="font-medium text-slate-700"><?= $statistik['sudah_bayar'] ?></span>
+                    <span class="text-slate-400">Paid</span>
+                </div>
+                <?php if ($statistik['belum_bayar'] > 0): ?>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-red-500">✗</span>
+                    <span class="font-medium text-red-600"><?= $statistik['belum_bayar'] ?></span>
+                    <span class="text-slate-400">Unpaid</span>
+                </div>
+                <?php endif; ?>
+                <span class="text-slate-300 hidden sm:inline">|</span>
+                <div class="flex items-center gap-1.5">
+                    <span class="font-medium text-slate-700"><?= count($statistik['kategori']) ?></span>
+                    <span class="text-slate-400">Kategori</span>
+                </div>
             </div>
         </div>
 
         <!-- Main Content -->
-        <div class="bg-white rounded-b-2xl shadow-xl p-6 sm:p-8">
-            <a href="kegiatan.view.php" class="inline-flex items-center gap-2 text-archery-600 hover:text-archery-700 font-medium text-sm mb-6">
-                <i class="fas fa-arrow-left"></i> Kembali Ke Kegiatan
-            </a>
-
-            <!-- Statistics Cards -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-                <div class="bg-white rounded-xl border-l-4 border-archery-500 p-4 shadow-sm">
-                    <p class="text-2xl font-bold text-archery-600"><?= $statistik['total'] ?></p>
-                    <p class="text-xs text-slate-500 mt-1">Total Peserta</p>
-                </div>
-                <div class="bg-white rounded-xl border-l-4 border-blue-500 p-4 shadow-sm">
-                    <p class="text-2xl font-bold text-blue-600"><?= $statistik['laki_laki'] ?></p>
-                    <p class="text-xs text-slate-500 mt-1">Laki-laki</p>
-                </div>
-                <div class="bg-white rounded-xl border-l-4 border-pink-500 p-4 shadow-sm">
-                    <p class="text-2xl font-bold text-pink-600"><?= $statistik['perempuan'] ?></p>
-                    <p class="text-xs text-slate-500 mt-1">Perempuan</p>
-                </div>
-                <div class="bg-white rounded-xl border-l-4 border-emerald-500 p-4 shadow-sm">
-                    <p class="text-2xl font-bold text-emerald-600"><?= $statistik['sudah_bayar'] ?></p>
-                    <p class="text-xs text-slate-500 mt-1">Sudah Bayar</p>
-                </div>
-                <div class="bg-white rounded-xl border-l-4 border-red-500 p-4 shadow-sm">
-                    <p class="text-2xl font-bold text-red-600"><?= $statistik['belum_bayar'] ?></p>
-                    <p class="text-xs text-slate-500 mt-1">Belum Bayar</p>
-                </div>
-                <div class="bg-white rounded-xl border-l-4 border-slate-400 p-4 shadow-sm">
-                    <p class="text-2xl font-bold text-slate-600"><?= count($statistik['kategori']) ?></p>
-                    <p class="text-xs text-slate-500 mt-1">Kategori</p>
-                </div>
-            </div>
-
-            <!-- Filter Form - PRESERVED: form method, names, values -->
-            <div class="bg-slate-50 rounded-xl border border-slate-200 p-5 mb-6">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm">
+            <!-- Filter Bar - Compact -->
+            <div class="px-6 py-4 border-b border-slate-100">
                 <form method="GET" action="">
                     <input type="hidden" name="kegiatan_id" value="<?= $kegiatan_id ?>">
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                            <label for="search" class="block text-sm font-medium text-slate-700 mb-1">Cari Peserta</label>
-                            <input type="text" id="search" name="search"
-                                class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
-                                placeholder="Nama, kota, club, atau sekolah..."
-                                value="<?= htmlspecialchars($search) ?>">
-                        </div>
-
-                        <div>
-                            <label for="filter_kategori" class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
-                            <select id="filter_kategori" name="filter_kategori" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500">
+                    <div class="flex flex-col lg:flex-row gap-3">
+                        <div class="flex-1 flex flex-col sm:flex-row gap-3">
+                            <div class="flex-1 min-w-0">
+                                <input type="text" id="search" name="search"
+                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50"
+                                    placeholder="Cari nama, kota, club, sekolah..."
+                                    value="<?= htmlspecialchars($search) ?>">
+                            </div>
+                            <select id="filter_kategori" name="filter_kategori" class="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-archery-500 bg-slate-50 min-w-[160px]">
                                 <option value="">Semua Kategori</option>
                                 <?php foreach ($kategoriesList as $kategori): ?>
                                 <option value="<?= $kategori['id'] ?>" <?= $filter_kategori == $kategori['id'] ? 'selected' : '' ?>>
@@ -2483,107 +2681,75 @@ foreach ($pesertaList as $peserta) {
                                 </option>
                                 <?php endforeach; ?>
                             </select>
-                        </div>
-
-                        <div>
-                            <label for="filter_gender" class="block text-sm font-medium text-slate-700 mb-1">Jenis Kelamin</label>
-                            <select id="filter_gender" name="filter_gender" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500">
-                                <option value="">Semua</option>
+                            <select id="filter_gender" name="filter_gender" class="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-archery-500 bg-slate-50 min-w-[120px]">
+                                <option value="">Semua Gender</option>
                                 <option value="Laki-laki" <?= $filter_gender == 'Laki-laki' ? 'selected' : '' ?>>Laki-laki</option>
                                 <option value="Perempuan" <?= $filter_gender == 'Perempuan' ? 'selected' : '' ?>>Perempuan</option>
                             </select>
                         </div>
-
-                        <div class="flex items-end gap-2">
-                            <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
-                                <i class="fas fa-search mr-1"></i> Filter
+                        <div class="flex gap-2">
+                            <button type="submit" class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                <i class="fas fa-search mr-1.5"></i> Filter
                             </button>
-                            <a href="#" id="inputBtn" class="btn-input <?= $filter_kategori > 0 ? 'show' : '' ?> px-3 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition-colors"
+                            <a href="#" id="inputBtn" class="btn-input <?= $filter_kategori > 0 ? 'show' : '' ?> px-3 py-2 rounded-lg border border-amber-400 text-amber-600 text-sm font-medium hover:bg-amber-50 transition-colors"
                                 onclick="goToInput(event)">
-                                📝 Input
+                                <i class="fas fa-edit mr-1"></i> Input
                             </a>
                         </div>
                     </div>
                 </form>
             </div>
 
-            <!-- Action Bar - PRESERVED: export link format -->
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div>
-                    <?php if ($totalPeserta > 0): ?>
-                    <a href="?export=excel&kegiatan_id=<?= $kegiatan_id ?>&search=<?= urlencode($search) ?>&filter_kategori=<?= $filter_kategori ?>&filter_gender=<?= urlencode($filter_gender) ?>"
-                        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors" target="_blank">
-                        <i class="fas fa-file-excel"></i> Export ke Excel
-                    </a>
-                    <?php endif; ?>
-                </div>
-                <div>
-                    <?php if ($totalPeserta > 0): ?>
-                    <span class="text-sm text-slate-500">
-                        Menampilkan <?= $totalPeserta ?> peserta
-                        <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
-                        dengan filter
-                        <?php endif; ?>
-                    </span>
-                    <?php endif; ?>
-                </div>
-            </div>
-
             <!-- Desktop Table View -->
-            <div class="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div class="hidden md:block">
                 <?php if ($totalPeserta > 0): ?>
                 <div class="overflow-x-auto custom-scrollbar" style="max-height: 65vh;">
                     <table class="w-full">
-                        <thead class="bg-zinc-800 text-white sticky top-0 z-10">
+                        <thead class="bg-slate-100 sticky top-0 z-10">
                             <tr>
-                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider w-12">#</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider w-20">Umur</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider w-24">Gender</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kategori</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kota</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Club</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Sekolah</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16">Kelas</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">No. HP</th>
-                                <th class="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider w-20">Bayar</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">#</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-16">Umur</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-16">L/P</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kategori</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kota</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Club</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Sekolah</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-14">Kelas</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">No. HP</th>
+                                <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-14">Bayar</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody class="divide-y divide-slate-100 bg-white">
                             <?php foreach ($pesertaList as $index => $peserta): ?>
                             <tr class="hover:bg-slate-50 transition-colors">
-                                <td class="px-3 py-3 text-sm text-slate-500"><?= $index + 1 ?></td>
-                                <td class="px-3 py-3">
-                                    <p class="font-medium text-slate-900"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
-                                    <p class="text-xs text-slate-400">Lahir: <?= date('d/m/Y', strtotime($peserta['tanggal_lahir'])) ?></p>
+                                <td class="px-3 py-2.5 text-sm text-slate-400"><?= $index + 1 ?></td>
+                                <td class="px-3 py-2.5">
+                                    <p class="font-semibold text-slate-900"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
                                 </td>
-                                <td class="px-3 py-3">
-                                    <span class="font-semibold text-slate-700"><?= $peserta['umur'] ?> th</span>
-                                </td>
-                                <td class="px-3 py-3">
-                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700' ?>">
-                                        <i class="fas <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?>"></i>
+                                <td class="px-3 py-2.5 text-sm text-slate-600"><?= $peserta['umur'] ?></td>
+                                <td class="px-3 py-2.5">
+                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600' ?>">
                                         <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'L' : 'P' ?>
                                     </span>
                                 </td>
-                                <td class="px-3 py-3">
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-archery-100 text-archery-700"><?= htmlspecialchars($peserta['category_name']) ?></span>
-                                    <p class="text-xs text-slate-400 mt-0.5"><?= $peserta['min_age'] ?>-<?= $peserta['max_age'] ?> thn (<?= $peserta['category_gender'] == 'Campuran' ? 'All' : $peserta['category_gender'] ?>)</p>
+                                <td class="px-3 py-2.5">
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700"><?= htmlspecialchars($peserta['category_name']) ?></span>
                                 </td>
-                                <td class="px-3 py-3 text-sm text-slate-600"><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></td>
-                                <td class="px-3 py-3 text-sm text-slate-600 max-w-32 truncate"><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></td>
-                                <td class="px-3 py-3 text-sm text-slate-600 max-w-32 truncate"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></td>
-                                <td class="px-3 py-3 text-sm text-slate-600"><?= htmlspecialchars($peserta['kelas'] ?: '-') ?></td>
-                                <td class="px-3 py-3">
-                                    <a href="tel:<?= htmlspecialchars($peserta['nomor_hp']) ?>" class="text-sm text-archery-600 hover:text-archery-700"><?= htmlspecialchars($peserta['nomor_hp']) ?></a>
+                                <td class="px-3 py-2.5 text-sm text-slate-600"><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></td>
+                                <td class="px-3 py-2.5 text-sm text-slate-600 max-w-28 truncate"><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></td>
+                                <td class="px-3 py-2.5 text-sm text-slate-600 max-w-28 truncate"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></td>
+                                <td class="px-3 py-2.5 text-sm text-slate-600"><?= htmlspecialchars($peserta['kelas'] ?: '-') ?></td>
+                                <td class="px-3 py-2.5">
+                                    <a href="tel:<?= htmlspecialchars($peserta['nomor_hp']) ?>" class="text-sm text-slate-600 hover:text-archery-600"><?= htmlspecialchars($peserta['nomor_hp']) ?></a>
                                 </td>
-                                <td class="px-3 py-3 text-center">
+                                <td class="px-3 py-2.5 text-center">
                                     <?php if (!empty($peserta['bukti_pembayaran'])): ?>
-                                    <button class="payment-icon text-lg" onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')" title="Lihat bukti">
-                                        ✅
+                                    <button class="payment-icon text-emerald-600 hover:text-emerald-700" onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')" title="Lihat bukti">
+                                        <i class="fas fa-check-circle"></i>
                                     </button>
                                     <?php else: ?>
-                                    <span class="text-lg" title="Belum bayar">❌</span>
+                                    <span class="text-red-400" title="Belum bayar"><i class="fas fa-times-circle"></i></span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -2591,8 +2757,11 @@ foreach ($pesertaList as $peserta) {
                         </tbody>
                     </table>
                 </div>
-                <div class="px-4 py-3 bg-slate-50 border-t border-slate-200">
-                    <p class="text-sm text-slate-500">Menampilkan <?= count($pesertaList) ?> peserta</p>
+                <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 text-sm text-slate-500">
+                    Menampilkan <?= count($pesertaList) ?> peserta
+                    <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
+                    <span class="text-slate-400">• filtered</span>
+                    <?php endif; ?>
                 </div>
                 <?php else: ?>
                 <div class="py-12 text-center">
@@ -2615,58 +2784,61 @@ foreach ($pesertaList as $peserta) {
             </div>
 
             <!-- Mobile Card View -->
-            <div class="md:hidden space-y-4">
+            <div class="md:hidden space-y-3 p-4">
                 <?php if ($totalPeserta > 0): ?>
                 <?php foreach ($pesertaList as $index => $peserta): ?>
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 border-l-4 border-l-archery-500">
-                    <div class="flex items-start gap-3 mb-3 pb-3 border-b border-slate-100">
-                        <div class="w-8 h-8 rounded-full bg-archery-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-                            <?= $index + 1 ?>
-                        </div>
+                <div class="bg-white rounded-lg border border-slate-200 p-4">
+                    <div class="flex items-start gap-3 mb-3">
+                        <span class="text-sm text-slate-400 font-medium w-6"><?= $index + 1 ?></span>
                         <div class="flex-1 min-w-0">
-                            <p class="font-semibold text-slate-900 truncate"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700' ?>">
-                                <i class="fas <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?>"></i>
-                                <?= $peserta['jenis_kelamin'] ?>, <?= $peserta['umur'] ?> th
-                            </span>
+                            <p class="font-semibold text-slate-900"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600' ?>">
+                                    <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'L' : 'P' ?>
+                                </span>
+                                <span class="text-sm text-slate-500"><?= $peserta['umur'] ?> th</span>
+                                <span class="text-slate-300">•</span>
+                                <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600"><?= htmlspecialchars($peserta['category_name']) ?></span>
+                            </div>
                         </div>
                         <div class="flex-shrink-0">
                             <?php if (!empty($peserta['bukti_pembayaran'])): ?>
-                            <button class="text-xl" onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')">✅</button>
+                            <button class="text-emerald-600" onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')">
+                                <i class="fas fa-check-circle"></i>
+                            </button>
                             <?php else: ?>
-                            <span class="text-xl">❌</span>
+                            <span class="text-red-400"><i class="fas fa-times-circle"></i></span>
                             <?php endif; ?>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3 text-sm mb-3">
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm border-t border-slate-100 pt-3">
                         <div>
-                            <p class="text-xs text-slate-400 uppercase tracking-wide">Kategori</p>
-                            <p class="font-medium text-slate-700"><?= htmlspecialchars($peserta['category_name']) ?></p>
-                            <p class="text-xs text-slate-400"><?= $peserta['min_age'] ?>-<?= $peserta['max_age'] ?> thn</p>
+                            <span class="text-slate-400">Kota:</span>
+                            <span class="text-slate-700 ml-1"><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></span>
                         </div>
                         <div>
-                            <p class="text-xs text-slate-400 uppercase tracking-wide">Kota</p>
-                            <p class="font-medium text-slate-700"><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></p>
+                            <span class="text-slate-400">Kelas:</span>
+                            <span class="text-slate-700 ml-1"><?= htmlspecialchars($peserta['kelas'] ?: '-') ?></span>
                         </div>
-                        <div>
-                            <p class="text-xs text-slate-400 uppercase tracking-wide">Club</p>
-                            <p class="font-medium text-slate-700 truncate"><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></p>
+                        <div class="truncate">
+                            <span class="text-slate-400">Club:</span>
+                            <span class="text-slate-700 ml-1"><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></span>
                         </div>
-                        <div>
-                            <p class="text-xs text-slate-400 uppercase tracking-wide">Sekolah</p>
-                            <p class="font-medium text-slate-700 truncate"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></p>
+                        <div class="truncate">
+                            <span class="text-slate-400">Sekolah:</span>
+                            <span class="text-slate-700 ml-1"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></span>
                         </div>
                     </div>
-                    <div class="flex items-center justify-between pt-3 border-t border-slate-100">
-                        <a href="tel:<?= htmlspecialchars($peserta['nomor_hp']) ?>" class="inline-flex items-center gap-1 text-archery-600 text-sm font-medium">
-                            <i class="fas fa-phone"></i> <?= htmlspecialchars($peserta['nomor_hp']) ?>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                        <a href="tel:<?= htmlspecialchars($peserta['nomor_hp']) ?>" class="inline-flex items-center gap-1.5 text-slate-600 text-sm hover:text-archery-600">
+                            <i class="fas fa-phone text-xs"></i> <?= htmlspecialchars($peserta['nomor_hp']) ?>
                         </a>
-                        <span class="text-xs text-slate-400">Lahir: <?= date('d/m/Y', strtotime($peserta['tanggal_lahir'])) ?></span>
+                        <span class="text-xs text-slate-400"><?= date('d/m/Y', strtotime($peserta['tanggal_lahir'])) ?></span>
                     </div>
                 </div>
                 <?php endforeach; ?>
                 <?php else: ?>
-                <div class="bg-white rounded-xl border border-slate-200 p-8 text-center">
+                <div class="bg-white rounded-lg border border-slate-200 p-8 text-center">
                     <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
                         <i class="fas fa-inbox text-slate-400 text-2xl"></i>
                     </div>

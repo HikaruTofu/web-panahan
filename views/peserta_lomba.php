@@ -139,6 +139,21 @@ if ($search) {
 }
 $participants_result = $conn->query($participants_sql);
 
+// Calculate statistics for metrics bar
+$stats_sql = "SELECT
+    COUNT(*) as total,
+    SUM(CASE WHEN p.gender = 'Laki-laki' THEN 1 ELSE 0 END) as putra,
+    SUM(CASE WHEN p.gender = 'Perempuan' THEN 1 ELSE 0 END) as putri,
+    SUM(CASE WHEN tp.payment_status = 'paid' THEN 1 ELSE 0 END) as paid,
+    SUM(CASE WHEN tp.payment_status = 'pending' THEN 1 ELSE 0 END) as pending,
+    SUM(CASE WHEN tp.status = 'confirmed' THEN 1 ELSE 0 END) as confirmed,
+    COUNT(DISTINCT tp.category_id) as kategori_count
+    FROM tournament_participants tp
+    LEFT JOIN participants p ON tp.participant_id = p.id
+    WHERE tp.tournament_id = $tournament_id";
+$stats_result = $conn->query($stats_sql);
+$stats = $stats_result->fetch_assoc();
+
 $username = $_SESSION['username'] ?? 'User';
 $name = $_SESSION['name'] ?? $username;
 $role = $_SESSION['role'] ?? 'user';
@@ -249,110 +264,158 @@ $role = $_SESSION['role'] ?? 'user';
 
         <!-- Main Content -->
         <main class="flex-1 overflow-auto">
-            <!-- Header -->
-            <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200">
-                <div class="px-6 lg:px-8 py-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-archery-100 flex items-center justify-center">
-                                <i class="fas fa-users text-archery-600"></i>
-                            </div>
-                            <div>
-                                <h1 class="text-xl font-bold text-slate-900">Peserta Lomba</h1>
-                                <p class="text-sm text-slate-500">Kelola peserta tournament</p>
-                            </div>
-                        </div>
-                        <button onclick="openModal('addModal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
-                            <i class="fas fa-plus"></i>
-                            <span class="hidden sm:inline">Tambah Peserta</span>
-                        </button>
-                    </div>
-                </div>
-            </header>
-
             <div class="px-6 lg:px-8 py-6">
-                <!-- Tournament Info Card -->
-                <div class="bg-white rounded-xl border border-slate-200 p-5 mb-6">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-trophy text-amber-600 text-xl"></i>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="font-semibold text-lg text-slate-900"><?= htmlspecialchars($tournament['name']); ?></h3>
-                            <div class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                                <div class="flex items-center gap-2 text-slate-600">
-                                    <i class="fas fa-calendar-alt text-slate-400"></i>
-                                    <span><?= date('d/m/Y', strtotime($tournament['start_date'])); ?> - <?= date('d/m/Y', strtotime($tournament['end_date'])); ?></span>
-                                </div>
-                                <div class="flex items-center gap-2 text-slate-600">
-                                    <i class="fas fa-map-marker-alt text-slate-400"></i>
-                                    <span><?= htmlspecialchars($tournament['location'] ?? '-'); ?></span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <?php
-                                    $statusColors = [
-                                        'draft' => 'bg-slate-100 text-slate-700',
-                                        'registration' => 'bg-cyan-100 text-cyan-700',
-                                        'ongoing' => 'bg-amber-100 text-amber-700',
-                                        'completed' => 'bg-emerald-100 text-emerald-700',
-                                        'cancelled' => 'bg-red-100 text-red-700'
-                                    ];
-                                    $statusColor = $statusColors[$tournament['status']] ?? 'bg-slate-100 text-slate-700';
-                                    ?>
-                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium <?= $statusColor ?>"><?= ucfirst($tournament['status']); ?></span>
+                <!-- Compact Header with Metrics -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <a href="kegiatan.view.php" class="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                                    <i class="fas fa-arrow-left"></i>
+                                </a>
+                                <div>
+                                    <h1 class="text-lg font-semibold text-slate-900"><?= htmlspecialchars($tournament['name']); ?></h1>
+                                    <p class="text-sm text-slate-500">Peserta Tournament</p>
                                 </div>
                             </div>
+                            <button onclick="openModal('addModal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                <i class="fas fa-plus"></i>
+                                <span class="hidden sm:inline">Tambah Peserta</span>
+                            </button>
                         </div>
+                    </div>
+
+                    <!-- Metrics Bar -->
+                    <div class="px-6 py-3 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl font-bold text-slate-900"><?= $stats['total'] ?? 0 ?></span>
+                            <span class="text-slate-500">Total</span>
+                        </div>
+                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-mars text-blue-500 text-xs"></i>
+                            <span class="font-medium text-slate-700"><?= $stats['putra'] ?? 0 ?></span>
+                            <span class="text-slate-400">Putra</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-venus text-pink-500 text-xs"></i>
+                            <span class="font-medium text-slate-700"><?= $stats['putri'] ?? 0 ?></span>
+                            <span class="text-slate-400">Putri</span>
+                        </div>
+                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-check-circle text-emerald-500 text-xs"></i>
+                            <span class="font-medium text-slate-700"><?= $stats['paid'] ?? 0 ?></span>
+                            <span class="text-slate-400">Paid</span>
+                        </div>
+                        <?php if (($stats['pending'] ?? 0) > 0): ?>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-clock text-amber-500 text-xs"></i>
+                            <span class="font-medium text-amber-600"><?= $stats['pending'] ?></span>
+                            <span class="text-slate-400">Pending</span>
+                        </div>
+                        <?php endif; ?>
+                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-medium text-slate-700"><?= $stats['kategori_count'] ?? 0 ?></span>
+                            <span class="text-slate-400">Kategori</span>
+                        </div>
+                    </div>
+
+                    <!-- Tournament Info -->
+                    <div class="px-6 py-3 border-t border-slate-100 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                        <div class="flex items-center gap-2 text-slate-500">
+                            <i class="fas fa-calendar-alt text-slate-400 text-xs"></i>
+                            <span><?= date('d/m/Y', strtotime($tournament['start_date'])); ?> - <?= date('d/m/Y', strtotime($tournament['end_date'])); ?></span>
+                        </div>
+                        <div class="flex items-center gap-2 text-slate-500">
+                            <i class="fas fa-map-marker-alt text-slate-400 text-xs"></i>
+                            <span><?= htmlspecialchars($tournament['location'] ?? '-'); ?></span>
+                        </div>
+                        <?php
+                        $statusColors = [
+                            'draft' => 'bg-slate-100 text-slate-600',
+                            'registration' => 'bg-cyan-50 text-cyan-700',
+                            'ongoing' => 'bg-amber-50 text-amber-700',
+                            'completed' => 'bg-emerald-50 text-emerald-700',
+                            'cancelled' => 'bg-red-50 text-red-700'
+                        ];
+                        $statusColor = $statusColors[$tournament['status']] ?? 'bg-slate-100 text-slate-600';
+                        ?>
+                        <span class="px-2 py-0.5 rounded text-xs font-medium <?= $statusColor ?>"><?= ucfirst($tournament['status']); ?></span>
                     </div>
                 </div>
 
-                <!-- Search & Actions Bar -->
-                <div class="flex flex-col sm:flex-row gap-4 mb-6">
-                    <form method="get" class="flex-1 flex gap-2">
-                        <input type="hidden" name="tournament_id" value="<?= $tournament_id; ?>">
-                        <div class="relative flex-1">
-                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                            <input type="search" name="q" value="<?= htmlspecialchars($search); ?>"
-                                   class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
-                                   placeholder="Cari peserta...">
+                <!-- Search & Bulk Actions Bar -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
+                    <div class="px-4 py-3 flex flex-col sm:flex-row gap-3">
+                        <form method="get" class="flex-1 flex gap-2">
+                            <input type="hidden" name="tournament_id" value="<?= $tournament_id; ?>">
+                            <div class="relative flex-1">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input type="search" name="q" value="<?= htmlspecialchars($search); ?>"
+                                       class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50"
+                                       placeholder="Cari peserta atau kategori...">
+                            </div>
+                            <button type="submit" class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                <i class="fas fa-search sm:hidden"></i>
+                                <span class="hidden sm:inline">Cari</span>
+                            </button>
+                            <?php if (!empty($search)): ?>
+                            <a href="?tournament_id=<?= $tournament_id ?>" class="px-3 py-2 rounded-lg border border-slate-200 text-slate-500 text-sm hover:bg-slate-50 transition-colors">
+                                <i class="fas fa-times"></i>
+                            </a>
+                            <?php endif; ?>
+                        </form>
+                    </div>
+
+                    <!-- Bulk Action Bar (hidden by default) -->
+                    <div id="bulkActionBar" class="hidden px-4 py-3 bg-amber-50 border-t border-amber-100 flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="font-medium text-amber-700"><span id="selectedCount">0</span> dipilih</span>
                         </div>
-                        <button type="submit" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">
-                            Cari
-                        </button>
-                        <?php if (!empty($search)): ?>
-                        <a href="?tournament_id=<?= $tournament_id ?>" class="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50 transition-colors">
-                            <i class="fas fa-times"></i>
-                        </a>
-                        <?php endif; ?>
-                    </form>
-                    <a href="kegiatan.view.php" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
-                        <i class="fas fa-arrow-left"></i>
-                        <span>Kegiatan</span>
-                    </a>
+                        <div class="flex items-center gap-2">
+                            <button onclick="bulkUpdateStatus('confirmed')" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition-colors">
+                                <i class="fas fa-check mr-1"></i> Confirm
+                            </button>
+                            <button onclick="bulkUpdatePayment('paid')" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-dollar-sign mr-1"></i> Mark Paid
+                            </button>
+                            <button onclick="bulkDelete()" class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition-colors">
+                                <i class="fas fa-trash mr-1"></i> Hapus
+                            </button>
+                            <button onclick="clearSelection()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 text-xs font-medium hover:bg-white transition-colors">
+                                Batal
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Desktop Table -->
                 <div class="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar">
                         <table class="w-full">
-                            <thead class="bg-zinc-800 text-white sticky top-0 z-10">
+                            <thead class="bg-slate-100 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama Peserta</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-20">Umur</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24">Gender</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-28">Pembayaran</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-28">Status</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-20">Seed</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-36">Tgl Daftar</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24">Aksi</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">
+                                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded border-slate-300 text-archery-600 focus:ring-archery-500">
+                                    </th>
+                                    <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">#</th>
+                                    <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-16">Umur</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">L/P</th>
+                                    <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-20">Bayar</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">Status</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-14">Seed</th>
+                                    <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">Tgl Daftar</th>
+                                    <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-20">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 <?php if ($participants_result->num_rows == 0): ?>
                                     <tr>
-                                        <td colspan="10" class="px-4 py-12">
+                                        <td colspan="11" class="px-4 py-12">
                                             <div class="flex flex-col items-center text-center">
                                                 <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
                                                     <i class="fas fa-users text-slate-400 text-2xl"></i>
@@ -371,68 +434,56 @@ $role = $_SESSION['role'] ?? 'user';
                                     while ($row = $participants_result->fetch_assoc()):
                                     ?>
                                     <tr class="hover:bg-slate-50 transition-colors">
-                                        <td class="px-4 py-3">
-                                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-archery-100 text-archery-700 text-sm font-semibold">
-                                                <?= $no++; ?>
-                                            </span>
+                                        <td class="px-3 py-2.5 text-center">
+                                            <input type="checkbox" name="selected[]" value="<?= $row['id']; ?>" onchange="updateSelection()" class="row-checkbox rounded border-slate-300 text-archery-600 focus:ring-archery-500">
                                         </td>
-                                        <td class="px-4 py-3">
-                                            <p class="font-medium text-slate-900"><?= htmlspecialchars($row['participant_name']); ?></p>
+                                        <td class="px-3 py-2.5 text-sm text-slate-400"><?= $no++; ?></td>
+                                        <td class="px-3 py-2.5">
+                                            <p class="font-semibold text-slate-900"><?= htmlspecialchars($row['participant_name']); ?></p>
                                         </td>
-                                        <td class="px-4 py-3 text-center">
-                                            <span class="text-sm text-slate-600"><?= $row['age']; ?> th</span>
-                                        </td>
-                                        <td class="px-4 py-3 text-center">
-                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $row['gender'] == 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700' ?>">
-                                                <i class="fas <?= $row['gender'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?> text-xs"></i>
+                                        <td class="px-3 py-2.5 text-center text-sm text-slate-600"><?= $row['age']; ?></td>
+                                        <td class="px-3 py-2.5 text-center">
+                                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium <?= $row['gender'] == 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600' ?>">
                                                 <?= $row['gender'] == 'Laki-laki' ? 'L' : 'P' ?>
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3">
-                                            <span class="px-2 py-1 rounded-full text-xs font-medium bg-archery-100 text-archery-700">
+                                        <td class="px-3 py-2.5">
+                                            <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
                                                 <?= htmlspecialchars($row['category_name']); ?>
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3 text-center">
-                                            <?php
-                                            $paymentColors = [
-                                                'pending' => 'bg-amber-100 text-amber-700',
-                                                'paid' => 'bg-emerald-100 text-emerald-700',
-                                                'refunded' => 'bg-slate-100 text-slate-700'
-                                            ];
-                                            $paymentColor = $paymentColors[$row['payment_status']] ?? 'bg-slate-100 text-slate-700';
-                                            ?>
-                                            <span class="px-2 py-1 rounded-full text-xs font-medium <?= $paymentColor ?>">
-                                                <?= ucfirst($row['payment_status']); ?>
-                                            </span>
+                                        <td class="px-3 py-2.5 text-center">
+                                            <?php if ($row['payment_status'] == 'paid'): ?>
+                                            <span class="text-emerald-600"><i class="fas fa-check-circle"></i></span>
+                                            <?php elseif ($row['payment_status'] == 'pending'): ?>
+                                            <span class="text-amber-500"><i class="fas fa-clock"></i></span>
+                                            <?php else: ?>
+                                            <span class="text-slate-400"><i class="fas fa-minus-circle"></i></span>
+                                            <?php endif; ?>
                                         </td>
-                                        <td class="px-4 py-3 text-center">
+                                        <td class="px-3 py-2.5 text-center">
                                             <?php
                                             $statusColors = [
-                                                'registered' => 'bg-cyan-100 text-cyan-700',
-                                                'confirmed' => 'bg-emerald-100 text-emerald-700',
-                                                'withdrew' => 'bg-amber-100 text-amber-700',
-                                                'disqualified' => 'bg-red-100 text-red-700'
+                                                'registered' => 'bg-slate-100 text-slate-600',
+                                                'confirmed' => 'bg-emerald-50 text-emerald-700',
+                                                'withdrew' => 'bg-amber-50 text-amber-700',
+                                                'disqualified' => 'bg-red-50 text-red-700'
                                             ];
-                                            $statusColor = $statusColors[$row['status']] ?? 'bg-slate-100 text-slate-700';
+                                            $statusColor = $statusColors[$row['status']] ?? 'bg-slate-100 text-slate-600';
                                             ?>
-                                            <span class="px-2 py-1 rounded-full text-xs font-medium <?= $statusColor ?>">
+                                            <span class="px-2 py-0.5 rounded text-xs font-medium <?= $statusColor ?>">
                                                 <?= ucfirst($row['status']); ?>
                                             </span>
                                         </td>
-                                        <td class="px-4 py-3 text-center">
-                                            <span class="text-sm text-slate-600"><?= $row['seed_number'] ?? '-'; ?></span>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <span class="text-sm text-slate-500"><?= date('d/m/Y H:i', strtotime($row['registration_date'])); ?></span>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center justify-center gap-2">
-                                                <button onclick="editParticipant(<?= $row['id']; ?>)" class="p-2 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors" title="Edit">
-                                                    <i class="fas fa-edit"></i>
+                                        <td class="px-3 py-2.5 text-center text-sm text-slate-600"><?= $row['seed_number'] ?? '-'; ?></td>
+                                        <td class="px-3 py-2.5 text-sm text-slate-500"><?= date('d/m/Y', strtotime($row['registration_date'])); ?></td>
+                                        <td class="px-3 py-2.5">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <button onclick="editParticipant(<?= $row['id']; ?>)" class="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Edit">
+                                                    <i class="fas fa-edit text-xs"></i>
                                                 </button>
-                                                <button onclick="removeParticipant(<?= $row['id']; ?>)" class="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
-                                                    <i class="fas fa-trash"></i>
+                                                <button onclick="removeParticipant(<?= $row['id']; ?>)" class="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
+                                                    <i class="fas fa-trash text-xs"></i>
                                                 </button>
                                             </div>
                                         </td>
@@ -448,20 +499,20 @@ $role = $_SESSION['role'] ?? 'user';
                     $count = $participants_result->num_rows;
                     if ($count > 0):
                     ?>
-                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-200">
-                        <p class="text-sm text-slate-500">Menampilkan <?= $count ?> peserta</p>
+                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 text-sm text-slate-500">
+                        Menampilkan <?= $count ?> peserta<?php if (!empty($search)): ?> <span class="text-slate-400">• filtered</span><?php endif; ?>
                     </div>
                     <?php endif; ?>
                 </div>
 
                 <!-- Mobile Cards -->
-                <div id="mobileCards" class="md:hidden space-y-4">
+                <div id="mobileCards" class="md:hidden space-y-3 p-4">
                     <?php
                     // Reset result pointer for mobile view
                     $participants_result->data_seek(0);
                     if ($participants_result->num_rows == 0):
                     ?>
-                        <div class="bg-white rounded-xl border border-slate-200 p-8 text-center">
+                        <div class="bg-white rounded-lg border border-slate-200 p-8 text-center">
                             <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
                                 <i class="fas fa-users text-slate-400 text-2xl"></i>
                             </div>
@@ -475,61 +526,60 @@ $role = $_SESSION['role'] ?? 'user';
                         $no = 1;
                         while ($row = $participants_result->fetch_assoc()):
                         ?>
-                            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 border-l-4 border-l-archery-500">
-                                <div class="flex items-start gap-3 mb-3 pb-3 border-b border-slate-100">
-                                    <div class="w-8 h-8 rounded-full bg-archery-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-                                        <?= $no++; ?>
-                                    </div>
+                            <div class="bg-white rounded-lg border border-slate-200 p-4">
+                                <div class="flex items-start gap-3 mb-3">
+                                    <span class="text-sm text-slate-400 font-medium w-6"><?= $no++; ?></span>
                                     <div class="flex-1 min-w-0">
                                         <p class="font-semibold text-slate-900"><?= htmlspecialchars($row['participant_name']); ?></p>
-                                        <p class="text-sm text-slate-500"><?= $row['age']; ?> tahun - <?= $row['gender']; ?></p>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs <?= $row['gender'] == 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600' ?>">
+                                                <?= $row['gender'] == 'Laki-laki' ? 'L' : 'P' ?>
+                                            </span>
+                                            <span class="text-sm text-slate-500"><?= $row['age']; ?> th</span>
+                                            <span class="text-slate-300">•</span>
+                                            <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600"><?= htmlspecialchars($row['category_name']); ?></span>
+                                        </div>
                                     </div>
-                                    <?php
-                                    $statusColors = [
-                                        'registered' => 'bg-cyan-100 text-cyan-700',
-                                        'confirmed' => 'bg-emerald-100 text-emerald-700',
-                                        'withdrew' => 'bg-amber-100 text-amber-700',
-                                        'disqualified' => 'bg-red-100 text-red-700'
-                                    ];
-                                    $statusColor = $statusColors[$row['status']] ?? 'bg-slate-100 text-slate-700';
-                                    ?>
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= $statusColor ?>">
-                                        <?= ucfirst($row['status']); ?>
-                                    </span>
+                                    <div class="flex-shrink-0 flex items-center gap-2">
+                                        <?php if ($row['payment_status'] == 'paid'): ?>
+                                        <span class="text-emerald-600"><i class="fas fa-check-circle"></i></span>
+                                        <?php elseif ($row['payment_status'] == 'pending'): ?>
+                                        <span class="text-amber-500"><i class="fas fa-clock"></i></span>
+                                        <?php else: ?>
+                                        <span class="text-slate-400"><i class="fas fa-minus-circle"></i></span>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-2 mb-3 text-sm">
+                                <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm border-t border-slate-100 pt-3">
                                     <div>
-                                        <p class="text-xs text-slate-400 uppercase tracking-wide">Kategori</p>
-                                        <p class="text-slate-700"><?= htmlspecialchars($row['category_name']); ?></p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs text-slate-400 uppercase tracking-wide">Pembayaran</p>
+                                        <span class="text-slate-400">Status:</span>
                                         <?php
-                                        $paymentColors = [
-                                            'pending' => 'bg-amber-100 text-amber-700',
-                                            'paid' => 'bg-emerald-100 text-emerald-700',
-                                            'refunded' => 'bg-slate-100 text-slate-700'
+                                        $statusColors = [
+                                            'registered' => 'bg-slate-100 text-slate-600',
+                                            'confirmed' => 'bg-emerald-50 text-emerald-700',
+                                            'withdrew' => 'bg-amber-50 text-amber-700',
+                                            'disqualified' => 'bg-red-50 text-red-700'
                                         ];
-                                        $paymentColor = $paymentColors[$row['payment_status']] ?? 'bg-slate-100 text-slate-700';
+                                        $statusColor = $statusColors[$row['status']] ?? 'bg-slate-100 text-slate-600';
                                         ?>
-                                        <span class="px-2 py-1 rounded-full text-xs font-medium <?= $paymentColor ?>">
-                                            <?= ucfirst($row['payment_status']); ?>
+                                        <span class="ml-1 px-2 py-0.5 rounded text-xs font-medium <?= $statusColor ?>">
+                                            <?= ucfirst($row['status']); ?>
                                         </span>
                                     </div>
                                     <div>
-                                        <p class="text-xs text-slate-400 uppercase tracking-wide">Seed</p>
-                                        <p class="text-slate-700"><?= $row['seed_number'] ?? '-'; ?></p>
+                                        <span class="text-slate-400">Seed:</span>
+                                        <span class="text-slate-700 ml-1"><?= $row['seed_number'] ?? '-'; ?></span>
                                     </div>
-                                    <div>
-                                        <p class="text-xs text-slate-400 uppercase tracking-wide">Tgl Daftar</p>
-                                        <p class="text-slate-700"><?= date('d/m/Y', strtotime($row['registration_date'])); ?></p>
+                                    <div class="col-span-2">
+                                        <span class="text-slate-400">Tgl Daftar:</span>
+                                        <span class="text-slate-700 ml-1"><?= date('d/m/Y H:i', strtotime($row['registration_date'])); ?></span>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <button onclick="editParticipant(<?= $row['id']; ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium">
+                                <div class="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-slate-100">
+                                    <button onclick="editParticipant(<?= $row['id']; ?>)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 text-xs font-medium transition-colors">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <button onclick="removeParticipant(<?= $row['id']; ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-100 text-red-700 text-xs font-medium">
+                                    <button onclick="removeParticipant(<?= $row['id']; ?>)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-red-600 hover:bg-red-50 text-xs font-medium transition-colors">
                                         <i class="fas fa-trash"></i> Hapus
                                     </button>
                                 </div>
@@ -721,7 +771,7 @@ $role = $_SESSION['role'] ?? 'user';
 
     <!-- Mobile Sidebar -->
     <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
-    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden">
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden flex flex-col">
         <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
             <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
                 <i class="fas fa-bullseye text-white"></i>
@@ -886,6 +936,81 @@ function toggleMobileMenu() {
 mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
 mobileOverlay?.addEventListener('click', toggleMobileMenu);
 closeMobileMenu?.addEventListener('click', toggleMobileMenu);
+
+// Bulk selection functions
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateSelection();
+}
+
+function updateSelection() {
+    const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+    const count = checkboxes.length;
+    const bulkBar = document.getElementById('bulkActionBar');
+    const countEl = document.getElementById('selectedCount');
+
+    if (count > 0) {
+        bulkBar.classList.remove('hidden');
+        countEl.textContent = count;
+    } else {
+        bulkBar.classList.add('hidden');
+    }
+
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.row-checkbox');
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+        selectAll.checked = count > 0 && count === allCheckboxes.length;
+        selectAll.indeterminate = count > 0 && count < allCheckboxes.length;
+    }
+}
+
+function clearSelection() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    document.getElementById('selectAll').checked = false;
+    updateSelection();
+}
+
+function getSelectedIds() {
+    const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function bulkUpdateStatus(status) {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+
+    if (!confirm(`Ubah status ${ids.length} peserta menjadi "${status}"?`)) return;
+
+    // For now, show message - actual implementation would need backend support
+    alert(`Bulk update status to "${status}" for ${ids.length} participants - requires backend implementation`);
+    clearSelection();
+}
+
+function bulkUpdatePayment(status) {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+
+    if (!confirm(`Tandai ${ids.length} peserta sebagai "${status}"?`)) return;
+
+    // For now, show message - actual implementation would need backend support
+    alert(`Bulk update payment to "${status}" for ${ids.length} participants - requires backend implementation`);
+    clearSelection();
+}
+
+function bulkDelete() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+
+    if (!confirm(`Hapus ${ids.length} peserta dari tournament? Aksi ini tidak dapat dibatalkan!`)) return;
+
+    // For now, show message - actual implementation would need backend support
+    alert(`Bulk delete ${ids.length} participants - requires backend implementation`);
+    clearSelection();
+}
 </script>
 </body>
 </html>

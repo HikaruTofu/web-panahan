@@ -412,42 +412,12 @@ $role = $_SESSION['role'] ?? 'user';
         </aside>
 
         <!-- Mobile Menu Button -->
-        <button id="mobile-menu-btn" class="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-900 text-white shadow-lg">
+        <button id="mobile-menu-btn" onclick="toggleMobileMenu()" class="lg:hidden fixed top-4 left-4 z-[100] p-2 rounded-lg bg-zinc-900 text-white shadow-lg">
             <i class="fas fa-bars"></i>
         </button>
 
         <!-- Main Content -->
         <main class="flex-1 overflow-auto">
-            <!-- Header -->
-            <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200">
-                <div class="px-6 lg:px-8 py-4">
-                    <div class="flex items-center justify-between">
-                        <div class="pl-12 lg:pl-0">
-                            <h1 class="text-xl font-semibold text-slate-900">Data Peserta</h1>
-                            <p class="text-sm text-slate-500">Kelola data peserta turnamen panahan</p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <?php
-                            $exportParams = [];
-                            if (!empty($category_id)) $exportParams['category_id'] = $category_id;
-                            if (!empty($kegiatan_id)) $exportParams['kegiatan_id'] = $kegiatan_id;
-                            if (!empty($gender)) $exportParams['gender'] = $gender;
-                            if (!empty($nama)) $exportParams['nama'] = $nama;
-                            if (!empty($club)) $exportParams['club'] = $club;
-                            $exportParams['export'] = 'excel';
-                            $exportUrl = '?' . http_build_query($exportParams);
-                            ?>
-                            <a href="<?= $exportUrl ?>"
-                               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
-                               onclick="return confirm('Export data peserta ke Excel?')">
-                                <i class="fas fa-file-excel"></i>
-                                <span class="hidden sm:inline">Export Excel</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
             <div class="px-6 lg:px-8 py-6">
                 <!-- Toast Messages -->
                 <?php if (isset($success_message)): ?>
@@ -470,24 +440,73 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
                 <?php endif; ?>
 
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-white rounded-xl border-l-4 border-archery-500 p-4 shadow-sm">
-                        <p class="text-2xl font-bold text-archery-600"><?= $uniqueCount ?></p>
-                        <p class="text-xs text-slate-500 mt-1">Peserta Unik</p>
-                        <p class="text-xs text-slate-400">Total Entri: <?= $totalPeserta ?></p>
+                <!-- Compact Header with Metrics -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                                    <i class="fas fa-arrow-left"></i>
+                                </a>
+                                <div>
+                                    <h1 class="text-lg font-semibold text-slate-900">Data Peserta</h1>
+                                    <p class="text-sm text-slate-500">Kelola data peserta turnamen panahan</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="pendaftaran.php"
+                                   class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                    <i class="fas fa-user-plus"></i>
+                                    <span class="hidden sm:inline">Tambah Peserta</span>
+                                </a>
+                                <?php
+                                $exportParams = [];
+                                if (!empty($category_id)) $exportParams['category_id'] = $category_id;
+                                if (!empty($kegiatan_id)) $exportParams['kegiatan_id'] = $kegiatan_id;
+                                if (!empty($gender)) $exportParams['gender'] = $gender;
+                                if (!empty($nama)) $exportParams['nama'] = $nama;
+                                if (!empty($club)) $exportParams['club'] = $club;
+                                $exportParams['export'] = 'excel';
+                                $exportUrl = '?' . http_build_query($exportParams);
+                                ?>
+                                <a href="<?= $exportUrl ?>"
+                                   class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
+                                   onclick="return confirm('Export data peserta ke Excel?')">
+                                    <i class="fas fa-file-excel text-emerald-600"></i>
+                                    <span class="hidden sm:inline">Export</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
-                    <div class="bg-white rounded-xl border-l-4 border-blue-500 p-4 shadow-sm">
-                        <p class="text-2xl font-bold text-blue-600"><?= $totalLaki ?></p>
-                        <p class="text-xs text-slate-500 mt-1">Laki-laki</p>
-                    </div>
-                    <div class="bg-white rounded-xl border-l-4 border-pink-500 p-4 shadow-sm">
-                        <p class="text-2xl font-bold text-pink-600"><?= $totalPerempuan ?></p>
-                        <p class="text-xs text-slate-500 mt-1">Perempuan</p>
-                    </div>
-                    <div class="bg-white rounded-xl border-l-4 border-emerald-500 p-4 shadow-sm">
-                        <p class="text-2xl font-bold text-emerald-600"><?= $totalBayar ?></p>
-                        <p class="text-xs text-slate-500 mt-1">Sudah Bayar</p>
+
+                    <!-- Metrics Bar -->
+                    <div class="px-6 py-3 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl font-bold text-slate-900"><?= $uniqueCount ?></span>
+                            <span class="text-slate-500">Peserta Unik</span>
+                        </div>
+                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-slate-400 text-xs">Total Entri:</span>
+                            <span class="font-medium text-slate-700"><?= $totalPeserta ?></span>
+                        </div>
+                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-mars text-blue-500 text-xs"></i>
+                            <span class="font-medium text-slate-700"><?= $totalLaki ?></span>
+                            <span class="text-slate-400">Laki-laki</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-venus text-pink-500 text-xs"></i>
+                            <span class="font-medium text-slate-700"><?= $totalPerempuan ?></span>
+                            <span class="text-slate-400">Perempuan</span>
+                        </div>
+                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-check-circle text-emerald-500 text-xs"></i>
+                            <span class="font-medium text-slate-700"><?= $totalBayar ?></span>
+                            <span class="text-slate-400">Sudah Bayar</span>
+                        </div>
                     </div>
                 </div>
 
@@ -498,7 +517,7 @@ $role = $_SESSION['role'] ?? 'user';
                         Filter Pencarian
                     </h3>
                     <!-- FORM: method=get, no action (UNCHANGED) -->
-                    <form method="get">
+                    <form method="get" id="filterForm">
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
@@ -567,18 +586,18 @@ $role = $_SESSION['role'] ?? 'user';
                 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar" style="max-height: 65vh;">
                         <table class="w-full">
-                            <thead class="bg-zinc-800 text-white sticky top-0 z-10">
+                            <thead class="bg-slate-100 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kegiatan</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Umur</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Gender</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Club</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Sekolah</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Status</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Aksi</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kegiatan</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Umur</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Gender</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Club</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Sekolah</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
@@ -905,8 +924,8 @@ $role = $_SESSION['role'] ?? 'user';
     </div>
 
     <!-- Mobile Sidebar -->
-    <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
-    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden">
+    <div id="mobile-overlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden flex flex-col">
         <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
             <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
                 <i class="fas fa-bullseye text-white"></i>
@@ -914,7 +933,7 @@ $role = $_SESSION['role'] ?? 'user';
             <div class="flex-1">
                 <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
             </div>
-            <button id="close-mobile-menu" class="p-2 rounded-lg hover:bg-zinc-800">
+            <button id="close-mobile-menu" onclick="toggleMobileMenu()" class="p-2 rounded-lg hover:bg-zinc-800">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -922,33 +941,50 @@ $role = $_SESSION['role'] ?? 'user';
             <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                 <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
             </a>
+            <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
+            </a>
+            <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
+            </a>
+            <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-calendar w-5"></i><span class="text-sm">Kegiatan</span>
+            </a>
             <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
                 <i class="fas fa-user-friends w-5"></i><span class="text-sm font-medium">Peserta</span>
             </a>
             <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                 <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
             </a>
-            <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-calendar w-5"></i><span class="text-sm">Kegiatan</span>
-            </a>
         </nav>
+        <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
+            <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+               class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                <i class="fas fa-sign-out-alt w-5"></i>
+                <span>Logout</span>
+            </a>
+        </div>
     </div>
 
     <script>
-        // Mobile menu toggle
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const mobileOverlay = document.getElementById('mobile-overlay');
-        const mobileSidebar = document.getElementById('mobile-sidebar');
-        const closeMobileMenu = document.getElementById('close-mobile-menu');
-
+        // Mobile menu toggle logic (Global scope)
         function toggleMobileMenu() {
-            mobileSidebar.classList.toggle('-translate-x-full');
-            mobileOverlay.classList.toggle('hidden');
+            const mobileSidebar = document.getElementById('mobile-sidebar');
+            const mobileOverlay = document.getElementById('mobile-overlay');
+            console.log('Toggle called', { sidebar: !!mobileSidebar, overlay: !!mobileOverlay });
+            
+            if (mobileSidebar && mobileOverlay) {
+                mobileSidebar.classList.toggle('-translate-x-full');
+                mobileOverlay.classList.toggle('hidden');
+                console.log('Classes toggled');
+            } else {
+                console.error('Mobile menu elements not found');
+            }
         }
 
-        mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
-        mobileOverlay?.addEventListener('click', toggleMobileMenu);
-        closeMobileMenu?.addEventListener('click', toggleMobileMenu);
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded - Mobile Menu check');
+        });
 
         // Detail Modal
         function showDetails(records) {
@@ -1049,7 +1085,7 @@ $role = $_SESSION['role'] ?? 'user';
             const imagePath = '../assets/uploads/' + filename;
 
             if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(fileExtension)) {
-                modalBody.innerHTML = '<img src="' + imagePath + '" alt="Bukti Pembayaran" class="max-w-full max-h-96 mx-auto rounded-lg" onerror="this.onerror=null;this.parentElement.innerHTML=\'<div class=\\'p-8 text-center\\'><i class=\\'fas fa-image text-slate-400 text-4xl mb-3\\'></i><p class=\\'text-slate-500\\'>Gambar tidak dapat dimuat</p></div>\'">';
+                modalBody.innerHTML = '<img src="' + imagePath + '" alt="Bukti Pembayaran" class="max-w-full max-h-96 mx-auto rounded-lg" onerror="this.onerror=null;this.parentElement.innerHTML=\'<div class=&quot;p-8 text-center&quot;><i class=&quot;fas fa-image text-slate-400 text-4xl mb-3&quot;></i><p class=&quot;text-slate-500&quot;>Gambar tidak dapat dimuat</p></div>\'">';
                 downloadLink.href = imagePath;
                 downloadLink.download = 'bukti_' + pesertaName.replace(/[^a-zA-Z0-9]/g, '_') + '.' + fileExtension;
             } else if (fileExtension === 'pdf') {
@@ -1077,11 +1113,16 @@ $role = $_SESSION['role'] ?? 'user';
             }
         });
 
-        // Auto-submit on select change (UNCHANGED behavior)
-        document.querySelectorAll('select[name="category_id"], select[name="kegiatan_id"], select[name="gender"]').forEach(function(select) {
-            select.addEventListener('change', function() {
-                this.form.submit();
-            });
+        // Auto-submit on select change (Scoped to filter form only)
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterForm = document.getElementById('filterForm');
+            if (filterForm) {
+                filterForm.querySelectorAll('select').forEach(function(select) {
+                    select.addEventListener('change', function() {
+                        filterForm.submit();
+                    });
+                });
+            }
         });
 
         // Auto dismiss toasts after 5 seconds

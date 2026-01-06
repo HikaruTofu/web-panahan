@@ -630,35 +630,77 @@ $role = $_SESSION['role'] ?? 'user';
 
         <!-- Main Content -->
         <main class="flex-1 overflow-auto">
-            <!-- Header -->
-            <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200">
-                <div class="px-6 lg:px-8 py-4">
-                        <div class="flex items-center gap-3">
-                            <!-- Kegiatan Filter -->
-                            <form method="GET" class="flex items-center gap-2">
-                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Kegiatan:</label>
-                                <select name="kegiatan_id" onchange="this.form.submit()" class="bg-slate-100 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-archery-500">
-                                    <option value="all" <?= $kegiatan_id === 'all' ? 'selected' : '' ?>>Semua Kegiatan</option>
-                                    <?php foreach ($kegiatanList as $keg): ?>
-                                        <option value="<?= $keg['id'] ?>" <?= $kegiatan_id == $keg['id'] ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($keg['nama_kegiatan']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </form>
+            <div class="px-6 lg:px-8 py-6">
+                <!-- Compact Header with Metrics -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                                    <i class="fas fa-arrow-left"></i>
+                                </a>
+                                <div>
+                                    <h1 class="text-lg font-semibold text-slate-900">Statistik & Penilaian</h1>
+                                    <p class="text-sm text-slate-500">Analisis performa peserta turnamen</p>
+                                </div>
+                            </div>
                             <div class="flex items-center gap-2">
-                            <a href="?export=excel<?= !empty($gender) ? '&gender=' . $gender : '' ?><?= !empty($nama) ? '&nama=' . $nama : '' ?><?= !empty($club) ? '&club=' . $club : '' ?><?= !empty($kategori_filter) ? '&kategori=' . $kategori_filter : '' ?>"
-                               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
-                               onclick="return confirm('Export data statistik ke Excel?')">
-                                <i class="fas fa-file-excel"></i>
-                                <span class="hidden sm:inline">Export Excel</span>
-                            </a>
+                                <!-- Kegiatan Filter -->
+                                <form method="GET" class="flex items-center gap-2">
+                                    <select name="kegiatan_id" onchange="this.form.submit()" class="bg-slate-100 border-none rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-archery-500">
+                                        <option value="all" <?= $kegiatan_id === 'all' ? 'selected' : '' ?>>Semua Kegiatan</option>
+                                        <?php foreach ($kegiatanList as $keg): ?>
+                                            <option value="<?= $keg['id'] ?>" <?= $kegiatan_id == $keg['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($keg['nama_kegiatan']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </form>
+                                <a href="?export=excel<?= !empty($gender) ? '&gender=' . $gender : '' ?><?= !empty($nama) ? '&nama=' . $nama : '' ?><?= !empty($club) ? '&club=' . $club : '' ?><?= !empty($kategori_filter) ? '&kategori=' . $kategori_filter : '' ?>"
+                                   class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
+                                   onclick="return confirm('Export data statistik ke Excel?')">
+                                    <i class="fas fa-file-excel"></i>
+                                    <span class="hidden sm:inline">Export</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Bar -->
+                    <div class="px-6 py-3 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl font-bold text-slate-900"><?= count($pesertaData) ?></span>
+                            <span class="text-slate-500">Total Peserta</span>
+                        </div>
+                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span class="font-medium text-slate-700"><?= $totalKategoriA ?></span>
+                            <span class="text-slate-400">Kat. A</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                            <span class="font-medium text-slate-700"><?= $totalKategoriB ?></span>
+                            <span class="text-slate-400">Kat. B</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
+                            <span class="font-medium text-slate-700"><?= $totalKategoriC ?></span>
+                            <span class="text-slate-400">Kat. C</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span class="font-medium text-slate-700"><?= $totalKategoriD ?></span>
+                            <span class="text-slate-400">Kat. D</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                            <span class="font-medium text-slate-700"><?= $totalKategoriE ?></span>
+                            <span class="text-slate-400">Kat. E</span>
                         </div>
                     </div>
                 </div>
-            </header>
 
-            <div class="px-6 lg:px-8 py-6">
                 <!-- Category Legend -->
                 <div class="bg-white rounded-xl border border-slate-200 p-5 mb-6">
                     <h3 class="font-semibold text-slate-900 mb-3 flex items-center gap-2">
@@ -666,49 +708,21 @@ $role = $_SESSION['role'] ?? 'user';
                         Sistem Kategorisasi
                     </h3>
                     <div class="flex flex-wrap gap-2">
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium">
                             <i class="fas fa-trophy"></i> A: Top 30% & Rank 1-3
                         </span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-medium">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
                             <i class="fas fa-medal"></i> B: Top 40% & Rank 4-10
                         </span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-100 text-cyan-700 text-sm font-medium">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-50 text-cyan-700 text-sm font-medium">
                             <i class="fas fa-award"></i> C: Top 41-60%
                         </span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-medium">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-sm font-medium">
                             <i class="fas fa-chart-line"></i> D: Top 61-80%
                         </span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-200 text-slate-700 text-sm font-medium">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm font-medium">
                             <i class="fas fa-user"></i> E: Bottom 20%
                         </span>
-                    </div>
-                </div>
-
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-                    <div class="bg-white rounded-xl border-l-4 border-emerald-500 p-4 shadow-sm">
-                        <p class="text-2xl font-bold text-emerald-600"><?= $totalKategoriA ?></p>
-                        <p class="text-xs text-slate-500 mt-1">Kategori A</p>
-                    </div>
-                    <div class="bg-white rounded-xl border-l-4 border-blue-500 p-4 shadow-sm">
-                        <p class="text-2xl font-bold text-blue-600"><?= $totalKategoriB ?></p>
-                        <p class="text-xs text-slate-500 mt-1">Kategori B</p>
-                    </div>
-                    <div class="bg-white rounded-xl border-l-4 border-cyan-500 p-4 shadow-sm">
-                        <p class="text-2xl font-bold text-cyan-600"><?= $totalKategoriC ?></p>
-                        <p class="text-xs text-slate-500 mt-1">Kategori C</p>
-                    </div>
-                    <div class="bg-white rounded-xl border-l-4 border-amber-500 p-4 shadow-sm">
-                        <p class="text-2xl font-bold text-amber-600"><?= $totalKategoriD ?></p>
-                        <p class="text-xs text-slate-500 mt-1">Kategori D</p>
-                    </div>
-                    <div class="bg-white rounded-xl border-l-4 border-slate-400 p-4 shadow-sm">
-                        <p class="text-2xl font-bold text-slate-600"><?= $totalKategoriE ?></p>
-                        <p class="text-xs text-slate-500 mt-1">Kategori E</p>
-                    </div>
-                    <div class="bg-white rounded-xl border-l-4 border-archery-500 p-4 shadow-sm">
-                        <p class="text-2xl font-bold text-archery-600"><?= count($pesertaData) ?></p>
-                        <p class="text-xs text-slate-500 mt-1">Total Peserta</p>
                     </div>
                 </div>
 
@@ -791,22 +805,22 @@ $role = $_SESSION['role'] ?? 'user';
                 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar" style="max-height: 65vh;">
                         <table class="w-full">
-                            <thead class="bg-zinc-800 text-white sticky top-0 z-10">
+                            <thead class="bg-slate-100 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Gender</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Umur</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Club</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Turnamen</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Avg Rank</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">J1</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">J2</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">J3</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Top10</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Bracket</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Aksi</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Gender</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Umur</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Club</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Turnamen</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Avg Rank</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">J1</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">J2</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">J3</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Top10</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Bracket</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
@@ -943,7 +957,7 @@ $role = $_SESSION['role'] ?? 'user';
 
     <!-- Mobile Sidebar -->
     <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
-    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden">
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden flex flex-col">
         <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
             <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
                 <i class="fas fa-bullseye text-white"></i>
@@ -959,16 +973,29 @@ $role = $_SESSION['role'] ?? 'user';
             <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                 <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
             </a>
-            <a href="statistik.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
-                <i class="fas fa-chart-bar w-5"></i><span class="text-sm font-medium">Statistik</span>
+            <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
             </a>
-            <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+            <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
             </a>
             <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                 <i class="fas fa-calendar w-5"></i><span class="text-sm">Kegiatan</span>
             </a>
+            <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+            </a>
+            <a href="statistik.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
+                <i class="fas fa-chart-bar w-5"></i><span class="text-sm font-medium">Statistik</span>
+            </a>
         </nav>
+        <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
+            <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+               class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                <i class="fas fa-sign-out-alt w-5"></i>
+                <span>Logout</span>
+            </a>
+        </div>
     </div>
 
     <script>

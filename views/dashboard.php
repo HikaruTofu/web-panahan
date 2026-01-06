@@ -409,121 +409,162 @@ try {
 
         <!-- Main Content -->
         <main class="flex-1 overflow-auto">
-            <!-- Header -->
-            <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200">
-                <div class="px-6 lg:px-8 py-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h1 class="text-xl font-semibold text-slate-900">Dashboard</h1>
-                            <p class="text-sm text-slate-500">Ringkasan performa atlet dan statistik turnamen</p>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <!-- Kegiatan Filter -->
-                            <form method="GET" class="flex items-center gap-2">
-                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Kegiatan:</label>
-                                <select name="kegiatan_id" onchange="this.form.submit()" class="bg-slate-100 border-none rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-archery-500">
-                                    <option value="all" <?= $kegiatan_id === 'all' ? 'selected' : '' ?>>Semua Kegiatan</option>
-                                    <?php foreach ($kegiatanList as $keg): ?>
-                                        <option value="<?= $keg['id'] ?>" <?= $kegiatan_id == $keg['id'] ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($keg['nama_kegiatan']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </form>
-                            <span class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-archery-50 text-archery-700 text-sm font-medium">
-                                <span class="w-2 h-2 rounded-full bg-archery-500 animate-pulse"></span>
-                                Live Data
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Dashboard Content -->
             <div class="px-6 lg:px-8 py-6">
-                <!-- Welcome Banner -->
-                <div class="mb-8 p-6 rounded-2xl bg-gradient-to-br from-archery-600 to-archery-800 text-white">
-                    <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center">
-                            <i class="fas fa-bullseye text-2xl"></i>
+                <!-- Compact Header with Metrics -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <h1 class="text-lg font-semibold text-slate-900">Dashboard</h1>
+                                <p class="text-sm text-slate-500">Ringkasan performa atlet dan statistik turnamen</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <!-- Kegiatan Filter -->
+                                <form method="GET" class="flex items-center gap-2">
+                                    <select name="kegiatan_id" onchange="this.form.submit()" class="bg-slate-100 border-none rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-archery-500">
+                                        <option value="all" <?= $kegiatan_id === 'all' ? 'selected' : '' ?>>Semua Kegiatan</option>
+                                        <?php foreach ($kegiatanList as $keg): ?>
+                                            <option value="<?= $keg['id'] ?>" <?= $kegiatan_id == $keg['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($keg['nama_kegiatan']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </form>
+                                <span class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-archery-50 text-archery-700 text-sm font-medium">
+                                    <span class="w-2 h-2 rounded-full bg-archery-500 animate-pulse"></span>
+                                    Live
+                                </span>
+                            </div>
                         </div>
-                        <div>
-                            <h2 class="text-xl font-semibold">Selamat Datang, <?= htmlspecialchars($name) ?>!</h2>
-                            <p class="text-archery-100 text-sm mt-1">Dashboard Turnamen Panahan - Data diperbarui secara dinamis</p>
+                    </div>
+
+                    <!-- KPI Bar: 4 Core Metrics -->
+                    <div class="px-6 py-4 grid grid-cols-2 lg:grid-cols-4 gap-6">
+                        <!-- Total Atlet -->
+                        <div class="flex items-start gap-4">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-3xl font-bold text-slate-900"><?= $totalAtlet ?></p>
+                                <p class="text-sm font-medium text-slate-500 mt-0.5">Total Atlet</p>
+                                <p class="text-xs text-slate-400 mt-1">Terdaftar dalam sistem</p>
+                            </div>
+                        </div>
+
+                        <!-- Total Club -->
+                        <div class="flex items-start gap-4">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-3xl font-bold text-slate-900"><?= $totalClub ?></p>
+                                <p class="text-sm font-medium text-slate-500 mt-0.5">Total Club</p>
+                                <p class="text-xs text-slate-400 mt-1">Club aktif</p>
+                            </div>
+                        </div>
+
+                        <!-- Atlet Berprestasi (A & B) -->
+                        <div class="flex items-start gap-4">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-3xl font-bold text-emerald-600"><?= count($atletBerprestasi) ?></p>
+                                <p class="text-sm font-medium text-slate-500 mt-0.5">Atlet Berprestasi</p>
+                                <p class="text-xs text-emerald-600 mt-1">Kategori A & B</p>
+                            </div>
+                        </div>
+
+                        <!-- Perlu Peningkatan (D & E) -->
+                        <div class="flex items-start gap-4">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-3xl font-bold text-amber-600"><?= count($atletKurangPrestasi) ?></p>
+                                <p class="text-sm font-medium text-slate-500 mt-0.5">Perlu Peningkatan</p>
+                                <p class="text-xs text-amber-600 mt-1">Kategori D & E</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Stats Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-                    <!-- Total Athletes Card -->
-                    <div class="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow" data-card="athletes">
-                        <div class="flex items-start justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-slate-500">Total Atlet</p>
-                                <p class="text-3xl font-bold text-slate-900 mt-1"><?= $totalAtlet ?></p>
+                <!-- Top 3 Hero Cards (Podium) -->
+                <?php
+                // Get top 3 athletes for podium display
+                $top3 = array_slice($atletBerprestasi, 0, 3);
+                $hasTop3 = count($top3) >= 3;
+                ?>
+                <?php if ($hasTop3): ?>
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Top 3 Atlet Berprestasi</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- 2nd Place (Silver) -->
+                        <div class="bg-white rounded-xl border border-slate-200 p-5 relative overflow-hidden order-2 md:order-1">
+                            <div class="absolute top-0 right-0 w-16 h-16 bg-slate-100 rounded-bl-full flex items-end justify-start pb-2 pl-2">
+                                <span class="text-xl">🥈</span>
                             </div>
-                            <div class="w-11 h-11 rounded-lg bg-blue-50 flex items-center justify-center">
-                                <i class="fas fa-users text-blue-600"></i>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center text-white font-bold text-lg">
+                                    <?= strtoupper(substr($top3[1]['nama'], 0, 1)) ?>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-semibold text-slate-900 truncate"><?= htmlspecialchars($top3[1]['nama']) ?></p>
+                                    <p class="text-xs text-slate-500 truncate"><?= htmlspecialchars($top3[1]['club'] ?: 'No Club') ?></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 text-sm">
+                                <?php if ($top3[1]['juara1'] > 0): ?>
+                                    <span class="flex items-center gap-1 text-yellow-600"><i class="fas fa-trophy text-xs"></i> <?= $top3[1]['juara1'] ?></span>
+                                <?php endif; ?>
+                                <?php if ($top3[1]['juara2'] > 0): ?>
+                                    <span class="flex items-center gap-1 text-slate-500"><i class="fas fa-medal text-xs"></i> <?= $top3[1]['juara2'] ?></span>
+                                <?php endif; ?>
+                                <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">Kat. <?= $top3[1]['kategori'] ?></span>
                             </div>
                         </div>
-                        <div class="mt-3 flex items-center gap-1 text-xs text-slate-500">
-                            <i class="fas fa-database"></i>
-                            <span>Terdaftar dalam sistem</span>
-                        </div>
-                    </div>
 
-                    <!-- Total Clubs Card -->
-                    <div class="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow" data-card="clubs">
-                        <div class="flex items-start justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-slate-500">Total Club</p>
-                                <p class="text-3xl font-bold text-slate-900 mt-1"><?= $totalClub ?></p>
+                        <!-- 1st Place (Gold) - Featured -->
+                        <div class="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl border-2 border-yellow-200 p-5 relative overflow-hidden order-1 md:order-2 ring-2 ring-yellow-100">
+                            <div class="absolute top-0 right-0 w-20 h-20 bg-yellow-100 rounded-bl-full flex items-end justify-start pb-3 pl-3">
+                                <span class="text-2xl">🥇</span>
                             </div>
-                            <div class="w-11 h-11 rounded-lg bg-emerald-50 flex items-center justify-center">
-                                <i class="fas fa-building text-emerald-600"></i>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                                    <?= strtoupper(substr($top3[0]['nama'], 0, 1)) ?>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-bold text-slate-900 truncate text-lg"><?= htmlspecialchars($top3[0]['nama']) ?></p>
+                                    <p class="text-sm text-slate-600 truncate"><?= htmlspecialchars($top3[0]['club'] ?: 'No Club') ?></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 text-sm">
+                                <?php if ($top3[0]['juara1'] > 0): ?>
+                                    <span class="flex items-center gap-1 text-yellow-700 font-semibold"><i class="fas fa-trophy"></i> <?= $top3[0]['juara1'] ?> Emas</span>
+                                <?php endif; ?>
+                                <?php if ($top3[0]['juara2'] > 0): ?>
+                                    <span class="flex items-center gap-1 text-slate-600"><i class="fas fa-medal text-xs"></i> <?= $top3[0]['juara2'] ?></span>
+                                <?php endif; ?>
+                                <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-200 text-yellow-800">Kat. <?= $top3[0]['kategori'] ?></span>
                             </div>
                         </div>
-                        <div class="mt-3 flex items-center gap-1 text-xs text-slate-500">
-                            <i class="fas fa-flag"></i>
-                            <span>Club aktif</span>
-                        </div>
-                    </div>
 
-                    <!-- Prestasi Card (Category A + B) -->
-                    <div class="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow" data-card="prestasi">
-                        <div class="flex items-start justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-slate-500">Atlet Berprestasi</p>
-                                <p class="text-3xl font-bold text-archery-600 mt-1"><?= count($atletBerprestasi) ?></p>
+                        <!-- 3rd Place (Bronze) -->
+                        <div class="bg-white rounded-xl border border-slate-200 p-5 relative overflow-hidden order-3">
+                            <div class="absolute top-0 right-0 w-16 h-16 bg-amber-50 rounded-bl-full flex items-end justify-start pb-2 pl-2">
+                                <span class="text-xl">🥉</span>
                             </div>
-                            <div class="w-11 h-11 rounded-lg bg-archery-50 flex items-center justify-center">
-                                <i class="fas fa-trophy text-archery-600"></i>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold text-lg">
+                                    <?= strtoupper(substr($top3[2]['nama'], 0, 1)) ?>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-semibold text-slate-900 truncate"><?= htmlspecialchars($top3[2]['nama']) ?></p>
+                                    <p class="text-xs text-slate-500 truncate"><?= htmlspecialchars($top3[2]['club'] ?: 'No Club') ?></p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="mt-3 flex items-center gap-1 text-xs text-archery-600">
-                            <i class="fas fa-medal"></i>
-                            <span>Kategori A & B</span>
-                        </div>
-                    </div>
-
-                    <!-- Needs Improvement Card (Category D + E) -->
-                    <div class="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow" data-card="improve">
-                        <div class="flex items-start justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-slate-500">Perlu Peningkatan</p>
-                                <p class="text-3xl font-bold text-amber-600 mt-1"><?= count($atletKurangPrestasi) ?></p>
+                            <div class="flex items-center gap-4 text-sm">
+                                <?php if ($top3[2]['juara1'] > 0): ?>
+                                    <span class="flex items-center gap-1 text-yellow-600"><i class="fas fa-trophy text-xs"></i> <?= $top3[2]['juara1'] ?></span>
+                                <?php endif; ?>
+                                <?php if ($top3[2]['juara2'] > 0): ?>
+                                    <span class="flex items-center gap-1 text-slate-500"><i class="fas fa-medal text-xs"></i> <?= $top3[2]['juara2'] ?></span>
+                                <?php endif; ?>
+                                <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Kat. <?= $top3[2]['kategori'] ?></span>
                             </div>
-                            <div class="w-11 h-11 rounded-lg bg-amber-50 flex items-center justify-center">
-                                <i class="fas fa-chart-line text-amber-600"></i>
-                            </div>
-                        </div>
-                        <div class="mt-3 flex items-center gap-1 text-xs text-amber-600">
-                            <i class="fas fa-arrow-trend-up"></i>
-                            <span>Kategori D & E</span>
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <!-- Two Column Layout for Lists -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -3,6 +3,10 @@ include '../config/panggil.php';
 include '../includes/check_access.php';
 requireLogin();
 
+// Toast message handling
+$toast_message = '';
+$toast_type = '';
+
 // Ambil semua kategori
 $kategoriResult = $conn->query("SELECT id, name, min_age, max_age FROM categories ORDER BY min_age ASC");
 $kategoriList = [];
@@ -14,14 +18,21 @@ while ($row = $kategoriResult->fetch_assoc()) {
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $kegiatanId = intval($_GET['id']);
 
+    // Get name for toast
+    $nameResult = $conn->query("SELECT nama_kegiatan FROM kegiatan WHERE id = $kegiatanId");
+    $kegiatanName = $nameResult->fetch_assoc()['nama_kegiatan'] ?? 'Kegiatan';
+
     // Hapus dari kegiatan_kategori dulu (foreign key)
     $conn->query("DELETE FROM kegiatan_kategori WHERE kegiatan_id = $kegiatanId");
 
     // Kemudian hapus dari kegiatan
-    $conn->query("DELETE FROM kegiatan WHERE id = $kegiatanId");
-
-    header("Location: kegiatan.view.php");
-    exit;
+    if ($conn->query("DELETE FROM kegiatan WHERE id = $kegiatanId")) {
+        $toast_message = "Kegiatan '$kegiatanName' berhasil dihapus!";
+        $toast_type = 'success';
+    } else {
+        $toast_message = "Gagal menghapus kegiatan!";
+        $toast_type = 'error';
+    }
 }
 
 // Proses tambah/edit data
@@ -34,7 +45,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Update data existing
         $stmt = $conn->prepare("UPDATE kegiatan SET nama_kegiatan = ? WHERE id = ?");
         $stmt->bind_param("si", $nama, $editId);
-        $stmt->execute();
+        if ($stmt->execute()) {
+            $toast_message = "Kegiatan '$nama' berhasil diperbarui!";
+            $toast_type = 'success';
+        } else {
+            $toast_message = "Gagal memperbarui kegiatan!";
+            $toast_type = 'error';
+        }
         $stmt->close();
 
         // Hapus kategori lama
@@ -45,7 +62,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Insert data baru
         $stmt = $conn->prepare("INSERT INTO kegiatan (nama_kegiatan) VALUES (?)");
         $stmt->bind_param("s", $nama);
-        $stmt->execute();
+        if ($stmt->execute()) {
+            $toast_message = "Kegiatan '$nama' berhasil ditambahkan!";
+            $toast_type = 'success';
+        } else {
+            $toast_message = "Gagal menambahkan kegiatan!";
+            $toast_type = 'error';
+        }
         $kegiatanId = $stmt->insert_id;
         $stmt->close();
     }
@@ -59,19 +82,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
         }
     }
-
-    // redirect setelah simpan
-    header("Location: kegiatan.view.php");
-    exit;
 }
 
-// Ambil data kegiatan dengan kategorinya
+// Ambil data kegiatan dengan kategorinya dan statistik peserta
 $query = "
     SELECT
         k.id,
         k.nama_kegiatan AS kegiatan_nama,
         GROUP_CONCAT(kk.category_id) AS category_ids,
-        GROUP_CONCAT(c.name SEPARATOR '|') AS category_names
+        GROUP_CONCAT(c.name SEPARATOR '|') AS category_names,
+        (SELECT COUNT(*) FROM peserta p WHERE p.kegiatan_id = k.id) AS peserta_count
     FROM kegiatan k
     LEFT JOIN kegiatan_kategori kk ON k.id = kk.kegiatan_id
     LEFT JOIN categories c ON kk.category_id = c.id
@@ -89,9 +109,19 @@ while ($row = $result->fetch_assoc()) {
         'id' => $row['id'],
         'nama' => $row['kegiatan_nama'],
         'category_ids' => array_map('intval', $categoryIds),
-        'category_names' => $categoryNames
+        'category_names' => $categoryNames,
+        'peserta_count' => (int)$row['peserta_count']
     ];
 }
+
+// Calculate statistics
+$statsQuery = "SELECT
+    COUNT(*) as total_kegiatan,
+    (SELECT COUNT(*) FROM peserta) as total_peserta,
+    (SELECT COUNT(DISTINCT category_id) FROM kegiatan_kategori) as total_kategori_used
+    FROM kegiatan";
+$statsResult = $conn->query($statsQuery);
+$stats = $statsResult->fetch_assoc();
 
 $username = $_SESSION['username'] ?? 'User';
 $name = $_SESSION['name'] ?? $username;
@@ -127,6 +157,13 @@ $role = $_SESSION['role'] ?? 'user';
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; }
         .modal-backdrop.active { display: flex; align-items: center; justify-content: center; }
+        /* Toast animation */
+        .toast-enter { animation: slideIn 0.3s ease-out; }
+        .toast-exit { animation: slideOut 0.3s ease-in forwards; }
+        @keyframes slideIn { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+        /* Monospaced dates */
+        .date-mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace; }
     </style>
 </head>
 <body class="h-full bg-slate-50">
@@ -203,58 +240,88 @@ $role = $_SESSION['role'] ?? 'user';
 
         <!-- Main Content -->
         <main class="flex-1 overflow-auto">
-            <!-- Header -->
-            <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200">
-                <div class="px-6 lg:px-8 py-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-archery-100 flex items-center justify-center">
-                                <i class="fas fa-calendar text-archery-600"></i>
-                            </div>
-                            <div>
-                                <h1 class="text-xl font-bold text-slate-900">Data Kegiatan</h1>
-                                <p class="text-sm text-slate-500">Kelola turnamen dan kegiatan</p>
-                            </div>
-                        </div>
-                        <button onclick="openModal()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
-                            <i class="fas fa-plus"></i>
-                            <span class="hidden sm:inline">Tambah Kegiatan</span>
-                        </button>
-                    </div>
+            <!-- Toast Notification -->
+            <?php if (!empty($toast_message)): ?>
+            <div id="toast" class="fixed top-4 right-4 z-50 toast-enter">
+                <div class="flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg <?= $toast_type === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800' ?>">
+                    <i class="fas <?= $toast_type === 'success' ? 'fa-check-circle text-emerald-500' : 'fa-exclamation-circle text-red-500' ?>"></i>
+                    <span class="text-sm font-medium"><?= htmlspecialchars($toast_message) ?></span>
+                    <button onclick="dismissToast()" class="ml-2 <?= $toast_type === 'success' ? 'text-emerald-500 hover:text-emerald-700' : 'text-red-500 hover:text-red-700' ?>">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-            </header>
+            </div>
+            <?php endif; ?>
 
             <div class="px-6 lg:px-8 py-6">
+                <!-- Compact Header with Metrics -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
+                    <div class="px-6 py-4 border-b border-slate-100">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                                    <i class="fas fa-arrow-left"></i>
+                                </a>
+                                <div>
+                                    <h1 class="text-lg font-semibold text-slate-900">Data Kegiatan</h1>
+                                    <p class="text-sm text-slate-500">Kelola turnamen dan event panahan</p>
+                                </div>
+                            </div>
+                            <button onclick="openModal()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                <i class="fas fa-plus"></i>
+                                <span class="hidden sm:inline">Tambah Kegiatan</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Bar -->
+                    <div class="px-6 py-3 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl font-bold text-slate-900"><?= $stats['total_kegiatan'] ?? 0 ?></span>
+                            <span class="text-slate-500">Kegiatan</span>
+                        </div>
+                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-users text-archery-500 text-xs"></i>
+                            <span class="font-medium text-slate-700"><?= $stats['total_peserta'] ?? 0 ?></span>
+                            <span class="text-slate-400">Total Peserta</span>
+                        </div>
+                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-tags text-cyan-500 text-xs"></i>
+                            <span class="font-medium text-slate-700"><?= $stats['total_kategori_used'] ?? 0 ?></span>
+                            <span class="text-slate-400">Kategori Dipakai</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Search Bar -->
                 <div class="flex flex-col sm:flex-row gap-4 mb-6">
                     <div class="relative flex-1">
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                         <input type="text" id="searchInput" onkeyup="searchData()"
-                               class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
+                               class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50"
                                placeholder="Cari kegiatan...">
                     </div>
-                    <a href="dashboard.php" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
-                        <i class="fas fa-arrow-left"></i>
-                        <span>Dashboard</span>
-                    </a>
                 </div>
 
                 <!-- Desktop Table -->
                 <div class="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar">
                         <table class="w-full">
-                            <thead class="bg-zinc-800 text-white sticky top-0 z-10">
+                            <thead class="bg-slate-100 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama Kegiatan</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-64">Aksi</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama Kegiatan</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">Peserta</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-48">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBody" class="divide-y divide-slate-100">
                                 <?php if (empty($kegiatanData)): ?>
                                     <tr>
-                                        <td colspan="4" class="px-4 py-12">
+                                        <td colspan="5" class="px-4 py-12">
                                             <div class="flex flex-col items-center text-center">
                                                 <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
                                                     <i class="fas fa-calendar-times text-slate-400 text-2xl"></i>
@@ -270,11 +337,7 @@ $role = $_SESSION['role'] ?? 'user';
                                 <?php else: ?>
                                     <?php foreach ($kegiatanData as $index => $item): ?>
                                         <tr class="hover:bg-slate-50 transition-colors">
-                                            <td class="px-4 py-3">
-                                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-archery-100 text-archery-700 text-sm font-semibold">
-                                                    <?= $index + 1 ?>
-                                                </span>
-                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-500"><?= $index + 1 ?></td>
                                             <td class="px-4 py-3">
                                                 <p class="font-medium text-slate-900"><?= htmlspecialchars($item['nama']) ?></p>
                                             </td>
@@ -284,24 +347,34 @@ $role = $_SESSION['role'] ?? 'user';
                                                 <?php else: ?>
                                                     <div class="flex flex-wrap gap-1">
                                                         <?php foreach ($item['category_names'] as $categoryName): ?>
-                                                            <span class="px-2 py-1 rounded-full text-xs font-medium bg-archery-100 text-archery-700"><?= htmlspecialchars($categoryName) ?></span>
+                                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700"><?= htmlspecialchars($categoryName) ?></span>
                                                         <?php endforeach; ?>
                                                     </div>
                                                 <?php endif; ?>
                                             </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <?php if ($item['peserta_count'] > 0): ?>
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-archery-50 text-archery-700">
+                                                        <i class="fas fa-users text-xs"></i>
+                                                        <?= $item['peserta_count'] ?>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="text-slate-400 text-sm">-</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="px-4 py-3">
-                                                <div class="flex items-center justify-center gap-2">
-                                                    <a href="pendaftaran.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 text-xs font-medium hover:bg-purple-200 transition-colors">
-                                                        <i class="fas fa-user-plus"></i> Daftar
+                                                <div class="flex items-center justify-center gap-1">
+                                                    <a href="pendaftaran.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium hover:bg-purple-100 transition-colors">
+                                                        <i class="fas fa-user-plus text-xs"></i> Daftar
                                                     </a>
-                                                    <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200 transition-colors">
-                                                        <i class="fas fa-eye"></i> Detail
+                                                    <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors">
+                                                        <i class="fas fa-eye text-xs"></i> Detail
                                                     </a>
-                                                    <button onclick="editData(<?= $item['id'] ?>)" class="p-2 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors" title="Edit">
-                                                        <i class="fas fa-edit"></i>
+                                                    <button onclick="editData(<?= $item['id'] ?>)" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Edit">
+                                                        <i class="fas fa-edit text-sm"></i>
                                                     </button>
-                                                    <button onclick="deleteData(<?= $item['id'] ?>)" class="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
-                                                        <i class="fas fa-trash"></i>
+                                                    <button onclick="deleteData(<?= $item['id'] ?>)" class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
+                                                        <i class="fas fa-trash text-sm"></i>
                                                     </button>
                                                 </div>
                                             </td>
@@ -312,14 +385,14 @@ $role = $_SESSION['role'] ?? 'user';
                         </table>
                     </div>
                     <?php if (!empty($kegiatanData)): ?>
-                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-200">
-                        <p class="text-sm text-slate-500">Menampilkan <?= count($kegiatanData) ?> kegiatan</p>
+                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 text-sm text-slate-500">
+                        Menampilkan <?= count($kegiatanData) ?> kegiatan
                     </div>
                     <?php endif; ?>
                 </div>
 
                 <!-- Mobile Cards -->
-                <div id="mobileCards" class="md:hidden space-y-4">
+                <div id="mobileCards" class="md:hidden space-y-3">
                     <?php if (empty($kegiatanData)): ?>
                         <div class="bg-white rounded-xl border border-slate-200 p-8 text-center">
                             <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
@@ -332,38 +405,43 @@ $role = $_SESSION['role'] ?? 'user';
                         </div>
                     <?php else: ?>
                         <?php foreach ($kegiatanData as $index => $item): ?>
-                            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 border-l-4 border-l-archery-500" data-id="<?= $item['id'] ?>">
-                                <div class="flex items-start gap-3 mb-3 pb-3 border-b border-slate-100">
-                                    <div class="w-8 h-8 rounded-full bg-archery-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-                                        <?= $index + 1 ?>
-                                    </div>
+                            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4" data-id="<?= $item['id'] ?>">
+                                <div class="flex items-start gap-3 mb-3">
+                                    <span class="text-sm text-slate-400 font-medium w-6"><?= $index + 1 ?></span>
                                     <div class="flex-1 min-w-0">
                                         <p class="font-semibold text-slate-900"><?= htmlspecialchars($item['nama']) ?></p>
+                                        <div class="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                                            <?php if ($item['peserta_count'] > 0): ?>
+                                                <span class="inline-flex items-center gap-1">
+                                                    <i class="fas fa-users text-archery-500"></i>
+                                                    <?= $item['peserta_count'] ?> peserta
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <p class="text-xs text-slate-400 uppercase tracking-wide mb-2">Kategori</p>
                                     <?php if (empty($item['category_names'])): ?>
                                         <span class="text-slate-400 italic text-sm">Belum ada kategori</span>
                                     <?php else: ?>
                                         <div class="flex flex-wrap gap-1">
                                             <?php foreach ($item['category_names'] as $categoryName): ?>
-                                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-archery-100 text-archery-700"><?= htmlspecialchars($categoryName) ?></span>
+                                                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700"><?= htmlspecialchars($categoryName) ?></span>
                                             <?php endforeach; ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <a href="pendaftaran.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-100 text-purple-700 text-xs font-medium">
+                                <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100">
+                                    <a href="pendaftaran.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium">
                                         <i class="fas fa-user-plus"></i> Daftar
                                     </a>
-                                    <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium">
+                                    <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
                                         <i class="fas fa-eye"></i> Detail
                                     </a>
-                                    <button onclick="editData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium">
+                                    <button onclick="editData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-medium">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <button onclick="deleteData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-100 text-red-700 text-xs font-medium">
+                                    <button onclick="deleteData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 text-red-700 text-xs font-medium">
                                         <i class="fas fa-trash"></i> Hapus
                                     </button>
                                 </div>
@@ -433,7 +511,7 @@ $role = $_SESSION['role'] ?? 'user';
 
     <!-- Mobile Sidebar -->
     <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
-    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden">
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden flex flex-col">
         <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
             <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
                 <i class="fas fa-bullseye text-white"></i>
@@ -449,6 +527,9 @@ $role = $_SESSION['role'] ?? 'user';
             <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                 <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
             </a>
+            <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
+            </a>
             <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                 <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
             </a>
@@ -458,13 +539,36 @@ $role = $_SESSION['role'] ?? 'user';
             <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                 <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
             </a>
+            <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+            </a>
         </nav>
+        <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
+            <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+               class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                <i class="fas fa-sign-out-alt w-5"></i>
+                <span>Logout</span>
+            </a>
+        </div>
     </div>
 
 <script>
 // Data kegiatan dari PHP
 const kegiatanData = <?= json_encode($kegiatanData) ?>;
 const allData = [...kegiatanData];
+
+// Toast functions
+function dismissToast() {
+    const toast = document.getElementById('toast');
+    if (toast) {
+        toast.classList.remove('toast-enter');
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 300);
+    }
+}
+
+// Auto dismiss toast after 5 seconds
+setTimeout(dismissToast, 5000);
 
 function toggleCheckbox(id) {
     const checkbox = document.getElementById(id);
@@ -534,7 +638,7 @@ function displayData(data) {
     const mobileCards = document.getElementById('mobileCards');
 
     if (data.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="4" class="px-4 py-12"><div class="flex flex-col items-center text-center"><div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3"><i class="fas fa-search text-slate-400 text-2xl"></i></div><p class="text-slate-500 font-medium">Tidak ada data yang ditemukan</p></div></td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-12"><div class="flex flex-col items-center text-center"><div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3"><i class="fas fa-search text-slate-400 text-2xl"></i></div><p class="text-slate-500 font-medium">Tidak ada data yang ditemukan</p></div></td></tr>`;
         mobileCards.innerHTML = `<div class="bg-white rounded-xl border border-slate-200 p-8 text-center"><div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3"><i class="fas fa-search text-slate-400 text-2xl"></i></div><p class="text-slate-500 font-medium">Tidak ada data yang ditemukan</p></div>`;
         return;
     }
@@ -543,23 +647,28 @@ function displayData(data) {
         let categoryBadges = '';
         if (item.category_names && item.category_names.length > 0) {
             categoryBadges = item.category_names.map(name =>
-                `<span class="px-2 py-1 rounded-full text-xs font-medium bg-archery-100 text-archery-700">${name}</span>`
+                `<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700">${name}</span>`
             ).join(' ');
         } else {
             categoryBadges = '<span class="text-slate-400 italic text-sm">Belum ada kategori</span>';
         }
 
+        const pesertaBadge = item.peserta_count > 0
+            ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-archery-50 text-archery-700"><i class="fas fa-users text-xs"></i> ${item.peserta_count}</span>`
+            : '<span class="text-slate-400 text-sm">-</span>';
+
         return `
             <tr class="hover:bg-slate-50 transition-colors">
-                <td class="px-4 py-3"><span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-archery-100 text-archery-700 text-sm font-semibold">${index + 1}</span></td>
+                <td class="px-4 py-3 text-sm text-slate-500">${index + 1}</td>
                 <td class="px-4 py-3"><p class="font-medium text-slate-900">${item.nama}</p></td>
                 <td class="px-4 py-3"><div class="flex flex-wrap gap-1">${categoryBadges}</div></td>
+                <td class="px-4 py-3 text-center">${pesertaBadge}</td>
                 <td class="px-4 py-3">
-                    <div class="flex items-center justify-center gap-2">
-                        <a href="pendaftaran.php?id=${item.id}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 text-xs font-medium hover:bg-purple-200"><i class="fas fa-user-plus"></i> Daftar</a>
-                        <a href="detail.php?id=${item.id}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200"><i class="fas fa-eye"></i> Detail</a>
-                        <button onclick="editData(${item.id})" class="p-2 rounded-lg text-amber-600 hover:bg-amber-50"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteData(${item.id})" class="p-2 rounded-lg text-red-600 hover:bg-red-50"><i class="fas fa-trash"></i></button>
+                    <div class="flex items-center justify-center gap-1">
+                        <a href="pendaftaran.php?id=${item.id}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium hover:bg-purple-100"><i class="fas fa-user-plus text-xs"></i> Daftar</a>
+                        <a href="detail.php?id=${item.id}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100"><i class="fas fa-eye text-xs"></i> Detail</a>
+                        <button onclick="editData(${item.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50"><i class="fas fa-edit text-sm"></i></button>
+                        <button onclick="deleteData(${item.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"><i class="fas fa-trash text-sm"></i></button>
                     </div>
                 </td>
             </tr>
@@ -570,27 +679,35 @@ function displayData(data) {
         let categoryBadges = '';
         if (item.category_names && item.category_names.length > 0) {
             categoryBadges = item.category_names.map(name =>
-                `<span class="px-2 py-1 rounded-full text-xs font-medium bg-archery-100 text-archery-700">${name}</span>`
+                `<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700">${name}</span>`
             ).join(' ');
         } else {
             categoryBadges = '<span class="text-slate-400 italic text-sm">Belum ada kategori</span>';
         }
 
+        const pesertaInfo = item.peserta_count > 0
+            ? `<span class="inline-flex items-center gap-1"><i class="fas fa-users text-archery-500"></i> ${item.peserta_count} peserta</span>`
+            : '';
+
         return `
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 border-l-4 border-l-archery-500" data-id="${item.id}">
-                <div class="flex items-start gap-3 mb-3 pb-3 border-b border-slate-100">
-                    <div class="w-8 h-8 rounded-full bg-archery-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">${index + 1}</div>
-                    <div class="flex-1 min-w-0"><p class="font-semibold text-slate-900">${item.nama}</p></div>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4" data-id="${item.id}">
+                <div class="flex items-start gap-3 mb-3">
+                    <span class="text-sm text-slate-400 font-medium w-6">${index + 1}</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-slate-900">${item.nama}</p>
+                        <div class="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                            ${pesertaInfo}
+                        </div>
+                    </div>
                 </div>
                 <div class="mb-3">
-                    <p class="text-xs text-slate-400 uppercase tracking-wide mb-2">Kategori</p>
                     <div class="flex flex-wrap gap-1">${categoryBadges}</div>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <a href="pendaftaran.php?id=${item.id}" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-100 text-purple-700 text-xs font-medium"><i class="fas fa-user-plus"></i> Daftar</a>
-                    <a href="detail.php?id=${item.id}" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium"><i class="fas fa-eye"></i> Detail</a>
-                    <button onclick="editData(${item.id})" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium"><i class="fas fa-edit"></i> Edit</button>
-                    <button onclick="deleteData(${item.id})" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-100 text-red-700 text-xs font-medium"><i class="fas fa-trash"></i> Hapus</button>
+                <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100">
+                    <a href="pendaftaran.php?id=${item.id}" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium"><i class="fas fa-user-plus"></i> Daftar</a>
+                    <a href="detail.php?id=${item.id}" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium"><i class="fas fa-eye"></i> Detail</a>
+                    <button onclick="editData(${item.id})" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-medium"><i class="fas fa-edit"></i> Edit</button>
+                    <button onclick="deleteData(${item.id})" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 text-red-700 text-xs font-medium"><i class="fas fa-trash"></i> Hapus</button>
                 </div>
             </div>
         `;
@@ -604,6 +721,13 @@ document.getElementById('kegiatanForm').addEventListener('submit', function(e) {
         e.preventDefault();
         alert('Pilih minimal satu kategori!');
         return false;
+    }
+
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Loading...';
     }
 });
 

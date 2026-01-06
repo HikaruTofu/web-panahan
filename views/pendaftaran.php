@@ -88,7 +88,13 @@ $kegiatan_id = isset($_GET['kegiatan_id']) ? intval($_GET['kegiatan_id']) : null
 
 if (!$kegiatan_id) {
     try {
-        $queryFirstKegiatan = "SELECT id FROM kegiatan WHERE id =".$_GET['id'];
+        // Check if 'id' parameter exists
+        if (isset($_GET['id']) && !empty($_GET['id'])) {
+            $queryFirstKegiatan = "SELECT id FROM kegiatan WHERE id = " . intval($_GET['id']);
+        } else {
+            // Get the most recent active kegiatan
+            $queryFirstKegiatan = "SELECT id FROM kegiatan ORDER BY id DESC LIMIT 1";
+        }
         $resultFirstKegiatan = $conn->query($queryFirstKegiatan);
         if ($resultFirstKegiatan && $resultFirstKegiatan->num_rows > 0) {
             $firstKegiatan = $resultFirstKegiatan->fetch_assoc();
