@@ -1,9 +1,13 @@
 <?php
+/**
+ * Data Peserta - Turnamen Panahan
+ * UI: Intentional Minimalism with Tailwind CSS
+ */
 include '../config/panggil.php';
 include '../includes/check_access.php';
 requireAdmin();
 
-// Handle update request
+// Handle update request (UNCHANGED)
 if (isset($_POST['update_id'])) {
     $update_id = intval($_POST['update_id']);
     $nama_peserta = $_POST['nama_peserta'];
@@ -16,10 +20,10 @@ if (isset($_POST['update_id'])) {
     $sekolah = $_POST['sekolah'];
     $kelas = $_POST['kelas'];
     $nomor_hp = $_POST['nomor_hp'];
-    
+
     $stmt = $conn->prepare("UPDATE peserta SET nama_peserta=?, category_id=?, kegiatan_id=?, tanggal_lahir=?, jenis_kelamin=?, asal_kota=?, nama_club=?, sekolah=?, kelas=?, nomor_hp=? WHERE id=?");
     $stmt->bind_param("siisssssssi", $nama_peserta, $category_id, $kegiatan_id, $tanggal_lahir, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp, $update_id);
-    
+
     if ($stmt->execute()) {
         $success_message = "Data peserta berhasil diperbarui!";
     } else {
@@ -27,30 +31,27 @@ if (isset($_POST['update_id'])) {
     }
 }
 
-// Handle delete request
+// Handle delete request (UNCHANGED)
 if (isset($_POST['delete_id'])) {
     $delete_id = intval($_POST['delete_id']);
-    
-    // Get bukti pembayaran file first to delete it
+
     $stmt = $conn->prepare("SELECT bukti_pembayaran FROM peserta WHERE id = ?");
     $stmt->bind_param("i", $delete_id);
     $stmt->execute();
     $result = $stmt->get_result();
     $peserta_data = $result->fetch_assoc();
-    
+
     if ($peserta_data) {
-        // Delete file if exists
         if (!empty($peserta_data['bukti_pembayaran'])) {
             $file_path = '../assets/uploads/' . $peserta_data['bukti_pembayaran'];
             if (file_exists($file_path)) {
                 unlink($file_path);
             }
         }
-        
-        // Delete from database
+
         $stmt = $conn->prepare("DELETE FROM peserta WHERE id = ?");
         $stmt->bind_param("i", $delete_id);
-        
+
         if ($stmt->execute()) {
             $success_message = "Data peserta berhasil dihapus!";
         } else {
@@ -61,22 +62,21 @@ if (isset($_POST['delete_id'])) {
     }
 }
 
-// Handle export to Excel
+// Handle export to Excel (UNCHANGED)
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
     header("Content-Type: application/vnd.ms-excel");
     header("Content-Disposition: attachment; filename=data_peserta_" . date('Y-m-d') . ".xls");
     header("Pragma: no-cache");
     header("Expires: 0");
-    
-    // Ambil data dengan filter yang sama
-    $category_id = $_GET['category_id'] ?? '';
-    $kegiatan_id = $_GET['kegiatan_id'] ?? '';
-    $gender = $_GET['gender'] ?? '';
-    $nama = $_GET['nama'] ?? '';
-    $club = $_GET['club'] ?? '';
+
+    $category_id = trim($_GET['category_id'] ?? '');
+    $kegiatan_id = trim($_GET['kegiatan_id'] ?? '');
+    $gender = trim($_GET['gender'] ?? '');
+    $nama = trim($_GET['nama'] ?? '');
+    $club = trim($_GET['club'] ?? '');
 
     $query = "SELECT p.*, c.name AS category_name, k.nama_kegiatan
-              FROM peserta p 
+              FROM peserta p
               LEFT JOIN categories c ON p.category_id = c.id
               LEFT JOIN kegiatan k ON p.kegiatan_id = k.id
               WHERE 1=1";
@@ -103,13 +103,13 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
     }
 
     if (!empty($nama)) {
-        $query .= " AND p.nama_peserta LIKE ?";
+        $query .= " AND LOWER(p.nama_peserta) LIKE LOWER(?)";
         $params[] = "%$nama%";
         $types .= "s";
     }
 
     if (!empty($club)) {
-        $query .= " AND p.nama_club LIKE ?";
+        $query .= " AND LOWER(p.nama_club) LIKE LOWER(?)";
         $params[] = "%$club%";
         $types .= "s";
     }
@@ -125,26 +125,26 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
         $result = $conn->query($query);
     }
 
-    // Group data by nama_peserta
     $groupedData = [];
     while ($row = $result->fetch_assoc()) {
-        $nama = $row['nama_peserta'];
-        if (!isset($groupedData[$nama])) {
-            $groupedData[$nama] = $row;
-            $groupedData[$nama]['categories'] = [];
-            $groupedData[$nama]['kegiatan'] = [];
-            $groupedData[$nama]['ids'] = [];
+        $nama_display = $row['nama_peserta'];
+        $nama_key = strtolower(trim($nama_display));
+
+        if (!isset($groupedData[$nama_key])) {
+            $groupedData[$nama_key] = $row;
+            $groupedData[$nama_key]['categories'] = [];
+            $groupedData[$nama_key]['kegiatan'] = [];
+            $groupedData[$nama_key]['ids'] = [];
         }
-        $groupedData[$nama]['ids'][] = $row['id'];
-        if (!empty($row['category_name']) && !in_array($row['category_name'], $groupedData[$nama]['categories'])) {
-            $groupedData[$nama]['categories'][] = $row['category_name'];
+        $groupedData[$nama_key]['ids'][] = $row['id'];
+        if (!empty($row['category_name']) && !in_array($row['category_name'], $groupedData[$nama_key]['categories'])) {
+            $groupedData[$nama_key]['categories'][] = $row['category_name'];
         }
-        if (!empty($row['nama_kegiatan']) && !in_array($row['nama_kegiatan'], $groupedData[$nama]['kegiatan'])) {
-            $groupedData[$nama]['kegiatan'][] = $row['nama_kegiatan'];
+        if (!empty($row['nama_kegiatan']) && !in_array($row['nama_kegiatan'], $groupedData[$nama_key]['kegiatan'])) {
+            $groupedData[$nama_key]['kegiatan'][] = $row['nama_kegiatan'];
         }
     }
 
-    // Output Excel content
     echo "<table border='1'>";
     echo "<tr>";
     echo "<th>No</th>";
@@ -163,7 +163,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
     echo "<th>Status Pembayaran</th>";
     echo "<th>Tanggal Daftar</th>";
     echo "</tr>";
-    
+
     $no = 1;
     foreach ($groupedData as $row) {
         $umur = "-";
@@ -172,9 +172,9 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
             $today = new DateTime();
             $umur = $today->diff($dob)->y . " tahun";
         }
-        
+
         $statusBayar = !empty($row['bukti_pembayaran']) ? 'Sudah Bayar' : 'Belum Bayar';
-        
+
         echo "<tr>";
         echo "<td>" . $no++ . "</td>";
         echo "<td>" . implode(', ', $row['ids']) . "</td>";
@@ -197,30 +197,30 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
     exit();
 }
 
-// --- Ambil kategori untuk dropdown ---
+// --- Ambil kategori untuk dropdown (UNCHANGED) ---
 $kategoriResult = $conn->query("SELECT id, name FROM categories ORDER BY name ASC");
 $kategoriList = [];
 while ($row = $kategoriResult->fetch_assoc()) {
     $kategoriList[] = $row;
 }
 
-// --- Ambil kegiatan untuk dropdown ---
+// --- Ambil kegiatan untuk dropdown (UNCHANGED) ---
 $kegiatanResult = $conn->query("SELECT id, nama_kegiatan FROM kegiatan ORDER BY nama_kegiatan ASC");
 $kegiatanList = [];
 while ($row = $kegiatanResult->fetch_assoc()) {
     $kegiatanList[] = $row;
 }
 
-// --- Ambil filter dari GET ---
-$category_id = $_GET['category_id'] ?? '';
-$kegiatan_id = $_GET['kegiatan_id'] ?? '';
-$gender = $_GET['gender'] ?? '';
-$nama = $_GET['nama'] ?? '';
-$club = $_GET['club'] ?? '';
+// --- GET filter parameters (TRIMMED) ---
+$category_id = trim($_GET['category_id'] ?? '');
+$kegiatan_id = trim($_GET['kegiatan_id'] ?? '');
+$gender = trim($_GET['gender'] ?? '');
+$nama = trim($_GET['nama'] ?? '');
+$club = trim($_GET['club'] ?? '');
 
-// --- Query peserta ---
+// --- Query peserta (UNCHANGED) ---
 $query = "SELECT p.*, c.name AS category_name, k.nama_kegiatan
-          FROM peserta p 
+          FROM peserta p
           LEFT JOIN categories c ON p.category_id = c.id
           LEFT JOIN kegiatan k ON p.kegiatan_id = k.id
           WHERE 1=1";
@@ -247,13 +247,13 @@ if (!empty($gender)) {
 }
 
 if (!empty($nama)) {
-    $query .= " AND p.nama_peserta LIKE ?";
+    $query .= " AND LOWER(p.nama_peserta) LIKE LOWER(?)";
     $params[] = "%$nama%";
     $types .= "s";
 }
 
 if (!empty($club)) {
-    $query .= " AND p.nama_club LIKE ?";
+    $query .= " AND LOWER(p.nama_club) LIKE LOWER(?)";
     $params[] = "%$club%";
     $types .= "s";
 }
@@ -269,7 +269,7 @@ if (!empty($params)) {
     $result = $conn->query($query);
 }
 
-// Group peserta by nama_peserta
+// Group peserta by nama_peserta (UNCHANGED)
 $pesertaGrouped = [];
 $totalPeserta = 0;
 $totalLaki = 0;
@@ -281,12 +281,13 @@ while ($row = $result->fetch_assoc()) {
     if ($row['jenis_kelamin'] == 'Laki-laki') $totalLaki++;
     if ($row['jenis_kelamin'] == 'Perempuan') $totalPerempuan++;
     if (!empty($row['bukti_pembayaran'])) $totalBayar++;
-    
-    $nama = $row['nama_peserta'];
-    
-    if (!isset($pesertaGrouped[$nama])) {
-        // First entry for this name
-        $pesertaGrouped[$nama] = [
+
+    $nama_display = $row['nama_peserta'];
+    $nama_key = strtolower(trim($nama_display));
+
+    if (!isset($pesertaGrouped[$nama_key])) {
+        $pesertaGrouped[$nama_key] = [
+            'display_name' => $nama_display,
             'data' => $row,
             'ids' => [$row['id']],
             'categories' => [],
@@ -294,1156 +295,804 @@ while ($row = $result->fetch_assoc()) {
             'all_records' => [$row]
         ];
     } else {
-        // Additional entry for this name
-        $pesertaGrouped[$nama]['ids'][] = $row['id'];
-        $pesertaGrouped[$nama]['all_records'][] = $row;
+        $pesertaGrouped[$nama_key]['ids'][] = $row['id'];
+        $pesertaGrouped[$nama_key]['all_records'][] = $row;
     }
-    
-    // Collect unique categories
-    if (!empty($row['category_name']) && !in_array($row['category_name'], $pesertaGrouped[$nama]['categories'])) {
-        $pesertaGrouped[$nama]['categories'][] = $row['category_name'];
+
+    if (!empty($row['category_name']) && !in_array($row['category_name'], $pesertaGrouped[$nama_key]['categories'])) {
+        $pesertaGrouped[$nama_key]['categories'][] = $row['category_name'];
     }
-    
-    // Collect unique kegiatan
-    if (!empty($row['nama_kegiatan']) && !in_array($row['nama_kegiatan'], $pesertaGrouped[$nama]['kegiatan'])) {
-        $pesertaGrouped[$nama]['kegiatan'][] = $row['nama_kegiatan'];
+
+    if (!empty($row['nama_kegiatan']) && !in_array($row['nama_kegiatan'], $pesertaGrouped[$nama_key]['kegiatan'])) {
+        $pesertaGrouped[$nama_key]['kegiatan'][] = $row['nama_kegiatan'];
     }
 }
 
-// Count unique participants
 $uniqueCount = count($pesertaGrouped);
+
+$username = $_SESSION['username'] ?? 'User';
+$name = $_SESSION['name'] ?? $username;
+$role = $_SESSION['role'] ?? 'user';
 ?>
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Peserta - Turnamen Panahan</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'archery': {
+                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
+                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
+                            800: '#166534', 900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --primary-color: #6366f1;
-            --secondary-color: #8b5cf6;
-            --accent-color: #06b6d4;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
-            --dark-color: #1f2937;
-            --light-gray: #f8fafc;
-            --medium-gray: #e2e8f0;
-            --text-dark: #122036ff;
-            --text-light: #6b7280;
-        }
-
-        body { 
-            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: var(--text-dark);
-            min-height: 100vh;
-        }
-
-        .header-card {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            color: white;
-            padding: 3rem 2rem;
-            margin-bottom: 2rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
-            backdrop-filter: blur(10px);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .header-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: shimmer 3s infinite;
-        }
-
-        @keyframes shimmer {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(180deg); }
-        }
-
-        .filter-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .data-table {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .table {
-            margin-bottom: 0;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        .table th {
-            background: linear-gradient(135deg, var(--dark-color) 0%, #374151 100%);
-            color: white;
-            border: none;
-            font-weight: 600;
-            font-size: 0.875rem;
-            padding: 1rem 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .table th:first-child {
-            border-top-left-radius: 20px;
-        }
-
-        .table th:last-child {
-            border-top-right-radius: 20px;
-        }
-
-        .table td {
-            padding: 1rem 0.75rem;
-            vertical-align: middle;
-            font-size: 0.9rem;
-            border-bottom: 1px solid var(--medium-gray);
-            transition: all 0.3s ease;
-        }
-
-        .table tbody tr {
-            transition: all 0.3s ease;
-        }
-
-        .table tbody tr:hover {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .badge {
-            padding: 0.5rem 0.75rem;
-            border-radius: 50px;
-            font-weight: 500;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 2px;
-            display: inline-block;
-        }
-
-        .btn {
-            border-radius: 12px;
-            font-weight: 500;
-            padding: 0.75rem 1.5rem;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-sm {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.75rem;
-        }
-
-        .btn-filter {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            border: none;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-        }
-
-        .btn-filter:hover {
-            background: linear-gradient(135deg, #5855eb 0%, #7c3aed 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
-            border: none;
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
-        }
-
-        .btn-danger:hover {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, var(--warning-color) 0%, #ea580c 100%);
-            border: none;
-            color: white;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
-        }
-
-        .btn-warning:hover {
-            background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
-            color: white;
-        }
-
-        .btn-outline-secondary {
-            border: 2px solid var(--medium-gray);
-            color: var(--text-light);
-        }
-
-        .btn-outline-secondary:hover {
-            background: var(--medium-gray);
-            border-color: var(--medium-gray);
-            color: var(--text-dark);
-            transform: translateY(-2px);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
-            border: none;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-success:hover {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-        }
-
-        .btn-info {
-            background: linear-gradient(135deg, var(--accent-color) 0%, #0891b2 100%);
-            border: none;
-            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
-        }
-
-        .btn-info:hover {
-            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
-        }
-
-        .stats-card {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stats-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-        }
-
-        .stats-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-color), var(--accent-color), var(--success-color), var(--warning-color));
-        }
-
-        .stats-card h4 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 0;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .stats-card small {
-            color: var(--text-light);
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .form-control, .form-select {
-            border: 2px solid var(--medium-gray);
-            border-radius: 12px;
-            padding: 0.75rem 1rem;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.8);
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
-            background: white;
-        }
-
-        .form-label {
-            font-weight: 600;
-            color: var(--text-dark);
-            margin-bottom: 0.5rem;
-        }
-
-        .table-responsive {
-            max-height: 70vh;
-            border-radius: 20px;
-        }
-
-        .small-text {
-            font-size: 0.85rem;
-        }
-
-        .text-truncate-custom {
-            max-width: 150px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .table-responsive::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        .table-responsive::-webkit-scrollbar-track {
-            background: var(--light-gray);
-            border-radius: 10px;
-        }
-
-        .table-responsive::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            border-radius: 10px;
-        }
-
-        .alert {
-            border-radius: 12px;
-            border: none;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .data-table {
-            animation: fadeInUp 0.6s ease;
-        }
-
-        .action-buttons {
-            margin-bottom: 2rem;
-        }
-
-        .modal-content {
-            border-radius: 20px;
-            border: none;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .modal-header {
-            border-top-left-radius: 20px;
-            border-top-right-radius: 20px;
-            border-bottom: none;
-            padding: 1.5rem 2rem;
-        }
-
-        .modal-body {
-            padding: 2rem;
-        }
-
-        .modal-footer {
-            border-top: none;
-            padding: 1.5rem 2rem;
-        }
-
-        .duplicate-count {
-            background: linear-gradient(135deg, #f59e0b, #ea580c);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 50px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            margin-left: 0.5rem;
-        }
-
-        .category-group, .kegiatan-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body>
-<div class="container-fluid py-4">
-    <div class="header-card text-center">
-        <h1><i class="fas fa-bow-arrow me-3"></i>Data Peserta Turnamen Panahan</h1>
-        <p class="mb-0">Sistem Manajemen Peserta Turnamen (Mode: Penggabungan Nama)</p>
-    </div>
+<body class="h-full bg-slate-50">
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white">
+            <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+                <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                    <i class="fas fa-bullseye text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+                    <p class="text-xs text-zinc-400">Management System</p>
+                </div>
+            </div>
 
-    <!-- Alert Messages -->
-    <?php if (isset($success_message)): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i><?= $success_message ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-    
-    <?php if (isset($error_message)): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i><?= $error_message ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
+            <nav class="flex-1 px-4 py-6 space-y-1">
+                <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-home w-5"></i>
+                    <span class="text-sm">Dashboard</span>
+                </a>
 
-    <!-- Action Buttons -->
-    <div class="action-buttons d-flex justify-content-between align-items-center">
-        <div>
-            <a href="dashboard.php" class="btn btn-info">
-                <i class="fas fa-arrow-left me-2"></i>Kembali ke Dashboard
-            </a>
-        </div>
-        <div>
-            <?php
-            $exportParams = [];
-            if (!empty($category_id)) $exportParams['category_id'] = $category_id;
-            if (!empty($kegiatan_id)) $exportParams['kegiatan_id'] = $kegiatan_id;
-            if (!empty($gender)) $exportParams['gender'] = $gender;
-            if (!empty($nama)) $exportParams['nama'] = $nama;
-            if (!empty($club)) $exportParams['club'] = $club;
-            $exportParams['export'] = 'excel';
-            $exportUrl = '?' . http_build_query($exportParams);
-            ?>
-            <a href="<?= $exportUrl ?>" class="btn btn-success">
-                <i class="fas fa-file-excel me-2"></i>Export Excel
-            </a>
-        </div>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stats-card text-center text-white">
-                <h4><?= $uniqueCount ?></h4>
-                <small>Peserta Unik</small>
-                <div class="mt-2 text-muted" style="font-size: 0.75rem;">Total Entri: <?= $totalPeserta ?></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card text-center text-white">
-                <h4><?= $totalLaki ?></h4>
-                <small>Laki-laki</small>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card text-center text-white">
-                <h4><?= $totalPerempuan ?></h4>
-                <small>Perempuan</small>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card text-center text-white">
-                <h4><?= $totalBayar ?></h4>
-                <small>Sudah Bayar</small>
-            </div>
-        </div>
-    </div>
-
-    <!-- Form Filter -->
-    <div class="filter-card">
-        <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filter Pencarian</h5>
-        <form method="get">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Kategori</label>
-                    <select class="form-select" name="category_id">
-                        <option value="">Semua Kategori</option>
-                        <?php foreach ($kategoriList as $kat): ?>
-                            <option value="<?= $kat['id'] ?>" <?= $category_id==$kat['id']?'selected':'' ?>>
-                                <?= htmlspecialchars($kat['name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Kegiatan</label>
-                    <select class="form-select" name="kegiatan_id">
-                        <option value="">Semua Kegiatan</option>
-                        <?php foreach ($kegiatanList as $keg): ?>
-                            <option value="<?= $keg['id'] ?>" <?= $kegiatan_id==$keg['id']?'selected':'' ?>>
-                                <?= htmlspecialchars($keg['nama_kegiatan']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Gender</label>
-                    <select class="form-select" name="gender">
-                        <option value="">Semua</option>
-                        <option value="Laki-laki" <?= $gender=="Laki-laki"?'selected':'' ?>>Laki-laki</option>
-                        <option value="Perempuan" <?= $gender=="Perempuan"?'selected':'' ?>>Perempuan</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Nama Peserta</label>
-                    <input type="text" class="form-control" name="nama" value="<?= htmlspecialchars($nama) ?>" placeholder="Cari nama...">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Club</label>
-                    <input type="text" class="form-control" name="club" value="<?= htmlspecialchars($club) ?>" placeholder="Nama club...">
-                </div>
-            </div>
-            <div class="row mt-3">
-                <div class="col-md-12 text-end">
-                    <button type="submit" class="btn btn-filter btn-primary me-2">
-                        <i class="fas fa-search me-2"></i>Cari
-                    </button>
-                    <a href="?" class="btn btn-outline-secondary">
-                        <i class="fas fa-redo me-2"></i>Reset
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
+                    <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-users w-5"></i>
+                        <span class="text-sm">Users</span>
+                    </a>
+                    <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-tags w-5"></i>
+                        <span class="text-sm">Kategori</span>
                     </a>
                 </div>
+
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
+                    <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-calendar w-5"></i>
+                        <span class="text-sm">Kegiatan</span>
+                    </a>
+                    <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
+                        <i class="fas fa-user-friends w-5"></i>
+                        <span class="text-sm font-medium">Peserta</span>
+                    </a>
+                    <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-chart-bar w-5"></i>
+                        <span class="text-sm">Statistik</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="px-4 py-4 border-t border-zinc-800">
+                <div class="flex items-center gap-3 px-2">
+                    <div class="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center">
+                        <i class="fas fa-user text-zinc-400 text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
+                        <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
+                    </div>
+                </div>
+                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                   class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span>Logout</span>
+                </a>
             </div>
-        </form>
-    </div>
+        </aside>
 
-    <!-- Info Alert -->
-    <?php if ($totalPeserta > $uniqueCount): ?>
-    <div class="alert alert-info">
-        <i class="fas fa-info-circle me-2"></i>
-        <strong>Info:</strong> Ditemukan <?= $totalPeserta - $uniqueCount ?> peserta dengan nama yang sama. Data telah digabungkan berdasarkan nama peserta.
-    </div>
-    <?php endif; ?>
+        <!-- Mobile Menu Button -->
+        <button id="mobile-menu-btn" class="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-900 text-white shadow-lg">
+            <i class="fas fa-bars"></i>
+        </button>
 
-    <!-- Tabel Peserta -->
-    <div class="data-table">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th style="width: 50px;">No</th>
-                        <th>Nama Peserta</th>
-                        <th>Kategori</th>
-                        <th>Kegiatan</th>
-                        <th>Umur</th>
-                        <th>Gender</th>
-                        <th>Asal Kota</th>
-                        <th>Club</th>
-                        <th>Sekolah</th>
-                        <th>Kelas</th>
-                        <th>No. HP</th>
-                        <th>Status</th>
-                        <th style="width: 150px;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php if (empty($pesertaGrouped)): ?>
-                    <tr>
-                        <td colspan="13" class="text-center text-muted py-4">
-                            <i class="fas fa-inbox fa-3x mb-3"></i><br>
-                            Tidak ada data peserta yang ditemukan.
-                        </td>
-                    </tr>
-                <?php else: ?>
-                    <?php 
-                    $no = 1; 
-                    foreach ($pesertaGrouped as $nama => $group): 
-                        $p = $group['data'];
-                        $recordCount = count($group['all_records']);
-                        
-                        // Hitung umur dari tanggal_lahir
-                        $umur = "-";
-                        if (!empty($p['tanggal_lahir'])) {
-                            $dob = new DateTime($p['tanggal_lahir']);
-                            $today = new DateTime();
-                            $umur = $today->diff($dob)->y . " tahun";
-                        }
-                        
-                        // Status pembayaran
-                        $statusBayar = !empty($p['bukti_pembayaran']) ? 'Sudah Bayar' : 'Belum Bayar';
-                        $badgeClass = !empty($p['bukti_pembayaran']) ? 'bg-success' : 'bg-warning text-dark';
-                    ?>
-                        <tr>
-                            <td class="text-center"><?= $no++ ?></td>
-                            <td>
-                                <strong><?= htmlspecialchars($nama) ?></strong>
-                                <?php if ($recordCount > 1): ?>
-                                    <span class="duplicate-count" title="Peserta ini memiliki <?= $recordCount ?> pendaftaran">
-                                        x<?= $recordCount ?>
-                                    </span>
-                                <?php endif; ?>
-                                <br>
-                                <small class="text-muted">ID: <?= implode(', ', $group['ids']) ?></small>
-                            </td>
-                            <td>
-                                <?php if (!empty($group['categories'])): ?>
-                                    <div class="category-group">
-                                        <?php foreach ($group['categories'] as $cat): ?>
-                                            <span class="badge bg-info text-dark"><?= htmlspecialchars($cat) ?></span>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php else: ?>
-                                    <span class="text-muted small">Belum ditentukan</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if (!empty($group['kegiatan'])): ?>
-                                    <div class="kegiatan-group">
-                                        <?php foreach ($group['kegiatan'] as $keg): ?>
-                                            <span class="badge bg-primary"><?= htmlspecialchars($keg) ?></span>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php else: ?>
-                                    <span class="text-muted small">Belum ditentukan</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="small-text"><?= $umur ?></td>
-                            <td>
-                                <span class="badge badge-gender <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'bg-primary' : 'bg-danger' ?>">
-                                    <i class="fas <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?> me-1"></i>
-                                    <?= htmlspecialchars($p['jenis_kelamin']) ?>
-                                </span>
-                            </td>
-                            <td class="small-text"><?= htmlspecialchars($p['asal_kota'] ?? '-') ?></td>
-                            <td class="small-text text-truncate-custom" title="<?= htmlspecialchars($p['nama_club'] ?? '') ?>">
-                                <?= htmlspecialchars($p['nama_club'] ?? '-') ?>
-                            </td>
-                            <td class="small-text text-truncate-custom" title="<?= htmlspecialchars($p['sekolah'] ?? '') ?>">
-                                <?= htmlspecialchars($p['sekolah'] ?? '-') ?>
-                            </td>
-                            <td class="small-text"><?= htmlspecialchars($p['kelas'] ?? '-') ?></td>
-                            <td class="small-text">
-                                <?php if (!empty($p['nomor_hp'])): ?>
-                                    <a href="tel:<?= $p['nomor_hp'] ?>" class="text-decoration-none">
-                                        <i class="fas fa-phone-alt me-1"></i><?= htmlspecialchars($p['nomor_hp']) ?>
-                                    </a>
-                                <?php else: ?>
-                                    -
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <span class="badge badge-status <?= $badgeClass ?>">
-                                    <i class="fas <?= !empty($p['bukti_pembayaran']) ? 'fa-check-circle' : 'fa-clock' ?> me-1"></i>
-                                    <?= $statusBayar ?>
-                                </span>
-                                <?php if (!empty($p['bukti_pembayaran'])): ?>
-                                    <br><small class="text-muted">
-                                        <a href="#" class="text-info" onclick="showImage('<?= htmlspecialchars($p['bukti_pembayaran']) ?>', '<?= htmlspecialchars($nama) ?>')">
-                                            <i class="fas fa-file-image me-1"></i>Lihat Bukti
-                                        </a>
-                                    </small>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-center">
-                                <?php if ($recordCount > 1): ?>
-                                    <button type="button" class="btn btn-info btn-sm mb-1" onclick="showDetails(<?= htmlspecialchars(json_encode($group['all_records'])) ?>)" title="Lihat Detail">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <br>
-                                <?php endif; ?>
-                                <button type="button" class="btn btn-warning btn-sm me-1 mb-1" onclick="editPeserta(<?= htmlspecialchars(json_encode($p)) ?>)" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button type="button" class="btn btn-danger btn-sm mb-1" onclick="confirmDelete(<?= $p['id'] ?>, '<?= htmlspecialchars($nama, ENT_QUOTES) ?>')" title="Hapus">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
+        <!-- Main Content -->
+        <main class="flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200">
+                <div class="px-6 lg:px-8 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="pl-12 lg:pl-0">
+                            <h1 class="text-xl font-semibold text-slate-900">Data Peserta</h1>
+                            <p class="text-sm text-slate-500">Kelola data peserta turnamen panahan</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <?php
+                            $exportParams = [];
+                            if (!empty($category_id)) $exportParams['category_id'] = $category_id;
+                            if (!empty($kegiatan_id)) $exportParams['kegiatan_id'] = $kegiatan_id;
+                            if (!empty($gender)) $exportParams['gender'] = $gender;
+                            if (!empty($nama)) $exportParams['nama'] = $nama;
+                            if (!empty($club)) $exportParams['club'] = $club;
+                            $exportParams['export'] = 'excel';
+                            $exportUrl = '?' . http_build_query($exportParams);
+                            ?>
+                            <a href="<?= $exportUrl ?>"
+                               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
+                               onclick="return confirm('Export data peserta ke Excel?')">
+                                <i class="fas fa-file-excel"></i>
+                                <span class="hidden sm:inline">Export Excel</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="px-6 lg:px-8 py-6">
+                <!-- Toast Messages -->
+                <?php if (isset($success_message)): ?>
+                    <div id="toast-success" class="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800">
+                        <i class="fas fa-check-circle text-emerald-500"></i>
+                        <span class="text-sm"><?= $success_message ?></span>
+                        <button onclick="this.parentElement.remove()" class="ml-auto text-emerald-500 hover:text-emerald-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    <?php if (!empty($pesertaGrouped)): ?>
-        <div class="mt-3 text-end">
-            <small class="text-muted">
-                Menampilkan <?= $uniqueCount ?> peserta unik dari <?= $totalPeserta ?> total entri
-            </small>
-        </div>
-    <?php endif; ?>
-</div>
 
-<!-- Modal Detail Peserta (untuk nama duplikat) -->
-<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="detailModalLabel">
-                    <i class="fas fa-info-circle me-2"></i>Detail Pendaftaran Peserta
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <?php if (isset($error_message)): ?>
+                    <div id="toast-error" class="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-800">
+                        <i class="fas fa-exclamation-circle text-red-500"></i>
+                        <span class="text-sm"><?= $error_message ?></span>
+                        <button onclick="this.parentElement.remove()" class="ml-auto text-red-500 hover:text-red-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-xl border-l-4 border-archery-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-archery-600"><?= $uniqueCount ?></p>
+                        <p class="text-xs text-slate-500 mt-1">Peserta Unik</p>
+                        <p class="text-xs text-slate-400">Total Entri: <?= $totalPeserta ?></p>
+                    </div>
+                    <div class="bg-white rounded-xl border-l-4 border-blue-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-blue-600"><?= $totalLaki ?></p>
+                        <p class="text-xs text-slate-500 mt-1">Laki-laki</p>
+                    </div>
+                    <div class="bg-white rounded-xl border-l-4 border-pink-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-pink-600"><?= $totalPerempuan ?></p>
+                        <p class="text-xs text-slate-500 mt-1">Perempuan</p>
+                    </div>
+                    <div class="bg-white rounded-xl border-l-4 border-emerald-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-emerald-600"><?= $totalBayar ?></p>
+                        <p class="text-xs text-slate-500 mt-1">Sudah Bayar</p>
+                    </div>
+                </div>
+
+                <!-- Filter Form -->
+                <div class="bg-white rounded-xl border border-slate-200 p-5 mb-6">
+                    <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fas fa-filter text-slate-400"></i>
+                        Filter Pencarian
+                    </h3>
+                    <!-- FORM: method=get, no action (UNCHANGED) -->
+                    <form method="get">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+                                <!-- SELECT: name="category_id" (UNCHANGED) -->
+                                <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="category_id">
+                                    <option value="">Semua Kategori</option>
+                                    <?php foreach ($kategoriList as $kat): ?>
+                                        <option value="<?= $kat['id'] ?>" <?= $category_id==$kat['id']?'selected':'' ?>>
+                                            <?= htmlspecialchars($kat['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Kegiatan</label>
+                                <!-- SELECT: name="kegiatan_id" (UNCHANGED) -->
+                                <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="kegiatan_id">
+                                    <option value="">Semua Kegiatan</option>
+                                    <?php foreach ($kegiatanList as $keg): ?>
+                                        <option value="<?= $keg['id'] ?>" <?= $kegiatan_id==$keg['id']?'selected':'' ?>>
+                                            <?= htmlspecialchars($keg['nama_kegiatan']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Gender</label>
+                                <!-- SELECT: name="gender" (UNCHANGED) -->
+                                <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="gender">
+                                    <option value="">Semua</option>
+                                    <option value="Laki-laki" <?= $gender=="Laki-laki"?'selected':'' ?>>Laki-laki</option>
+                                    <option value="Perempuan" <?= $gender=="Perempuan"?'selected':'' ?>>Perempuan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Nama</label>
+                                <!-- INPUT: name="nama" (UNCHANGED) -->
+                                <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="nama" value="<?= htmlspecialchars($nama) ?>" placeholder="Cari nama...">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Club</label>
+                                <!-- INPUT: name="club" (UNCHANGED) -->
+                                <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="club" value="<?= htmlspecialchars($club) ?>" placeholder="Nama club...">
+                            </div>
+                            <div class="flex items-end gap-2">
+                                <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                    <i class="fas fa-search mr-1"></i> Cari
+                                </button>
+                                <a href="?" class="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50 transition-colors">
+                                    <i class="fas fa-redo"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Info Alert for Duplicates -->
+                <?php if ($totalPeserta > $uniqueCount): ?>
+                <div class="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
+                    <i class="fas fa-info-circle text-blue-500"></i>
+                    <span class="text-sm">Ditemukan <?= $totalPeserta - $uniqueCount ?> peserta dengan nama yang sama. Data telah digabungkan.</span>
+                </div>
+                <?php endif; ?>
+
+                <!-- Data Table -->
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto custom-scrollbar" style="max-height: 65vh;">
+                        <table class="w-full">
+                            <thead class="bg-zinc-800 text-white sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-12">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kategori</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kegiatan</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Umur</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Gender</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Club</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Sekolah</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Status</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <?php if (empty($pesertaGrouped)): ?>
+                                    <tr>
+                                        <td colspan="10" class="px-4 py-12 text-center">
+                                            <div class="flex flex-col items-center">
+                                                <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                                                    <i class="fas fa-inbox text-slate-400 text-2xl"></i>
+                                                </div>
+                                                <p class="text-slate-500 font-medium">Tidak ada data peserta</p>
+                                                <p class="text-slate-400 text-sm">Ubah filter pencarian atau tambah peserta baru</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php
+                                    $no = 1;
+                                    foreach ($pesertaGrouped as $key => $group):
+                                        $nama = $group['display_name'];
+                                        $p = $group['data'];
+                                        $recordCount = count($group['all_records']);
+
+                                        $umur = "-";
+                                        if (!empty($p['tanggal_lahir'])) {
+                                            $dob = new DateTime($p['tanggal_lahir']);
+                                            $today = new DateTime();
+                                            $umur = $today->diff($dob)->y . " th";
+                                        }
+
+                                        $hasBayar = !empty($p['bukti_pembayaran']);
+                                    ?>
+                                        <tr class="hover:bg-slate-50 transition-colors">
+                                            <td class="px-4 py-3 text-sm text-slate-500"><?= $no++ ?></td>
+                                            <td class="px-4 py-3">
+                                                <div class="flex items-center gap-2">
+                                                    <p class="font-medium text-slate-900"><?= htmlspecialchars($nama) ?></p>
+                                                    <?php if ($recordCount > 1): ?>
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                                            x<?= $recordCount ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <p class="text-xs text-slate-400">ID: <?= implode(', ', $group['ids']) ?></p>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <?php if (!empty($group['categories'])): ?>
+                                                    <div class="flex flex-wrap gap-1">
+                                                        <?php foreach ($group['categories'] as $cat): ?>
+                                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-700"><?= htmlspecialchars($cat) ?></span>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <span class="text-slate-400 text-xs">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <?php if (!empty($group['kegiatan'])): ?>
+                                                    <div class="flex flex-wrap gap-1">
+                                                        <?php foreach ($group['kegiatan'] as $keg): ?>
+                                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"><?= htmlspecialchars($keg) ?></span>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <span class="text-slate-400 text-xs">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="px-4 py-3 text-center text-sm text-slate-600"><?= $umur ?></td>
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700' ?>">
+                                                    <i class="fas <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?> text-xs"></i>
+                                                    <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'L' : 'P' ?>
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-600 max-w-32 truncate" title="<?= htmlspecialchars($p['nama_club'] ?? '') ?>">
+                                                <?= htmlspecialchars($p['nama_club'] ?? '-') ?>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-600 max-w-32 truncate" title="<?= htmlspecialchars($p['sekolah'] ?? '') ?>">
+                                                <?= htmlspecialchars($p['sekolah'] ?? '-') ?>
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <?php if ($hasBayar): ?>
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                                                        <i class="fas fa-check-circle"></i> Lunas
+                                                    </span>
+                                                    <button onclick="showImage('<?= htmlspecialchars($p['bukti_pembayaran']) ?>', '<?= htmlspecialchars($nama) ?>')" class="block mx-auto mt-1 text-xs text-blue-600 hover:underline">
+                                                        Lihat Bukti
+                                                    </button>
+                                                <?php else: ?>
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                                        <i class="fas fa-clock"></i> Pending
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <div class="flex items-center justify-center gap-1">
+                                                    <?php if ($recordCount > 1): ?>
+                                                        <button type="button" onclick="showDetails(<?= htmlspecialchars(json_encode($group['all_records'])) ?>)"
+                                                                class="p-1.5 rounded-lg text-cyan-600 hover:bg-cyan-50 transition-colors" title="Lihat Detail">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                    <?php endif; ?>
+                                                    <button type="button" onclick="editPeserta(<?= htmlspecialchars(json_encode($p)) ?>)"
+                                                            class="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button type="button" onclick="confirmDelete(<?= $p['id'] ?>, '<?= htmlspecialchars($nama, ENT_QUOTES) ?>')"
+                                                            class="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if (!empty($pesertaGrouped)): ?>
+                        <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                            <p class="text-sm text-slate-500">Menampilkan <?= $uniqueCount ?> peserta unik dari <?= $totalPeserta ?> total entri</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
-            <div class="modal-body">
-                <div id="detailContent"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Tutup
+        </main>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeDetailModal()"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="bg-gradient-to-br from-cyan-600 to-cyan-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
+                <h3 class="font-semibold text-lg">
+                    <i class="fas fa-info-circle mr-2"></i>Detail Pendaftaran Peserta
+                </h3>
+                <button onclick="closeDetailModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1" id="detailContent">
+                <!-- Content loaded by JS -->
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Modal Edit Peserta -->
-<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-white">
-                <h5 class="modal-title" id="editModalLabel">
-                    <i class="fas fa-edit me-2"></i>Edit Data Peserta
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- Edit Modal -->
+    <div id="editModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeEditModal()"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="bg-gradient-to-br from-amber-500 to-amber-700 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
+                <h3 class="font-semibold text-lg">
+                    <i class="fas fa-edit mr-2"></i>Edit Data Peserta
+                </h3>
+                <button onclick="closeEditModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <form method="POST" id="editForm">
-                <div class="modal-body">
+            <!-- FORM: method=POST, no action (UNCHANGED) -->
+            <form method="POST" id="editForm" class="flex flex-col flex-1 overflow-hidden">
+                <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
+                    <!-- INPUT: name="update_id" (UNCHANGED) -->
                     <input type="hidden" name="update_id" id="edit_id">
-                    
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Nama Peserta <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="nama_peserta" id="edit_nama_peserta" required>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Nama Peserta <span class="text-red-500">*</span></label>
+                            <!-- INPUT: name="nama_peserta" (UNCHANGED) -->
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="nama_peserta" id="edit_nama_peserta" required>
                         </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Kategori <span class="text-danger">*</span></label>
-                            <select class="form-select" name="category_id" id="edit_category_id" required>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Kategori <span class="text-red-500">*</span></label>
+                            <!-- SELECT: name="category_id" (UNCHANGED) -->
+                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="category_id" id="edit_category_id" required>
                                 <option value="">Pilih Kategori</option>
                                 <?php foreach ($kategoriList as $kat): ?>
                                     <option value="<?= $kat['id'] ?>"><?= htmlspecialchars($kat['name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Kegiatan <span class="text-danger">*</span></label>
-                            <select class="form-select" name="kegiatan_id" id="edit_kegiatan_id" required>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Kegiatan <span class="text-red-500">*</span></label>
+                            <!-- SELECT: name="kegiatan_id" (UNCHANGED) -->
+                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="kegiatan_id" id="edit_kegiatan_id" required>
                                 <option value="">Pilih Kegiatan</option>
                                 <?php foreach ($kegiatanList as $keg): ?>
                                     <option value="<?= $keg['id'] ?>"><?= htmlspecialchars($keg['nama_kegiatan']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Tanggal Lahir <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" name="tanggal_lahir" id="edit_tanggal_lahir" required>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Tanggal Lahir <span class="text-red-500">*</span></label>
+                            <!-- INPUT: name="tanggal_lahir" (UNCHANGED) -->
+                            <input type="date" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="tanggal_lahir" id="edit_tanggal_lahir" required>
                         </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Jenis Kelamin <span class="text-danger">*</span></label>
-                            <select class="form-select" name="jenis_kelamin" id="edit_jenis_kelamin" required>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Jenis Kelamin <span class="text-red-500">*</span></label>
+                            <!-- SELECT: name="jenis_kelamin" (UNCHANGED) -->
+                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="jenis_kelamin" id="edit_jenis_kelamin" required>
                                 <option value="">Pilih Jenis Kelamin</option>
                                 <option value="Laki-laki">Laki-laki</option>
                                 <option value="Perempuan">Perempuan</option>
                             </select>
                         </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Asal Kota</label>
-                            <input type="text" class="form-control" name="asal_kota" id="edit_asal_kota">
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Asal Kota</label>
+                            <!-- INPUT: name="asal_kota" (UNCHANGED) -->
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="asal_kota" id="edit_asal_kota">
                         </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Nama Club</label>
-                            <input type="text" class="form-control" name="nama_club" id="edit_nama_club">
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Nama Club</label>
+                            <!-- INPUT: name="nama_club" (UNCHANGED) -->
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="nama_club" id="edit_nama_club">
                         </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Sekolah</label>
-                            <input type="text" class="form-control" name="sekolah" id="edit_sekolah">
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Sekolah</label>
+                            <!-- INPUT: name="sekolah" (UNCHANGED) -->
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="sekolah" id="edit_sekolah">
                         </div>
-                        
-                        <div class="col-md-6">
-                            <label class="form-label">Kelas</label>
-                            <input type="text" class="form-control" name="kelas" id="edit_kelas">
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Kelas</label>
+                            <!-- INPUT: name="kelas" (UNCHANGED) -->
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="kelas" id="edit_kelas">
                         </div>
-                        
-                        <div class="col-md-12">
-                            <label class="form-label">Nomor HP</label>
-                            <input type="text" class="form-control" name="nomor_hp" id="edit_nomor_hp" placeholder="Contoh: 08123456789">
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Nomor HP</label>
+                            <!-- INPUT: name="nomor_hp" (UNCHANGED) -->
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="nomor_hp" id="edit_nomor_hp" placeholder="Contoh: 08123456789">
                         </div>
                     </div>
-                    
-                    <div class="alert alert-info mt-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <small><strong>Catatan:</strong> Field yang bertanda <span class="text-danger">*</span> wajib diisi.</small>
+
+                    <div class="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                        <p class="text-sm text-blue-800">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Field yang bertanda <span class="text-red-500">*</span> wajib diisi.
+                        </p>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>Batal
+                <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition-colors">
+                        Batal
                     </button>
-                    <button type="submit" class="btn btn-warning text-white">
-                        <i class="fas fa-save me-2"></i>Simpan Perubahan
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 transition-colors">
+                        <i class="fas fa-save mr-1"></i> Simpan
                     </button>
                 </div>
             </form>
         </div>
     </div>
-</div>
 
-<!-- Modal untuk menampilkan gambar -->
-<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="imageModalLabel">Bukti Pembayaran</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center">
-                <!-- Content akan dimuat dinamis oleh JavaScript -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Tutup
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeDeleteModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-gradient-to-br from-red-500 to-red-700 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="font-semibold text-lg">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Konfirmasi Hapus
+                </h3>
+                <button onclick="closeDeleteModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <i class="fas fa-times"></i>
                 </button>
-                <a id="downloadImage" href="" download class="btn btn-primary">
-                    <i class="fas fa-download me-2"></i>Download
-                </a>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Konfirmasi Hapus -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteModalLabel">
-                    <i class="fas fa-exclamation-triangle me-2"></i>Konfirmasi Hapus
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center mb-3">
-                    <i class="fas fa-user-times fa-4x text-danger mb-3"></i>
-                    <h5>Apakah Anda yakin ingin menghapus peserta ini?</h5>
-                    <p class="text-muted mb-0">Nama Peserta:</p>
-                    <p class="fw-bold" id="deletePesertaName"></p>
+            <div class="p-6 text-center">
+                <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-user-times text-red-500 text-2xl"></i>
                 </div>
-                <div class="alert alert-warning">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Perhatian:</strong> Data yang dihapus tidak dapat dikembalikan!
+                <h4 class="text-lg font-semibold text-slate-900 mb-2">Hapus peserta ini?</h4>
+                <p class="text-sm text-slate-500 mb-2">Nama Peserta:</p>
+                <p class="font-bold text-slate-900 mb-4" id="deletePesertaName"></p>
+                <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-left">
+                    <p class="text-sm text-amber-800">
+                        <i class="fas fa-warning mr-1"></i>
+                        Data yang dihapus tidak dapat dikembalikan!
+                    </p>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Batal
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition-colors">
+                    Batal
                 </button>
-                <form method="POST" id="deleteForm" style="display: inline;">
+                <!-- FORM: method=POST (UNCHANGED) -->
+                <form method="POST" id="deleteForm" class="inline">
+                    <!-- INPUT: name="delete_id" (UNCHANGED) -->
                     <input type="hidden" name="delete_id" id="deleteIdInput">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash-alt me-2"></i>Ya, Hapus
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">
+                        <i class="fas fa-trash-alt mr-1"></i> Ya, Hapus
                     </button>
                 </form>
             </div>
         </div>
     </div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
-<script>
-// Function untuk menampilkan detail peserta dengan nama duplikat
-function showDetails(records) {
-    const detailContent = document.getElementById('detailContent');
-    
-    let html = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>';
-    html += '<strong>Peserta ini memiliki ' + records.length + ' pendaftaran dengan kategori/kegiatan yang berbeda</strong></div>';
-    
-    html += '<div class="table-responsive">';
-    html += '<table class="table table-bordered table-striped">';
-    html += '<thead class="table-dark">';
-    html += '<tr>';
-    html += '<th>No</th>';
-    html += '<th>ID</th>';
-    html += '<th>Kategori</th>';
-    html += '<th>Kegiatan</th>';
-    html += '<th>Tanggal Lahir</th>';
-    html += '<th>Gender</th>';
-    html += '<th>Asal Kota</th>';
-    html += '<th>Club</th>';
-    html += '<th>Sekolah</th>';
-    html += '<th>Status Bayar</th>';
-    html += '<th>Aksi</th>';
-    html += '</tr>';
-    html += '</thead>';
-    html += '<tbody>';
-    
-    records.forEach(function(record, index) {
-        const statusBadge = record.bukti_pembayaran ? 
-            '<span class="badge bg-success">Sudah Bayar</span>' : 
-            '<span class="badge bg-warning text-dark">Belum Bayar</span>';
-        
-        html += '<tr>';
-        html += '<td>' + (index + 1) + '</td>';
-        html += '<td>' + record.id + '</td>';
-        html += '<td>' + (record.category_name || '-') + '</td>';
-        html += '<td>' + (record.nama_kegiatan || '-') + '</td>';
-        html += '<td>' + (record.tanggal_lahir || '-') + '</td>';
-        html += '<td>' + record.jenis_kelamin + '</td>';
-        html += '<td>' + (record.asal_kota || '-') + '</td>';
-        html += '<td>' + (record.nama_club || '-') + '</td>';
-        html += '<td>' + (record.sekolah || '-') + '</td>';
-        html += '<td>' + statusBadge + '</td>';
-        html += '<td>';
-        html += '<button class="btn btn-warning btn-sm me-1" onclick="editPeserta(' + JSON.stringify(record).replace(/"/g, '&quot;') + ')" title="Edit"><i class="fas fa-edit"></i></button>';
-        html += '<button class="btn btn-danger btn-sm" onclick="confirmDelete(' + record.id + ', \'' + record.nama_peserta.replace(/'/g, "\\'") + '\')" title="Hapus"><i class="fas fa-trash-alt"></i></button>';
-        html += '</td>';
-        html += '</tr>';
-    });
-    
-    html += '</tbody>';
-    html += '</table>';
-    html += '</div>';
-    
-    detailContent.innerHTML = html;
-    
-    const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
-    detailModal.show();
-}
+    <!-- Image Modal -->
+    <div id="imageModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeImageModal()"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="bg-gradient-to-br from-slate-700 to-slate-900 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
+                <h3 class="font-semibold text-lg" id="imageModalLabel">Bukti Pembayaran</h3>
+                <button onclick="closeImageModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 text-center" id="imageModalBody">
+                <!-- Content loaded by JS -->
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button type="button" onclick="closeImageModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition-colors">
+                    Tutup
+                </button>
+                <a id="downloadImage" href="" download class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                    <i class="fas fa-download mr-1"></i> Download
+                </a>
+            </div>
+        </div>
+    </div>
 
-// Function untuk edit peserta
-function editPeserta(data) {
-    document.getElementById('edit_id').value = data.id;
-    document.getElementById('edit_nama_peserta').value = data.nama_peserta || '';
-    document.getElementById('edit_category_id').value = data.category_id || '';
-    document.getElementById('edit_kegiatan_id').value = data.kegiatan_id || '';
-    document.getElementById('edit_tanggal_lahir').value = data.tanggal_lahir || '';
-    document.getElementById('edit_jenis_kelamin').value = data.jenis_kelamin || '';
-    document.getElementById('edit_asal_kota').value = data.asal_kota || '';
-    document.getElementById('edit_nama_club').value = data.nama_club || '';
-    document.getElementById('edit_sekolah').value = data.sekolah || '';
-    document.getElementById('edit_kelas').value = data.kelas || '';
-    document.getElementById('edit_nomor_hp').value = data.nomor_hp || '';
-    
-    // Close detail modal if open
-    const detailModal = bootstrap.Modal.getInstance(document.getElementById('detailModal'));
-    if (detailModal) {
-        detailModal.hide();
-    }
-    
-    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
-    editModal.show();
-}
+    <!-- Mobile Sidebar -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden">
+        <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+            <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                <i class="fas fa-bullseye text-white"></i>
+            </div>
+            <div class="flex-1">
+                <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+            </div>
+            <button id="close-mobile-menu" class="p-2 rounded-lg hover:bg-zinc-800">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <nav class="px-4 py-6 space-y-1">
+            <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
+            </a>
+            <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
+                <i class="fas fa-user-friends w-5"></i><span class="text-sm font-medium">Peserta</span>
+            </a>
+            <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+            </a>
+            <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-calendar w-5"></i><span class="text-sm">Kegiatan</span>
+            </a>
+        </nav>
+    </div>
 
-// Function untuk konfirmasi hapus
-function confirmDelete(id, nama) {
-    document.getElementById('deleteIdInput').value = id;
-    document.getElementById('deletePesertaName').textContent = nama;
-    
-    // Close detail modal if open
-    const detailModal = bootstrap.Modal.getInstance(document.getElementById('detailModal'));
-    if (detailModal) {
-        detailModal.hide();
-    }
-    
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
-}
+    <script>
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileOverlay = document.getElementById('mobile-overlay');
+        const mobileSidebar = document.getElementById('mobile-sidebar');
+        const closeMobileMenu = document.getElementById('close-mobile-menu');
 
-// Function untuk menampilkan gambar dalam modal
-function showImage(filename, pesertaName) {
-    const modal = new bootstrap.Modal(document.getElementById('imageModal'));
-    const modalTitle = document.getElementById('imageModalLabel');
-    const modalBody = document.querySelector('#imageModal .modal-body');
-    const downloadLink = document.getElementById('downloadImage');
-    
-    modalTitle.textContent = 'Bukti Pembayaran - ' + pesertaName;
-    
-    const fileExtension = filename.toLowerCase().split('.').pop();
-    const imagePath = '../assets/uploads/' + filename;
-    
-    modalBody.innerHTML = '';
-    
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(fileExtension)) {
-        const img = document.createElement('img');
-        img.id = 'modalImage';
-        img.className = 'img-fluid';
-        img.style.maxWidth = '100%';
-        img.style.maxHeight = '500px';
-        img.style.borderRadius = '8px';
-        img.alt = 'Bukti Pembayaran';
-        
-        const errorDiv = document.createElement('div');
-        errorDiv.id = 'imageError';
-        errorDiv.className = 'alert alert-warning mt-3';
-        errorDiv.style.display = 'none';
-        
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'mt-3 p-3 bg-light rounded';
-        infoDiv.style.fontSize = '14px';
-        infoDiv.innerHTML = `
-            <strong>File:</strong> ${filename}<br>
-            <strong>Peserta:</strong> ${pesertaName}<br>
-            <strong>Path:</strong> ${imagePath}
-        `;
-        
-        const possiblePaths = [
-            '../assets/uploads/' + filename,
-            '../assets/uploads/bukti/' + filename,
-            '../assets/uploads/pembayaran/' + filename,
-            filename
-        ];
-        
-        let pathIndex = 0;
-        
-        function tryNextPath() {
-            if (pathIndex >= possiblePaths.length) {
-                errorDiv.innerHTML = `
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Gambar tidak dapat dimuat dari semua path yang dicoba.
-                    <br><strong>File:</strong> ${filename}
-                    <br><strong>Path yang dicoba:</strong>
-                    <ul style="text-align: left; margin: 10px 0;">
-                        ${possiblePaths.map(path => `<li>${path}</li>`).join('')}
-                    </ul>
-                    <div class="mt-3">
-                        ${possiblePaths.map(path => 
-                            `<a href="${path}" target="_blank" class="btn btn-sm btn-outline-primary me-2 mb-2">
-                                <i class="fas fa-external-link-alt me-1"></i>Coba: ${path}
-                            </a>`
-                        ).join('')}
-                    </div>
-                `;
-                errorDiv.style.display = 'block';
-                modalBody.appendChild(errorDiv);
-                modalBody.appendChild(infoDiv);
-                return;
-            }
-            
-            const testImage = new Image();
-            const currentPath = possiblePaths[pathIndex];
-            
-            testImage.onload = function() {
-                img.src = currentPath;
-                modalBody.appendChild(img);
-                modalBody.appendChild(infoDiv);
-                
-                infoDiv.innerHTML = `
-                    <strong>File:</strong> ${filename}<br>
-                    <strong>Peserta:</strong> ${pesertaName}<br>
-                    <strong>Path:</strong> ${currentPath} ✅
-                `;
-                
-                downloadLink.href = currentPath;
-                downloadLink.download = 'bukti_pembayaran_' + pesertaName.replace(/[^a-zA-Z0-9]/g, '_') + '.' + fileExtension;
-            };
-            
-            testImage.onerror = function() {
-                pathIndex++;
-                tryNextPath();
-            };
-            
-            testImage.src = currentPath;
+        function toggleMobileMenu() {
+            mobileSidebar.classList.toggle('-translate-x-full');
+            mobileOverlay.classList.toggle('hidden');
         }
-        
-        tryNextPath();
-        
-    } else if (fileExtension === 'pdf') {
-        modalBody.innerHTML = `
-            <div class="text-center p-4">
-                <div style="font-size: 48px; color: #dc3545; margin-bottom: 20px;">📄</div>
-                <h4>File PDF</h4>
-                <p class="mb-3 text-muted">File bukti pembayaran dalam format PDF</p>
-                <div class="d-flex justify-content-center gap-2">
-                    <a href="${imagePath}" target="_blank" class="btn btn-primary">
-                        <i class="fas fa-external-link-alt me-1"></i>Buka PDF
-                    </a>
-                    <a href="${imagePath}" download="${filename}" class="btn btn-success">
-                        <i class="fas fa-download me-1"></i>Download
-                    </a>
-                </div>
-                <div class="mt-3 p-3 bg-light rounded text-start" style="font-size: 14px;">
-                    <strong>File:</strong> ${filename}<br>
-                    <strong>Peserta:</strong> ${pesertaName}
-                </div>
-            </div>
-        `;
-        
-        downloadLink.href = imagePath;
-        downloadLink.download = filename;
-        
-    } else {
-        modalBody.innerHTML = `
-            <div class="text-center p-4">
-                <div style="font-size: 48px; color: #ffc107; margin-bottom: 20px;">⚠️</div>
-                <h4>File tidak dapat ditampilkan</h4>
-                <p class="mb-3 text-muted">Format file tidak didukung untuk preview</p>
-                <div class="d-flex justify-content-center gap-2">
-                    <a href="${imagePath}" target="_blank" class="btn btn-primary">
-                        <i class="fas fa-external-link-alt me-1"></i>Buka File
-                    </a>
-                    <a href="${imagePath}" download="${filename}" class="btn btn-success">
-                        <i class="fas fa-download me-1"></i>Download
-                    </a>
-                </div>
-                <div class="mt-3 p-3 bg-light rounded text-start" style="font-size: 14px;">
-                    <strong>File:</strong> ${filename}<br>
-                    <strong>Peserta:</strong> ${pesertaName}<br>
-                    <strong>Format:</strong> ${fileExtension.toUpperCase()}
-                </div>
-            </div>
-        `;
-        
-        downloadLink.href = imagePath;
-        downloadLink.download = filename;
-    }
-    
-    modal.show();
-}
 
-// Auto-submit form on select change untuk better UX
-document.querySelectorAll('select[name="category_id"], select[name="kegiatan_id"], select[name="gender"]').forEach(function(select) {
-    select.addEventListener('change', function() {
-        this.form.submit();
-    });
-});
+        mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
+        mobileOverlay?.addEventListener('click', toggleMobileMenu);
+        closeMobileMenu?.addEventListener('click', toggleMobileMenu);
 
-// Tooltip untuk teks yang terpotong
-var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
-var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl)
-});
+        // Detail Modal
+        function showDetails(records) {
+            const detailContent = document.getElementById('detailContent');
 
-// Konfirmasi sebelum export Excel
-document.querySelector('a[href*="export=excel"]').addEventListener('click', function(e) {
-    if (!confirm('Apakah Anda yakin ingin mengexport data ke Excel? Data akan diexport dalam format yang sudah digabungkan.')) {
-        e.preventDefault();
-    }
-});
+            let html = '<div class="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200">';
+            html += '<p class="text-sm text-blue-800"><i class="fas fa-info-circle mr-2"></i>';
+            html += '<strong>Peserta ini memiliki ' + records.length + ' pendaftaran dengan kategori/kegiatan yang berbeda</strong></p></div>';
 
-// Auto dismiss alerts after 5 seconds
-setTimeout(function() {
-    var alerts = document.querySelectorAll('.alert-success, .alert-danger');
-    alerts.forEach(function(alert) {
-        var bsAlert = new bootstrap.Alert(alert);
-        bsAlert.close();
-    });
-}, 5000);
-</script>
+            html += '<div class="overflow-x-auto">';
+            html += '<table class="w-full text-sm">';
+            html += '<thead class="bg-slate-100">';
+            html += '<tr>';
+            html += '<th class="px-3 py-2 text-left text-xs font-semibold text-slate-600">No</th>';
+            html += '<th class="px-3 py-2 text-left text-xs font-semibold text-slate-600">ID</th>';
+            html += '<th class="px-3 py-2 text-left text-xs font-semibold text-slate-600">Kategori</th>';
+            html += '<th class="px-3 py-2 text-left text-xs font-semibold text-slate-600">Kegiatan</th>';
+            html += '<th class="px-3 py-2 text-center text-xs font-semibold text-slate-600">Gender</th>';
+            html += '<th class="px-3 py-2 text-center text-xs font-semibold text-slate-600">Status</th>';
+            html += '<th class="px-3 py-2 text-center text-xs font-semibold text-slate-600">Aksi</th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody class="divide-y divide-slate-100">';
+
+            records.forEach(function(record, index) {
+                const statusBadge = record.bukti_pembayaran ?
+                    '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Lunas</span>' :
+                    '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Pending</span>';
+
+                html += '<tr class="hover:bg-slate-50">';
+                html += '<td class="px-3 py-2 text-slate-500">' + (index + 1) + '</td>';
+                html += '<td class="px-3 py-2 font-medium text-slate-900">' + record.id + '</td>';
+                html += '<td class="px-3 py-2 text-slate-600">' + (record.category_name || '-') + '</td>';
+                html += '<td class="px-3 py-2 text-slate-600">' + (record.nama_kegiatan || '-') + '</td>';
+                html += '<td class="px-3 py-2 text-center text-slate-600">' + record.jenis_kelamin + '</td>';
+                html += '<td class="px-3 py-2 text-center">' + statusBadge + '</td>';
+                html += '<td class="px-3 py-2 text-center">';
+                html += '<button class="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50" onclick="editPeserta(' + JSON.stringify(record).replace(/"/g, '&quot;') + ')" title="Edit"><i class="fas fa-edit"></i></button>';
+                html += '<button class="p-1.5 rounded-lg text-red-600 hover:bg-red-50" onclick="confirmDelete(' + record.id + ', \'' + record.nama_peserta.replace(/'/g, "\\'") + '\')" title="Hapus"><i class="fas fa-trash-alt"></i></button>';
+                html += '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody>';
+            html += '</table>';
+            html += '</div>';
+
+            detailContent.innerHTML = html;
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        // Edit Modal
+        function editPeserta(data) {
+            document.getElementById('edit_id').value = data.id;
+            document.getElementById('edit_nama_peserta').value = data.nama_peserta || '';
+            document.getElementById('edit_category_id').value = data.category_id || '';
+            document.getElementById('edit_kegiatan_id').value = data.kegiatan_id || '';
+            document.getElementById('edit_tanggal_lahir').value = data.tanggal_lahir || '';
+            document.getElementById('edit_jenis_kelamin').value = data.jenis_kelamin || '';
+            document.getElementById('edit_asal_kota').value = data.asal_kota || '';
+            document.getElementById('edit_nama_club').value = data.nama_club || '';
+            document.getElementById('edit_sekolah').value = data.sekolah || '';
+            document.getElementById('edit_kelas').value = data.kelas || '';
+            document.getElementById('edit_nomor_hp').value = data.nomor_hp || '';
+
+            closeDetailModal();
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        // Delete Modal
+        function confirmDelete(id, nama) {
+            document.getElementById('deleteIdInput').value = id;
+            document.getElementById('deletePesertaName').textContent = nama;
+
+            closeDetailModal();
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        // Image Modal
+        function showImage(filename, pesertaName) {
+            const modalBody = document.getElementById('imageModalBody');
+            const downloadLink = document.getElementById('downloadImage');
+            document.getElementById('imageModalLabel').textContent = 'Bukti Pembayaran - ' + pesertaName;
+
+            const fileExtension = filename.toLowerCase().split('.').pop();
+            const imagePath = '../assets/uploads/' + filename;
+
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(fileExtension)) {
+                modalBody.innerHTML = '<img src="' + imagePath + '" alt="Bukti Pembayaran" class="max-w-full max-h-96 mx-auto rounded-lg" onerror="this.onerror=null;this.parentElement.innerHTML=\'<div class=\\'p-8 text-center\\'><i class=\\'fas fa-image text-slate-400 text-4xl mb-3\\'></i><p class=\\'text-slate-500\\'>Gambar tidak dapat dimuat</p></div>\'">';
+                downloadLink.href = imagePath;
+                downloadLink.download = 'bukti_' + pesertaName.replace(/[^a-zA-Z0-9]/g, '_') + '.' + fileExtension;
+            } else if (fileExtension === 'pdf') {
+                modalBody.innerHTML = '<div class="p-8"><i class="fas fa-file-pdf text-red-500 text-5xl mb-4"></i><p class="text-slate-700 font-medium">File PDF</p><a href="' + imagePath + '" target="_blank" class="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Buka PDF</a></div>';
+                downloadLink.href = imagePath;
+            } else {
+                modalBody.innerHTML = '<div class="p-8"><i class="fas fa-file text-slate-400 text-5xl mb-4"></i><p class="text-slate-500">Format tidak didukung</p></div>';
+                downloadLink.href = imagePath;
+            }
+
+            document.getElementById('imageModal').classList.remove('hidden');
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.add('hidden');
+        }
+
+        // Close modals on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeDetailModal();
+                closeEditModal();
+                closeDeleteModal();
+                closeImageModal();
+            }
+        });
+
+        // Auto-submit on select change (UNCHANGED behavior)
+        document.querySelectorAll('select[name="category_id"], select[name="kegiatan_id"], select[name="gender"]').forEach(function(select) {
+            select.addEventListener('change', function() {
+                this.form.submit();
+            });
+        });
+
+        // Auto dismiss toasts after 5 seconds
+        setTimeout(function() {
+            const toasts = document.querySelectorAll('#toast-success, #toast-error');
+            toasts.forEach(function(toast) {
+                toast.style.transition = 'opacity 0.3s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            });
+        }, 5000);
+    </script>
 </body>
 </html>

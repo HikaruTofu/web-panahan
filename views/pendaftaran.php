@@ -1,35 +1,39 @@
 <?php
-// Aktifkan error reporting untuk debugging
+/**
+ * Form Pendaftaran Peserta - Turnamen Panahan
+ * UI: Intentional Minimalism with Tailwind CSS
+ */
+
+// Error reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Mulai session jika belum
+// Start session
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Include file koneksi database
+// Database connection
 try {
     include '../config/panggil.php';
 } catch (Exception $e) {
     die("Error koneksi database: " . $e->getMessage());
 }
 
-// Handle AJAX request untuk get peserta by club
+// Handle AJAX request untuk get peserta by club (UNCHANGED)
 if (isset($_GET['action']) && $_GET['action'] === 'get_peserta') {
     header('Content-Type: application/json');
-    
+
     $club = isset($_GET['club']) ? trim($_GET['club']) : '';
-    
+
     if (empty($club)) {
         echo json_encode([]);
         exit;
     }
-    
+
     try {
-        // Query untuk mengambil peserta unik berdasarkan club
         $query = "
-            SELECT 
+            SELECT
                 p.id,
                 p.nama_peserta,
                 p.tanggal_lahir,
@@ -40,8 +44,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_peserta') {
                 p.kelas
             FROM peserta p
             INNER JOIN (
-                SELECT 
-                    nama_peserta, 
+                SELECT
+                    nama_peserta,
                     MAX(id) as max_id
                 FROM peserta
                 WHERE nama_club = ?
@@ -49,12 +53,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_peserta') {
             ) latest ON p.id = latest.max_id
             ORDER BY p.nama_peserta ASC
         ";
-        
+
         $stmt = $conn->prepare($query);
         $stmt->bind_param("s", $club);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         $pesertaList = [];
         while ($row = $result->fetch_assoc()) {
             $pesertaList[] = [
@@ -68,21 +72,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_peserta') {
                 'kelas' => $row['kelas'] ?? ''
             ];
         }
-        
+
         $stmt->close();
         echo json_encode($pesertaList);
         exit;
-        
+
     } catch (Exception $e) {
         echo json_encode(['error' => 'Gagal mengambil data: ' . $e->getMessage()]);
         exit;
     }
 }
 
-// Ambil ID kegiatan dari URL atau ambil kegiatan pertama yang tersedia
+// Get kegiatan ID (UNCHANGED)
 $kegiatan_id = isset($_GET['kegiatan_id']) ? intval($_GET['kegiatan_id']) : null;
 
-// Jika tidak ada kegiatan_id, ambil kegiatan pertama yang tersedia
 if (!$kegiatan_id) {
     try {
         $queryFirstKegiatan = "SELECT id FROM kegiatan WHERE id =".$_GET['id'];
@@ -96,16 +99,15 @@ if (!$kegiatan_id) {
     }
 }
 
-// Jika masih tidak ada kegiatan
 if (!$kegiatan_id) {
     die("Tidak ada kegiatan yang tersedia. Silakan buat kegiatan terlebih dahulu.");
 }
 
-// Ambil data kegiatan dan kategorinya
+// Ambil data kegiatan dan kategorinya (UNCHANGED)
 $kegiatanData = [];
 try {
     $query = "
-        SELECT 
+        SELECT
             k.id as kegiatan_id,
             k.nama_kegiatan,
             c.id as category_id,
@@ -119,12 +121,12 @@ try {
         WHERE k.id = ? AND c.status = 'active'
         ORDER BY c.min_age ASC, c.name ASC
     ";
-    
+
     $stmt = $conn->prepare($query);
     $stmt->bind_param("i", $kegiatan_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     while ($row = $result->fetch_assoc()) {
         if (empty($kegiatanData)) {
             $kegiatanData['kegiatan_id'] = $row['kegiatan_id'];
@@ -142,22 +144,20 @@ try {
         }
     }
     $stmt->close();
-    
-    // Jika kegiatan tidak ditemukan
+
     if (empty($kegiatanData)) {
         die("Kegiatan tidak ditemukan.");
     }
-    
-    // Jika kegiatan tidak memiliki kategori
+
     if (empty($kegiatanData['kategori'])) {
         die("Kegiatan '{$kegiatanData['nama_kegiatan']}' belum memiliki kategori. Silakan tambahkan kategori terlebih dahulu.");
     }
-    
+
 } catch (Exception $e) {
     die("Error mengambil data kegiatan: " . $e->getMessage());
 }
 
-// Ambil data club untuk dropdown
+// Ambil data club untuk dropdown (UNCHANGED)
 $clubList = [];
 try {
     $queryClub = "SELECT DISTINCT nama_club FROM peserta WHERE nama_club IS NOT NULL AND nama_club != '' ORDER BY nama_club ASC";
@@ -169,89 +169,81 @@ try {
     die("Error mengambil data club: " . $e->getMessage());
 }
 
-// Proses insert data
+// Proses insert data (UNCHANGED)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nama_peserta = trim($_POST['nama_peserta']);
     $tanggal_lahir = $_POST['tanggal_lahir'];
     $jenis_kelamin = $_POST['jenis_kelamin'];
     $asal_kota = trim($_POST['asal_kota']);
-    
-    // Handle club baru atau existing
+
     $nama_club = trim($_POST['nama_club']);
     if ($nama_club === 'CLUB_BARU' && !empty($_POST['club_baru'])) {
         $nama_club = trim($_POST['club_baru']);
     }
-    
+
     $sekolah = trim($_POST['sekolah']);
     $kelas = trim($_POST['kelas']);
     $nomor_hp = trim($_POST['nomor_hp']);
     $category_ids = isset($_POST['category_ids']) ? $_POST['category_ids'] : [];
-    
-    // Cek apakah ini peserta baru atau existing
-    $peserta_id_existing = isset($_POST['peserta_id_existing']) ? intval($_POST['peserta_id_existing']) : 0;
-    $is_new_peserta = ($peserta_id_existing == 0); // Jika 0 berarti peserta baru
 
-    // Validasi
+    $peserta_id_existing = isset($_POST['peserta_id_existing']) ? intval($_POST['peserta_id_existing']) : 0;
+    $is_new_peserta = ($peserta_id_existing == 0);
+
     $errors = [];
-    
+
     if (empty($nama_club)) {
         $errors[] = "Nama club wajib dipilih";
     }
-    
+
     if (empty($nama_peserta)) {
         $errors[] = "Nama peserta wajib diisi";
     }
-    
+
     if (empty($tanggal_lahir)) {
         $errors[] = "Tanggal lahir wajib diisi";
     }
-    
+
     if (empty($jenis_kelamin)) {
         $errors[] = "Jenis kelamin wajib dipilih";
     }
-    
+
     if (empty($nomor_hp)) {
         $errors[] = "Nomor HP wajib diisi";
     }
-    
+
     if (empty($category_ids)) {
         $errors[] = "Minimal pilih satu kategori";
     }
-    
-    // Validasi upload file
+
+    // Validasi upload file (UNCHANGED)
     $bukti_pembayaran = '';
     if (isset($_FILES['bukti_pembayaran']) && $_FILES['bukti_pembayaran']['error'] === UPLOAD_ERR_OK) {
         $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
-        $max_size = 5 * 1024 * 1024; // 5MB
-        
+        $max_size = 5 * 1024 * 1024;
+
         $file_type = $_FILES['bukti_pembayaran']['type'];
         $file_size = $_FILES['bukti_pembayaran']['size'];
         $file_tmp = $_FILES['bukti_pembayaran']['tmp_name'];
         $file_name = $_FILES['bukti_pembayaran']['name'];
-        
-        // Validasi tipe file
+
         if (!in_array($file_type, $allowed_types)) {
             $errors[] = "Tipe file tidak diizinkan. Hanya JPG, PNG, GIF, dan PDF yang diperbolehkan";
         }
-        
-        // Validasi ukuran file
+
         if ($file_size > $max_size) {
             $errors[] = "Ukuran file terlalu besar. Maksimal 5MB";
         }
-        
+
         if (empty($errors)) {
-            // Create uploads directory if not exists
             $upload_dir = '../assets/uploads/pembayaran/';
             if (!file_exists($upload_dir)) {
                 mkdir($upload_dir, 0755, true);
             }
-            
-            // Generate unique filename
+
             $file_extension = pathinfo($file_name, PATHINFO_EXTENSION);
             $unique_name = date('YmdHis') . '_' . uniqid() . '.' . $file_extension;
             $upload_path = $upload_dir . $unique_name;
-            
-            // Move uploaded file
+
             if (move_uploaded_file($file_tmp, $upload_path)) {
                 $bukti_pembayaran = $unique_name;
             } else {
@@ -259,33 +251,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-    
-    // Validasi umur dan gender sesuai kategori yang dipilih
+
+    // Validasi umur dan gender (UNCHANGED)
     if (!empty($tanggal_lahir) && !empty($category_ids) && !empty($jenis_kelamin)) {
         $birth_date = new DateTime($tanggal_lahir);
         $current_date = new DateTime();
         $age = $current_date->diff($birth_date)->y;
-        
+
         $invalidCategories = [];
         foreach ($category_ids as $category_id) {
-            // Cari kategori yang dipilih
             foreach ($kegiatanData['kategori'] as $kategori) {
                 if ($kategori['id'] == $category_id) {
-                    // Validasi umur
                     if ($age < $kategori['min_age'] || $age > $kategori['max_age']) {
                         $invalidCategories[] = $kategori['name'] . " (umur {$kategori['min_age']}-{$kategori['max_age']} tahun)";
                     }
-                    
-                    // Validasi gender
+
                     if ($kategori['gender'] !== 'Campuran' && $kategori['gender'] !== $jenis_kelamin) {
                         $invalidCategories[] = $kategori['name'] . " (khusus {$kategori['gender']})";
                     }
-                    
+
                     break;
                 }
             }
         }
-        
+
         if (!empty($invalidCategories)) {
             $errors[] = "Kategori tidak sesuai: " . implode(', ', $invalidCategories);
         }
@@ -293,43 +282,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         try {
-            // Loop untuk setiap kategori yang dipilih
             $successCount = 0;
             $selectedCategoryNames = [];
-            
+
             foreach ($category_ids as $category_id) {
-                // Ambil nama kategori untuk pesan sukses
                 foreach ($kegiatanData['kategori'] as $kategori) {
                     if ($kategori['id'] == $category_id) {
                         $selectedCategoryNames[] = $kategori['name'];
                         break;
                     }
                 }
-                
-                // Cek apakah peserta sudah terdaftar di kategori ini untuk kegiatan ini
+
                 $checkStmt = $conn->prepare("SELECT id FROM peserta WHERE nama_peserta = ? AND category_id = ? AND kegiatan_id = ? LIMIT 1");
                 $checkStmt->bind_param("sii", $nama_peserta, $category_id, $kegiatan_id);
                 $checkStmt->execute();
                 $checkResult = $checkStmt->get_result();
-                
+
                 if ($checkResult->num_rows > 0) {
-                    // Sudah terdaftar, skip
                     $checkStmt->close();
                     continue;
                 }
                 $checkStmt->close();
-                
-                // Jika peserta existing (bukan baru), ambil data dari peserta yang sudah ada
+
                 if (!$is_new_peserta && $peserta_id_existing > 0) {
-                    // Ambil data peserta existing
                     $getPesertaStmt = $conn->prepare("SELECT tanggal_lahir, jenis_kelamin, asal_kota, nama_club, sekolah, kelas, nomor_hp FROM peserta WHERE id = ? LIMIT 1");
                     $getPesertaStmt->bind_param("i", $peserta_id_existing);
                     $getPesertaStmt->execute();
                     $pesertaResult = $getPesertaStmt->get_result();
-                    
+
                     if ($pesertaResult->num_rows > 0) {
                         $existingData = $pesertaResult->fetch_assoc();
-                        // Gunakan data existing
                         $tanggal_lahir = $existingData['tanggal_lahir'];
                         $jenis_kelamin = $existingData['jenis_kelamin'];
                         $asal_kota = $existingData['asal_kota'];
@@ -340,31 +322,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $getPesertaStmt->close();
                 }
-                
-                // Insert record baru untuk kategori ini
+
                 $stmt = $conn->prepare("INSERT INTO peserta (nama_peserta, tanggal_lahir, jenis_kelamin, asal_kota, nama_club, sekolah, kelas, nomor_hp, bukti_pembayaran, category_id, kegiatan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-                $stmt->bind_param("sssssssssii", 
-                    $nama_peserta, 
-                    $tanggal_lahir, 
-                    $jenis_kelamin, 
-                    $asal_kota, 
-                    $nama_club, 
-                    $sekolah, 
-                    $kelas, 
+                $stmt->bind_param("sssssssssii",
+                    $nama_peserta,
+                    $tanggal_lahir,
+                    $jenis_kelamin,
+                    $asal_kota,
+                    $nama_club,
+                    $sekolah,
+                    $kelas,
                     $nomor_hp,
                     $bukti_pembayaran,
                     $category_id,
                     $kegiatan_id
                 );
-                
+
                 if ($stmt->execute()) {
                     $successCount++;
                 }
-                
+
                 $stmt->close();
             }
-            
+
             if ($successCount > 0) {
                 $categoryList = implode(', ', $selectedCategoryNames);
                 $pesertaType = $is_new_peserta ? "Peserta baru" : "Peserta existing";
@@ -374,766 +355,335 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $errors[] = "Semua kategori yang dipilih sudah terdaftar sebelumnya";
             }
-            
+
         } catch (Exception $e) {
             $errors[] = "Error: " . $e->getMessage();
         }
     }
-    
+
     $_SESSION['errors'] = $errors;
 }
 ?>
-
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Form Pendaftaran Peserta - <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></title>
+    <title>Pendaftaran Peserta - <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'archery': {
+                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
+                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
+                            800: '#166534', 900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-
-        .header p {
-            font-size: 16px;
-            opacity: 0.9;
-        }
-
-        .kegiatan-info {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-        }
-
-        .kegiatan-info h3 {
-            font-size: 20px;
-            margin-bottom: 8px;
-        }
-
-        .form-container {
-            padding: 40px;
-        }
-
-        .alert {
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid transparent;
-            border-radius: 8px;
-        }
-
-        .alert-success {
-            color: #155724;
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-        }
-
-        .alert-danger {
-            color: #721c24;
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        .form-group.full-width {
-            grid-column: 1 / -1;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
-            font-size: 14px;
-        }
-
-        .required {
-            color: #e74c3c;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e1e8ed;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            background-color: #f8f9fa;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: #4facfe;
-            background-color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.2);
-        }
-
-        .form-control:hover {
-            border-color: #b8c6db;
-        }
-
-        .form-control:disabled {
-            background-color: #e9ecef;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        select.form-control {
-            cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            padding-right: 35px;
-        }
-
-        .file-input-container {
-            position: relative;
-            display: inline-block;
-            width: 100%;
-        }
-
-        .file-input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px dashed #e1e8ed;
-            border-radius: 8px;
-            background-color: #f8f9fa;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            text-align: center;
-            font-size: 14px;
-            color: #666;
-        }
-
-        .file-input:hover {
-            border-color: #4facfe;
-            background-color: rgba(79, 172, 254, 0.1);
-        }
-
-        .file-input input[type="file"] {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .file-info {
-            margin-top: 8px;
-            font-size: 12px;
-            color: #666;
-            text-align: center;
-        }
-
-        .file-preview {
-            margin-top: 10px;
-            padding: 10px;
-            background: #e8f4f8;
-            border-radius: 6px;
-            font-size: 14px;
-            color: #333;
-            display: none;
-        }
-
-        .checkbox-group {
-            border: 2px solid #e1e8ed;
-            border-radius: 8px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .checkbox-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 15px;
-            padding: 12px;
-            background-color: white;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
-            transition: all 0.3s ease;
-        }
-
-        .checkbox-item:hover {
-            border-color: #4facfe;
-            box-shadow: 0 2px 8px rgba(79, 172, 254, 0.1);
-        }
-
-        .checkbox-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .checkbox-item input[type="checkbox"] {
-            margin-right: 12px;
-            margin-top: 3px;
-            transform: scale(1.2);
-            accent-color: #4facfe;
-        }
-
-        .checkbox-label {
-            flex: 1;
-            cursor: pointer;
-        }
-
-        .checkbox-label .category-name {
-            font-weight: 600;
-            color: #333;
-            font-size: 15px;
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        .checkbox-label .age-info {
-            font-size: 12px;
-            color: #666;
-            font-style: italic;
-            margin-bottom: 2px;
-        }
-
-        .checkbox-label .gender-info {
-            font-size: 12px;
-            color: #007bff;
-            font-weight: 500;
-        }
-
-        .checkbox-item.disabled {
-            opacity: 0.5;
-            background-color: #f5f5f5;
-        }
-
-        .checkbox-item.disabled input[type="checkbox"] {
-            cursor: not-allowed;
-        }
-
-        .radio-group {
-            display: flex;
-            gap: 20px;
-            margin-top: 8px;
-        }
-
-        .radio-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .radio-item input[type="radio"] {
-            width: 18px;
-            height: 18px;
-            accent-color: #4facfe;
-        }
-
-        .radio-item label {
-            margin-bottom: 0;
-            font-weight: normal;
-            cursor: pointer;
-        }
-
-        .btn-container {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 30px;
-            padding-top: 30px;
-            border-top: 2px solid #f1f3f4;
-        }
-
-        .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 120px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
-        .back-link {
-            display: inline-block;
-            margin-bottom: 20px;
-            color: #4facfe;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        .category-info {
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 10px;
-            font-size: 14px;
-            color: #1976d2;
-        }
-
-        .info-box {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #856404;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        .info-box strong {
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        /* Responsive Design for Mobile */
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            .container {
-                border-radius: 10px;
-                margin: 10px 0;
-            }
-
-            .form-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-            
-            .form-container {
-                padding: 20px 15px;
-            }
-            
-            .header {
-                padding: 20px 15px;
-            }
-
-            .header h1 {
-                font-size: 22px;
-                margin-bottom: 8px;
-            }
-
-            .header p {
-                font-size: 14px;
-            }
-
-            .kegiatan-info {
-                padding: 12px;
-            }
-
-            .kegiatan-info h3 {
-                font-size: 18px;
-            }
-
-            .kegiatan-info p {
-                font-size: 14px;
-            }
-            
-            .radio-group {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .checkbox-group {
-                max-height: 250px;
-                padding: 12px;
-            }
-
-            .checkbox-item {
-                padding: 10px;
-                margin-bottom: 12px;
-            }
-
-            .checkbox-label .category-name {
-                font-size: 14px;
-            }
-
-            .checkbox-label .age-info,
-            .checkbox-label .gender-info {
-                font-size: 11px;
-            }
-
-            .form-group label {
-                font-size: 13px;
-            }
-
-            .form-control {
-                padding: 10px 12px;
-                font-size: 14px;
-            }
-
-            select.form-control {
-                background-position: right 10px center;
-                padding-right: 30px;
-            }
-
-            .btn-container {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .btn {
-                width: 100%;
-                padding: 14px 20px;
-                font-size: 15px;
-            }
-
-            .alert {
-                padding: 12px;
-                font-size: 14px;
-                margin-bottom: 15px;
-            }
-
-            .info-box {
-                padding: 10px;
-                font-size: 13px;
-                margin-bottom: 15px;
-            }
-
-            .category-info {
-                padding: 12px;
-                font-size: 13px;
-            }
-
-            .file-input {
-                padding: 10px 12px;
-                font-size: 13px;
-            }
-
-            .file-info {
-                font-size: 11px;
-            }
-
-            .file-preview {
-                font-size: 13px;
-            }
-
-            .back-link {
-                font-size: 14px;
-                margin-bottom: 15px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 5px;
-            }
-
-            .container {
-                border-radius: 8px;
-            }
-
-            .header h1 {
-                font-size: 20px;
-            }
-
-            .header p {
-                font-size: 13px;
-            }
-
-            .form-container {
-                padding: 15px 10px;
-            }
-
-            .form-group {
-                margin-bottom: 20px;
-            }
-
-            .checkbox-item {
-                padding: 8px;
-            }
-
-            .checkbox-item input[type="checkbox"] {
-                transform: scale(1.1);
-            }
-
-            .btn {
-                padding: 12px 20px;
-                font-size: 14px;
-            }
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .checkbox-item.disabled { opacity: 0.5; pointer-events: none; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Form Pendaftaran Peserta</h1>
-            <p>Silakan lengkapi data diri Anda dengan benar</p>
-            
-            <div class="kegiatan-info">
-                <h3><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></h3>
-                <p>Kategori yang tersedia: <?= count($kegiatanData['kategori']) ?> kategori</p>
-            </div>
-        </div>
-
-        <div class="form-container">
-            <a href="kegiatan.view.php" class="back-link">← Kembali Ke Kegiatan</a>
-
-            <?php if (isset($_SESSION['success'])): ?>
-                <div class="alert alert-success">
-                    <?= $_SESSION['success']; ?>
-                    <?php unset($_SESSION['success']); ?>
+<body class="min-h-full bg-gradient-to-br from-archery-600 via-archery-700 to-emerald-800">
+    <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-3xl mx-auto">
+            <!-- Header Card -->
+            <div class="bg-white/10 backdrop-blur-lg rounded-t-2xl px-6 py-8 text-center text-white">
+                <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-bullseye text-3xl"></i>
                 </div>
-            <?php endif; ?>
-
-            <?php if (isset($_SESSION['errors']) && !empty($_SESSION['errors'])): ?>
-                <div class="alert alert-danger">
-                    <ul style="margin: 0; padding-left: 20px;">
-                        <?php foreach ($_SESSION['errors'] as $error): ?>
-                            <li><?= $error; ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <?php unset($_SESSION['errors']); ?>
+                <h1 class="text-2xl sm:text-3xl font-bold mb-2">Pendaftaran Peserta</h1>
+                <p class="text-white/80 mb-4">Lengkapi data diri Anda dengan benar</p>
+                <div class="inline-block bg-white/20 rounded-lg px-4 py-2">
+                    <p class="font-semibold"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
+                    <p class="text-sm text-white/70"><?= count($kegiatanData['kategori']) ?> kategori tersedia</p>
                 </div>
-            <?php endif; ?>
-
-            <div class="info-box">
-                <strong>📋 Petunjuk Pengisian:</strong>
-                1. Pilih nama club terlebih dahulu<br>
-                2. Pilih peserta existing atau tambah peserta baru<br>
-                3. Lengkapi data yang diperlukan
             </div>
 
-            <form method="POST" action="" enctype="multipart/form-data">
-                <input type="hidden" name="kegiatan_id" value="<?= $kegiatan_id ?>">
-                <input type="hidden" id="peserta_id_existing" name="peserta_id_existing" value="0">
-                
-                <div class="form-grid">
-                    <!-- CLUB (Dipindah ke atas) -->
-                    <div class="form-group full-width">
-                        <label for="nama_club">Nama Club <span class="required">*</span></label>
-                        <select id="nama_club" 
-                                name="nama_club" 
-                                class="form-control" 
-                                onchange="loadPesertaByClub()"
-                                required>
-                            <option value="">-- Pilih Club --</option>
-                            <?php foreach ($clubList as $club): ?>
-                                <option value="<?= htmlspecialchars($club) ?>">
-                                    <?= htmlspecialchars($club) ?>
-                                </option>
-                            <?php endforeach; ?>
-                            <option value="CLUB_BARU">+ Tambah Club Baru</option>
-                        </select>
-                        
-                        <!-- Input manual untuk club baru -->
-                        <input type="text" 
-                               id="club_baru" 
-                               name="club_baru" 
-                               class="form-control" 
-                               placeholder="Masukkan nama club baru"
-                               style="display: none; margin-top: 10px;">
-                    </div>
+            <!-- Main Form Container -->
+            <div class="bg-white rounded-b-2xl shadow-xl">
+                <div class="p-6 sm:p-8">
+                    <!-- Back Link -->
+                    <a href="kegiatan.view.php" class="inline-flex items-center gap-2 text-archery-600 hover:text-archery-700 font-medium text-sm mb-6">
+                        <i class="fas fa-arrow-left"></i> Kembali Ke Kegiatan
+                    </a>
 
-                    <!-- NAMA PESERTA (Dropdown atau Input Manual) -->
-                    <div class="form-group full-width">
-                        <label for="nama_peserta_select">Nama Peserta <span class="required">*</span></label>
-                        <select id="nama_peserta_select" 
-                                class="form-control" 
-                                onchange="loadPesertaData()"
-                                disabled>
-                            <option value="">-- Pilih club terlebih dahulu --</option>
-                        </select>
-                        
-                        <!-- Input manual untuk peserta baru -->
-                        <input type="text" 
-                               id="nama_peserta_manual" 
-                               class="form-control" 
-                               placeholder="Masukkan nama peserta baru"
-                               style="display: none; margin-top: 10px;">
-                        
-                        <input type="hidden" id="nama_peserta" name="nama_peserta" required>
-                    </div>
-
-                    <!-- Form fields lainnya -->
-                    <div class="form-group">
-                        <label for="tanggal_lahir">Tanggal Lahir <span class="required">*</span></label>
-                        <input type="date" 
-                               id="tanggal_lahir" 
-                               name="tanggal_lahir" 
-                               class="form-control"
-                               onchange="updateKategoriOptions()"
-                               required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Jenis Kelamin <span class="required">*</span></label>
-                        <div class="radio-group">
-                            <div class="radio-item">
-                                <input type="radio" 
-                                       id="laki_laki" 
-                                       name="jenis_kelamin" 
-                                       value="Laki-laki"
-                                       onchange="updateKategoriOptions()"
-                                       required>
-                                <label for="laki_laki">Laki-laki</label>
+                    <!-- Success Message -->
+                    <?php if (isset($_SESSION['success'])): ?>
+                        <div class="mb-6 flex items-start gap-3 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800">
+                            <i class="fas fa-check-circle text-emerald-500 mt-0.5"></i>
+                            <div>
+                                <p class="text-sm font-medium"><?= $_SESSION['success']; ?></p>
                             </div>
-                            <div class="radio-item">
-                                <input type="radio" 
-                                       id="perempuan" 
-                                       name="jenis_kelamin" 
-                                       value="Perempuan"
-                                       onchange="updateKategoriOptions()"
-                                       required>
-                                <label for="perempuan">Perempuan</label>
-                            </div>
+                            <button onclick="this.parentElement.remove()" class="ml-auto text-emerald-500 hover:text-emerald-700">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                    </div>
+                        <?php unset($_SESSION['success']); ?>
+                    <?php endif; ?>
 
-                    <div class="form-group">
-                        <label for="nomor_hp">Nomor HP <span class="required">*</span></label>
-                        <input type="tel" 
-                               id="nomor_hp" 
-                               name="nomor_hp" 
-                               class="form-control" 
-                               placeholder="08xxxxxxxxxx"
-                               required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="asal_kota">Asal Kota</label>
-                        <input type="text" 
-                               id="asal_kota" 
-                               name="asal_kota" 
-                               class="form-control">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="sekolah">Sekolah</label>
-                        <input type="text" 
-                               id="sekolah" 
-                               name="sekolah" 
-                               class="form-control">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="kelas">Kelas</label>
-                        <input type="text" 
-                               id="kelas" 
-                               name="kelas" 
-                               class="form-control" 
-                               placeholder="Contoh: XII IPA 1">
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label for="bukti_pembayaran">Bukti Pembayaran</label>
-                        <div class="file-input-container">
-                            <div class="file-input" onclick="document.getElementById('bukti_pembayaran').click()">
-                                <input type="file" 
-                                       id="bukti_pembayaran" 
-                                       name="bukti_pembayaran" 
-                                       accept=".jpg,.jpeg,.png,.gif,.pdf"
-                                       onchange="previewFile()">
-                                <span id="file-text">📁 Klik untuk memilih file bukti pembayaran</span>
-                            </div>
-                            <div class="file-info">
-                                Format: JPG, PNG, GIF, PDF | Maksimal: 5MB
-                            </div>
-                            <div id="file-preview" class="file-preview"></div>
-                        </div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Kategori yang Diikuti <span class="required">*</span></label>
-                        <div class="checkbox-group" id="kategori-group">
-                            <?php foreach ($kegiatanData['kategori'] as $kategori): ?>
-                                <div class="checkbox-item" 
-                                     data-min-age="<?= $kategori['min_age'] ?>"
-                                     data-max-age="<?= $kategori['max_age'] ?>"
-                                     data-gender="<?= $kategori['gender'] ?>">
-                                    <input type="checkbox" 
-                                           name="category_ids[]" 
-                                           value="<?= $kategori['id'] ?>" 
-                                           id="category_<?= $kategori['id'] ?>">
-                                    <label for="category_<?= $kategori['id'] ?>" class="checkbox-label">
-                                        <span class="category-name"><?= htmlspecialchars($kategori['name']) ?></span>
-                                        <div class="age-info">Umur: <?= $kategori['min_age'] ?>-<?= $kategori['max_age'] ?> tahun (Lahir <?= date("Y") - $kategori['max_age'] ?> – <?= date("Y") - $kategori['min_age'] ?>)</div>
-                                        <div class="gender-info"><?= $kategori['gender'] == 'Campuran' ? 'Putra & Putri' : 'Khusus ' . $kategori['gender'] ?></div>
-                                    </label>
+                    <!-- Error Messages -->
+                    <?php if (isset($_SESSION['errors']) && !empty($_SESSION['errors'])): ?>
+                        <div class="mb-6 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-800">
+                            <div class="flex items-start gap-3">
+                                <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
+                                <div>
+                                    <p class="text-sm font-medium mb-1">Terdapat kesalahan:</p>
+                                    <ul class="text-sm list-disc list-inside space-y-1">
+                                        <?php foreach ($_SESSION['errors'] as $error): ?>
+                                            <li><?= $error; ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
                                 </div>
-                            <?php endforeach; ?>
+                            </div>
                         </div>
-                        <div class="category-info" id="category-info">
-                            <strong>Info:</strong> Anda dapat memilih beberapa kategori sekaligus. Pilih tanggal lahir dan jenis kelamin terlebih dahulu untuk melihat kategori yang sesuai.
-                        </div>
-                    </div>
-                </div>
+                        <?php unset($_SESSION['errors']); ?>
+                    <?php endif; ?>
 
-                <div class="btn-container">
-                    <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
-                    <button type="submit" class="btn btn-primary">Daftar</button>
+                    <!-- Instructions -->
+                    <div class="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200">
+                        <p class="text-sm text-amber-800">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <strong>Petunjuk:</strong> Pilih club terlebih dahulu, lalu pilih peserta existing atau tambah peserta baru.
+                        </p>
+                    </div>
+
+                    <!-- Existing Peserta Info -->
+                    <div id="existing-peserta-info" class="hidden mb-6 p-4 rounded-lg bg-cyan-50 border border-cyan-200">
+                        <p class="text-sm text-cyan-800">
+                            <i class="fas fa-user-check mr-2"></i>
+                            <strong>Info:</strong> Anda memilih peserta existing. Data peserta akan menggunakan data yang sudah ada.
+                        </p>
+                    </div>
+
+                    <!-- FORM: method=POST, action="", enctype=multipart/form-data (UNCHANGED) -->
+                    <form method="POST" action="" enctype="multipart/form-data">
+                        <!-- HIDDEN: name="kegiatan_id" (UNCHANGED) -->
+                        <input type="hidden" name="kegiatan_id" value="<?= $kegiatan_id ?>">
+                        <!-- HIDDEN: name="peserta_id_existing" (UNCHANGED) -->
+                        <input type="hidden" id="peserta_id_existing" name="peserta_id_existing" value="0">
+                        <!-- HIDDEN: name="nama_peserta" (UNCHANGED) -->
+                        <input type="hidden" id="nama_peserta" name="nama_peserta" required>
+
+                        <div class="space-y-6">
+                            <!-- Club Selection -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">
+                                    Nama Club <span class="text-red-500">*</span>
+                                </label>
+                                <!-- SELECT: name="nama_club" (UNCHANGED) -->
+                                <select id="nama_club" name="nama_club"
+                                        class="w-full px-4 py-3 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 transition-colors"
+                                        onchange="loadPesertaByClub()" required>
+                                    <option value="">-- Pilih Club --</option>
+                                    <?php foreach ($clubList as $club): ?>
+                                        <option value="<?= htmlspecialchars($club) ?>"><?= htmlspecialchars($club) ?></option>
+                                    <?php endforeach; ?>
+                                    <option value="CLUB_BARU">+ Tambah Club Baru</option>
+                                </select>
+
+                                <!-- INPUT: name="club_baru" (UNCHANGED) -->
+                                <input type="text" id="club_baru" name="club_baru"
+                                       class="hidden w-full mt-3 px-4 py-3 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
+                                       placeholder="Masukkan nama club baru">
+                            </div>
+
+                            <!-- Peserta Selection -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">
+                                    Nama Peserta <span class="text-red-500">*</span>
+                                </label>
+                                <select id="nama_peserta_select"
+                                        class="w-full px-4 py-3 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 transition-colors disabled:bg-slate-100 disabled:text-slate-500"
+                                        onchange="loadPesertaData()" disabled>
+                                    <option value="">-- Pilih club terlebih dahulu --</option>
+                                </select>
+
+                                <input type="text" id="nama_peserta_manual"
+                                       class="hidden w-full mt-3 px-4 py-3 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
+                                       placeholder="Masukkan nama peserta baru">
+                            </div>
+
+                            <!-- Two Column Grid -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <!-- Tanggal Lahir -->
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">
+                                        Tanggal Lahir <span class="text-red-500">*</span>
+                                    </label>
+                                    <!-- INPUT: name="tanggal_lahir" (UNCHANGED) -->
+                                    <input type="date" id="tanggal_lahir" name="tanggal_lahir"
+                                           class="w-full px-4 py-3 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
+                                           onchange="updateKategoriOptions()" required>
+                                </div>
+
+                                <!-- Jenis Kelamin -->
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">
+                                        Jenis Kelamin <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="flex gap-4 mt-1">
+                                        <!-- INPUT: name="jenis_kelamin" (UNCHANGED) -->
+                                        <label class="flex items-center gap-2 px-4 py-3 rounded-lg border border-slate-300 cursor-pointer hover:bg-slate-50 transition-colors flex-1">
+                                            <input type="radio" id="laki_laki" name="jenis_kelamin" value="Laki-laki"
+                                                   class="text-archery-600 focus:ring-archery-500"
+                                                   onchange="updateKategoriOptions()" required>
+                                            <i class="fas fa-mars text-blue-500"></i>
+                                            <span class="text-sm">Laki-laki</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 px-4 py-3 rounded-lg border border-slate-300 cursor-pointer hover:bg-slate-50 transition-colors flex-1">
+                                            <input type="radio" id="perempuan" name="jenis_kelamin" value="Perempuan"
+                                                   class="text-archery-600 focus:ring-archery-500"
+                                                   onchange="updateKategoriOptions()" required>
+                                            <i class="fas fa-venus text-pink-500"></i>
+                                            <span class="text-sm">Perempuan</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Nomor HP -->
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">
+                                        Nomor HP <span class="text-red-500">*</span>
+                                    </label>
+                                    <!-- INPUT: name="nomor_hp" (UNCHANGED) -->
+                                    <input type="tel" id="nomor_hp" name="nomor_hp"
+                                           class="w-full px-4 py-3 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
+                                           placeholder="08xxxxxxxxxx" required>
+                                </div>
+
+                                <!-- Asal Kota -->
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Asal Kota</label>
+                                    <!-- INPUT: name="asal_kota" (UNCHANGED) -->
+                                    <input type="text" id="asal_kota" name="asal_kota"
+                                           class="w-full px-4 py-3 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
+                                           placeholder="Kota asal peserta">
+                                </div>
+
+                                <!-- Sekolah -->
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Sekolah</label>
+                                    <!-- INPUT: name="sekolah" (UNCHANGED) -->
+                                    <input type="text" id="sekolah" name="sekolah"
+                                           class="w-full px-4 py-3 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
+                                           placeholder="Nama sekolah">
+                                </div>
+
+                                <!-- Kelas -->
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Kelas</label>
+                                    <!-- INPUT: name="kelas" (UNCHANGED) -->
+                                    <input type="text" id="kelas" name="kelas"
+                                           class="w-full px-4 py-3 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
+                                           placeholder="Contoh: XII IPA 1">
+                                </div>
+                            </div>
+
+                            <!-- Bukti Pembayaran -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Bukti Pembayaran</label>
+                                <div class="relative">
+                                    <div id="file-drop-zone"
+                                         class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-archery-500 hover:bg-archery-50 transition-colors cursor-pointer"
+                                         onclick="document.getElementById('bukti_pembayaran').click()">
+                                        <!-- INPUT: name="bukti_pembayaran" (UNCHANGED) -->
+                                        <input type="file" id="bukti_pembayaran" name="bukti_pembayaran"
+                                               accept=".jpg,.jpeg,.png,.gif,.pdf"
+                                               onchange="previewFile()" class="hidden">
+                                        <i class="fas fa-cloud-upload-alt text-3xl text-slate-400 mb-2"></i>
+                                        <p id="file-text" class="text-sm text-slate-600">Klik untuk memilih file bukti pembayaran</p>
+                                        <p class="text-xs text-slate-400 mt-1">JPG, PNG, GIF, PDF (Max: 5MB)</p>
+                                    </div>
+                                    <div id="file-preview" class="hidden mt-3 p-3 rounded-lg bg-slate-50 border border-slate-200">
+                                        <div class="flex items-center gap-3">
+                                            <i class="fas fa-file text-archery-600"></i>
+                                            <div class="flex-1 text-sm" id="file-info"></div>
+                                            <button type="button" onclick="clearFile()" class="text-red-500 hover:text-red-700">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Kategori Selection -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">
+                                    Kategori yang Diikuti <span class="text-red-500">*</span>
+                                </label>
+                                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                                    <div id="kategori-group" class="max-h-64 overflow-y-auto custom-scrollbar divide-y divide-slate-100">
+                                        <?php foreach ($kegiatanData['kategori'] as $kategori): ?>
+                                            <div class="checkbox-item p-4 hover:bg-slate-50 transition-colors"
+                                                 data-min-age="<?= $kategori['min_age'] ?>"
+                                                 data-max-age="<?= $kategori['max_age'] ?>"
+                                                 data-gender="<?= $kategori['gender'] ?>">
+                                                <label class="flex items-start gap-3 cursor-pointer">
+                                                    <!-- INPUT: name="category_ids[]" (UNCHANGED) -->
+                                                    <input type="checkbox" name="category_ids[]"
+                                                           value="<?= $kategori['id'] ?>"
+                                                           id="category_<?= $kategori['id'] ?>"
+                                                           class="mt-1 rounded text-archery-600 focus:ring-archery-500">
+                                                    <div class="flex-1">
+                                                        <p class="font-medium text-slate-900"><?= htmlspecialchars($kategori['name']) ?></p>
+                                                        <p class="text-xs text-slate-500 mt-0.5">
+                                                            Umur: <?= $kategori['min_age'] ?>-<?= $kategori['max_age'] ?> tahun
+                                                            (Lahir <?= date("Y") - $kategori['max_age'] ?>–<?= date("Y") - $kategori['min_age'] ?>)
+                                                        </p>
+                                                        <p class="text-xs text-blue-600 font-medium">
+                                                            <?= $kategori['gender'] == 'Campuran' ? 'Putra & Putri' : 'Khusus ' . $kategori['gender'] ?>
+                                                        </p>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                                <div id="category-info" class="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                                    <p class="text-sm text-blue-800">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        Pilih tanggal lahir dan jenis kelamin untuk melihat kategori yang sesuai.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Submit Buttons -->
+                            <div class="flex flex-col sm:flex-row gap-3 pt-6 border-t border-slate-200">
+                                <button type="button" onclick="resetForm()"
+                                        class="flex-1 px-6 py-3 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors">
+                                    <i class="fas fa-redo mr-2"></i> Reset
+                                </button>
+                                <button type="submit"
+                                        class="flex-1 px-6 py-3 rounded-lg bg-archery-600 text-white font-medium hover:bg-archery-700 transition-colors">
+                                    <i class="fas fa-check mr-2"></i> Daftar Sekarang
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-6 text-white/60 text-sm">
+                <p>Turnamen Panahan Management System</p>
+            </div>
         </div>
     </div>
 
     <script>
-        // Load peserta berdasarkan club yang dipilih
+        // Load peserta by club (UNCHANGED logic)
         function loadPesertaByClub() {
             const clubSelect = document.getElementById('nama_club');
             const clubBaru = document.getElementById('club_baru');
@@ -1141,24 +691,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const pesertaManual = document.getElementById('nama_peserta_manual');
             const selectedClub = clubSelect.value;
 
-            // Reset form data
             resetFormData();
 
             if (selectedClub === 'CLUB_BARU') {
-                // Tampilkan input manual untuk club baru
-                clubBaru.style.display = 'block';
+                clubBaru.classList.remove('hidden');
                 clubBaru.required = true;
                 pesertaSelect.disabled = true;
-                pesertaSelect.innerHTML = '<option value="">-- Masukkan nama club baru terlebih dahulu --</option>';
-                pesertaSelect.style.display = 'block';
-                pesertaManual.style.display = 'none';
+                pesertaSelect.innerHTML = '<option value="">-- Masukkan nama club baru --</option>';
+                pesertaSelect.classList.remove('hidden');
+                pesertaManual.classList.add('hidden');
                 return;
             } else {
-                clubBaru.style.display = 'none';
+                clubBaru.classList.add('hidden');
                 clubBaru.required = false;
                 clubBaru.value = '';
-                pesertaSelect.style.display = 'block';
-                pesertaManual.style.display = 'none';
+                pesertaSelect.classList.remove('hidden');
+                pesertaManual.classList.add('hidden');
             }
 
             if (selectedClub === '') {
@@ -1167,16 +715,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 return;
             }
 
-            // Load peserta dari database via AJAX
             pesertaSelect.disabled = true;
-            pesertaSelect.innerHTML = '<option value="">⏳ Memuat data peserta...</option>';
+            pesertaSelect.innerHTML = '<option value="">Memuat data peserta...</option>';
 
-            // Panggil file yang sama dengan parameter action
             fetch('?action=get_peserta&club=' + encodeURIComponent(selectedClub))
                 .then(response => response.json())
                 .then(data => {
                     pesertaSelect.innerHTML = '<option value="">-- Pilih Nama Peserta --</option>';
-                    
+
                     if (data.length > 0) {
                         data.forEach(peserta => {
                             const option = document.createElement('option');
@@ -1185,13 +731,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             option.dataset.data = JSON.stringify(peserta);
                             pesertaSelect.appendChild(option);
                         });
-                        
-                        // Tambah opsi untuk peserta baru
+
                         const newOption = document.createElement('option');
                         newOption.value = 'PESERTA_BARU';
-                        newOption.textContent = '+ Tambah Peserta Baru dari Club ini';
+                        newOption.textContent = '+ Tambah Peserta Baru';
                         pesertaSelect.appendChild(newOption);
-                        
+
                         pesertaSelect.disabled = false;
                     } else {
                         pesertaSelect.innerHTML = '<option value="PESERTA_BARU">+ Tambah Peserta Baru</option>';
@@ -1200,214 +745,141 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    pesertaSelect.innerHTML = '<option value="">❌ Error memuat data</option>';
-                    alert('Gagal memuat data peserta. Silakan coba lagi.');
+                    pesertaSelect.innerHTML = '<option value="">Error memuat data</option>';
                 });
         }
 
-        // Load data peserta yang dipilih
+        // Load peserta data (UNCHANGED logic)
         function loadPesertaData() {
             const pesertaSelect = document.getElementById('nama_peserta_select');
             const pesertaManual = document.getElementById('nama_peserta_manual');
             const pesertaIdExisting = document.getElementById('peserta_id_existing');
             const selectedOption = pesertaSelect.options[pesertaSelect.selectedIndex];
-            
+            const existingInfo = document.getElementById('existing-peserta-info');
+
             if (pesertaSelect.value === 'PESERTA_BARU') {
-                // Enable manual input untuk peserta baru
-                pesertaSelect.style.display = 'none';
-                pesertaManual.style.display = 'block';
+                pesertaSelect.classList.add('hidden');
+                pesertaManual.classList.remove('hidden');
                 pesertaManual.required = true;
                 pesertaManual.focus();
-                
-                // Set sebagai peserta baru
+
                 pesertaIdExisting.value = '0';
-                
+                existingInfo.classList.add('hidden');
+
                 enableManualPesertaInput();
                 resetFormData();
                 return;
             }
 
             if (pesertaSelect.value === '') {
-                pesertaManual.style.display = 'none';
+                pesertaManual.classList.add('hidden');
                 pesertaManual.required = false;
                 pesertaIdExisting.value = '0';
+                existingInfo.classList.add('hidden');
                 resetFormData();
                 return;
             }
 
-            // Sembunyikan input manual
-            pesertaManual.style.display = 'none';
+            pesertaManual.classList.add('hidden');
             pesertaManual.required = false;
 
-            // Ambil data dari dataset
             const pesertaData = JSON.parse(selectedOption.dataset.data);
-            
-            // Set ID peserta existing untuk menandai ini bukan peserta baru
+
             pesertaIdExisting.value = pesertaData.id;
-            
-            // Isi form dengan data peserta
+
             document.getElementById('nama_peserta').value = pesertaData.nama_peserta;
             document.getElementById('tanggal_lahir').value = pesertaData.tanggal_lahir;
-            
-            // Set jenis kelamin
+
             const genderRadio = document.querySelector(`input[name="jenis_kelamin"][value="${pesertaData.jenis_kelamin}"]`);
-            if (genderRadio) {
-                genderRadio.checked = true;
-            }
-            
+            if (genderRadio) genderRadio.checked = true;
+
             document.getElementById('nomor_hp').value = pesertaData.nomor_hp || '';
             document.getElementById('asal_kota').value = pesertaData.asal_kota || '';
             document.getElementById('sekolah').value = pesertaData.sekolah || '';
             document.getElementById('kelas').value = pesertaData.kelas || '';
-            
-            // Update kategori options
+
+            existingInfo.classList.remove('hidden');
+
             updateKategoriOptions();
-            
-            // Disable fields yang sudah terisi (kecuali kategori dan bukti pembayaran)
-            disableFilledFields();
-            
-            // Tampilkan info bahwa ini peserta existing
-            showExistingPesertaInfo(pesertaData.nama_peserta);
         }
 
-        // Enable manual input untuk peserta baru
         function enableManualPesertaInput() {
-            // Enable semua input
             const fields = ['tanggal_lahir', 'nomor_hp', 'asal_kota', 'sekolah', 'kelas'];
             fields.forEach(fieldId => {
                 const field = document.getElementById(fieldId);
-                if (field) {
-                    field.disabled = false;
-                    field.style.backgroundColor = '#f8f9fa';
-                }
+                if (field) field.disabled = false;
             });
-            
-            // Enable radio buttons
+
             document.querySelectorAll('input[name="jenis_kelamin"]').forEach(radio => {
                 radio.disabled = false;
             });
-            
-            // Hapus info existing peserta jika ada
-            hideExistingPesertaInfo();
         }
 
-        // Tampilkan info peserta existing
-        function showExistingPesertaInfo(namaPeserta) {
-            hideExistingPesertaInfo(); // Hapus yang lama dulu
-            
-            const infoBox = document.createElement('div');
-            infoBox.id = 'existing-peserta-info';
-            infoBox.style.cssText = 'background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 14px;';
-            infoBox.innerHTML = `
-                <strong>ℹ️ Info:</strong> Anda memilih peserta existing "<strong>${namaPeserta}</strong>". 
-                Data peserta akan menggunakan data yang sudah ada. Yang ditambahkan hanya pendaftaran lomba baru.
-            `;
-            
-            const formGrid = document.querySelector('.form-grid');
-            formGrid.parentNode.insertBefore(infoBox, formGrid);
-        }
-
-        // Sembunyikan info peserta existing
-        function hideExistingPesertaInfo() {
-            const existingInfo = document.getElementById('existing-peserta-info');
-            if (existingInfo) {
-                existingInfo.remove();
-            }
-        }
-
-        // Disable fields yang sudah terisi
-        function disableFilledFields() {
-            const fields = ['tanggal_lahir', 'nomor_hp', 'asal_kota', 'sekolah', 'kelas'];
-            fields.forEach(fieldId => {
-                const field = document.getElementById(fieldId);
-                if (field && field.value) {
-                    field.style.backgroundColor = '#e9ecef';
-                }
-            });
-        }
-
-        // Reset form data
         function resetFormData() {
-            const pesertaManual = document.getElementById('nama_peserta_manual');
-            const pesertaIdExisting = document.getElementById('peserta_id_existing');
-            
             document.getElementById('nama_peserta').value = '';
-            pesertaManual.value = '';
-            pesertaIdExisting.value = '0';
+            document.getElementById('nama_peserta_manual').value = '';
+            document.getElementById('peserta_id_existing').value = '0';
             document.getElementById('tanggal_lahir').value = '';
             document.getElementById('nomor_hp').value = '';
             document.getElementById('asal_kota').value = '';
             document.getElementById('sekolah').value = '';
             document.getElementById('kelas').value = '';
-            
-            // Uncheck radio buttons
+
             document.querySelectorAll('input[name="jenis_kelamin"]').forEach(radio => {
                 radio.checked = false;
             });
-            
-            // Uncheck kategori
+
             document.querySelectorAll('input[name="category_ids[]"]').forEach(checkbox => {
                 checkbox.checked = false;
             });
-            
-            // Enable all fields
-            const fields = ['tanggal_lahir', 'nomor_hp', 'asal_kota', 'sekolah', 'kelas'];
-            fields.forEach(fieldId => {
-                const field = document.getElementById(fieldId);
-                if (field) {
-                    field.disabled = false;
-                    field.style.backgroundColor = '#f8f9fa';
-                }
-            });
-            
-            // Hapus info existing peserta
-            hideExistingPesertaInfo();
-            
+
+            document.getElementById('existing-peserta-info').classList.add('hidden');
+
             updateKategoriOptions();
         }
 
         function resetForm() {
             if (confirm('Yakin ingin mengosongkan semua field?')) {
                 document.querySelector('form').reset();
-                document.getElementById('file-text').textContent = '📁 Klik untuk memilih file bukti pembayaran';
-                document.getElementById('file-preview').style.display = 'none';
-                document.getElementById('club_baru').style.display = 'none';
-                document.getElementById('nama_peserta_manual').style.display = 'none';
-                document.getElementById('nama_peserta_select').style.display = 'block';
+                document.getElementById('file-text').textContent = 'Klik untuk memilih file bukti pembayaran';
+                document.getElementById('file-preview').classList.add('hidden');
+                document.getElementById('club_baru').classList.add('hidden');
+                document.getElementById('nama_peserta_manual').classList.add('hidden');
+                document.getElementById('nama_peserta_select').classList.remove('hidden');
                 document.getElementById('nama_peserta_select').disabled = true;
                 document.getElementById('nama_peserta_select').innerHTML = '<option value="">-- Pilih club terlebih dahulu --</option>';
                 document.getElementById('peserta_id_existing').value = '0';
+                document.getElementById('existing-peserta-info').classList.add('hidden');
                 resetFormData();
-                updateKategoriOptions();
             }
         }
 
-        // Preview file yang dipilih
         function previewFile() {
             const fileInput = document.getElementById('bukti_pembayaran');
             const fileText = document.getElementById('file-text');
             const filePreview = document.getElementById('file-preview');
-            
+            const fileInfo = document.getElementById('file-info');
+
             if (fileInput.files && fileInput.files[0]) {
                 const file = fileInput.files[0];
-                const fileName = file.name;
                 const fileSize = (file.size / 1024 / 1024).toFixed(2);
-                
-                fileText.innerHTML = `✅ ${fileName}`;
-                filePreview.innerHTML = `
-                    <strong>File dipilih:</strong><br>
-                    📄 Nama: ${fileName}<br>
-                    📊 Ukuran: ${fileSize} MB<br>
-                    📅 Tipe: ${file.type}
-                `;
-                filePreview.style.display = 'block';
+
+                fileText.innerHTML = '<i class="fas fa-check-circle text-archery-600 mr-1"></i>' + file.name;
+                fileInfo.innerHTML = `<strong>${file.name}</strong><br><span class="text-slate-500">${fileSize} MB - ${file.type}</span>`;
+                filePreview.classList.remove('hidden');
             } else {
-                fileText.textContent = '📁 Klik untuk memilih file bukti pembayaran';
-                filePreview.style.display = 'none';
+                fileText.textContent = 'Klik untuk memilih file bukti pembayaran';
+                filePreview.classList.add('hidden');
             }
         }
 
-        // Auto format nomor HP
+        function clearFile() {
+            document.getElementById('bukti_pembayaran').value = '';
+            document.getElementById('file-text').textContent = 'Klik untuk memilih file bukti pembayaran';
+            document.getElementById('file-preview').classList.add('hidden');
+        }
+
+        // Phone number auto-format
         document.getElementById('nomor_hp').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
             if (value.startsWith('0')) {
@@ -1417,37 +889,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
 
-        // Update kategori options berdasarkan umur dan gender
+        // Update category options based on age and gender
         function updateKategoriOptions() {
             const tanggalLahir = document.getElementById('tanggal_lahir').value;
             const jenisKelamin = document.querySelector('input[name="jenis_kelamin"]:checked');
             const checkboxItems = document.querySelectorAll('.checkbox-item');
             const categoryInfo = document.getElementById('category-info');
-            
+
             if (!tanggalLahir || !jenisKelamin) {
                 checkboxItems.forEach(item => {
                     item.classList.remove('disabled');
                     const checkbox = item.querySelector('input[type="checkbox"]');
                     checkbox.disabled = false;
                 });
-                categoryInfo.innerHTML = '<strong>Info:</strong> Anda dapat memilih beberapa kategori sekaligus. Pilih tanggal lahir dan jenis kelamin terlebih dahulu untuk melihat kategori yang sesuai.';
+                categoryInfo.innerHTML = '<p class="text-sm text-blue-800"><i class="fas fa-info-circle mr-1"></i>Pilih tanggal lahir dan jenis kelamin untuk melihat kategori yang sesuai.</p>';
                 return;
             }
 
             const birthDate = new Date(tanggalLahir);
             const currentDate = new Date();
             const age = Math.floor((currentDate - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
-
             const selectedGender = jenisKelamin.value;
             let availableCategories = 0;
-            let availableCategoryNames = [];
 
             checkboxItems.forEach(item => {
                 const minAge = parseInt(item.getAttribute('data-min-age'));
                 const maxAge = parseInt(item.getAttribute('data-max-age'));
                 const categoryGender = item.getAttribute('data-gender');
                 const checkbox = item.querySelector('input[type="checkbox"]');
-                const categoryName = item.querySelector('.category-name').textContent;
 
                 const ageMatch = age >= minAge && age <= maxAge;
                 const genderMatch = categoryGender === 'Campuran' || categoryGender === selectedGender;
@@ -1456,7 +925,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     item.classList.remove('disabled');
                     checkbox.disabled = false;
                     availableCategories++;
-                    availableCategoryNames.push(categoryName);
                 } else {
                     item.classList.add('disabled');
                     checkbox.disabled = true;
@@ -1464,42 +932,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             });
 
-            let infoHtml = `<strong>Umur Anda: ${age} tahun | Jenis Kelamin: ${selectedGender}</strong><br>`;
+            let infoHtml = `<p class="text-sm text-blue-800"><strong>Umur: ${age} tahun | ${selectedGender}</strong><br>`;
             if (availableCategories > 0) {
-                infoHtml += `Kategori yang sesuai: ${availableCategories} kategori`;
-                if (availableCategories <= 3) {
-                    infoHtml += ` (${availableCategoryNames.join(', ')})`;
-                }
-                if (availableCategories > 1) {
-                    infoHtml += '<br><em>Anda dapat memilih beberapa kategori sekaligus.</em>';
-                }
+                infoHtml += `${availableCategories} kategori tersedia untuk Anda</p>`;
             } else {
-                infoHtml += '<span style="color: #dc3545;">Tidak ada kategori yang sesuai dengan kriteria Anda</span>';
+                infoHtml += `<span class="text-red-600">Tidak ada kategori yang sesuai</span></p>`;
             }
-
             categoryInfo.innerHTML = infoHtml;
         }
 
-        // Validasi form sebelum submit
+        // Form validation (UNCHANGED)
         document.querySelector('form').addEventListener('submit', function(e) {
             const clubSelect = document.getElementById('nama_club');
             const clubBaru = document.getElementById('club_baru');
             const namaPeserta = document.getElementById('nama_peserta');
             const namaPesertaManual = document.getElementById('nama_peserta_manual');
             const pesertaSelect = document.getElementById('nama_peserta_select');
-            
-            // Validasi club baru
-            if (clubSelect.value === 'CLUB_BARU') {
-                if (!clubBaru.value.trim()) {
-                    e.preventDefault();
-                    alert('Masukkan nama club baru!');
-                    clubBaru.focus();
-                    return false;
-                }
+
+            if (clubSelect.value === 'CLUB_BARU' && !clubBaru.value.trim()) {
+                e.preventDefault();
+                alert('Masukkan nama club baru!');
+                clubBaru.focus();
+                return false;
             }
-            
-            // Jika mode peserta baru, ambil dari input manual
-            if (pesertaSelect.value === 'PESERTA_BARU' || namaPesertaManual.style.display !== 'none') {
+
+            if (pesertaSelect.value === 'PESERTA_BARU' || !namaPesertaManual.classList.contains('hidden')) {
                 if (!namaPesertaManual.value.trim()) {
                     e.preventDefault();
                     alert('Masukkan nama peserta!');
@@ -1508,14 +965,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 namaPeserta.value = namaPesertaManual.value.trim();
             }
-            
-            // Validasi nama peserta
+
             if (!namaPeserta.value.trim()) {
                 e.preventDefault();
                 alert('Nama peserta harus diisi!');
                 return false;
             }
-            
+
             const checkedCategories = document.querySelectorAll('input[name="category_ids[]"]:checked');
             if (checkedCategories.length === 0) {
                 e.preventDefault();
@@ -1524,31 +980,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
 
-        // Handle club baru input
+        // Club baru input handler
         document.getElementById('club_baru').addEventListener('input', function() {
             if (this.value.trim()) {
                 const pesertaSelect = document.getElementById('nama_peserta_select');
                 const pesertaManual = document.getElementById('nama_peserta_manual');
-                
+
                 pesertaSelect.disabled = false;
                 pesertaSelect.innerHTML = '<option value="PESERTA_BARU">+ Tambah Peserta Baru</option>';
                 pesertaSelect.value = 'PESERTA_BARU';
-                
-                // Langsung tampilkan input manual
-                pesertaSelect.style.display = 'none';
-                pesertaManual.style.display = 'block';
+
+                pesertaSelect.classList.add('hidden');
+                pesertaManual.classList.remove('hidden');
                 pesertaManual.required = true;
-                
+
                 enableManualPesertaInput();
             }
         });
 
-        // Handle input nama peserta manual
+        // Manual peserta input handler
         document.getElementById('nama_peserta_manual').addEventListener('input', function() {
             document.getElementById('nama_peserta').value = this.value.trim();
         });
 
-        // Panggil fungsi saat halaman dimuat jika ada data
+        // Init
         document.addEventListener('DOMContentLoaded', function() {
             const tanggalLahir = document.getElementById('tanggal_lahir').value;
             const jenisKelamin = document.querySelector('input[name="jenis_kelamin"]:checked');

@@ -212,794 +212,107 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
     $conn->close();
     ?>
     <!DOCTYPE html>
-    <html lang="id">
+    <html lang="id" class="h-full">
 
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Tournament Eliminasi / Aduan <?= htmlspecialchars($kategoriData['name']) ?></title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            'archery': {
+                                50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
+                                400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
+                                800: '#166534', 900: '#14532d',
+                            }
+                        }
+                    }
+                }
+            }
+        </script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-
-            body {
-                background: linear-gradient(135deg, #2d3436 0%, #000000 100%);
-                min-height: 100vh;
-                padding: 20px;
-                color: white;
-            }
-
-            .container {
-                max-width: 1600px;
-                margin: 0 auto;
-            }
-
-            .header {
-                text-align: center;
-                margin-bottom: 30px;
-                background: rgba(255, 255, 255, 0.05);
-                padding: 20px;
-                border-radius: 15px;
-            }
-
-            .back-btn {
-                background: rgba(255, 255, 255, 0.1);
-                border: none;
-                color: white;
-                padding: 10px 20px;
-                border-radius: 8px;
-                cursor: pointer;
-                margin-bottom: 20px;
-                text-decoration: none;
-                display: inline-block;
-                transition: all 0.3s ease;
-            }
-
-            .back-btn:hover {
-                background: rgba(255, 255, 255, 0.2);
-            }
-
-            .setup-container {
-                background: rgba(255, 255, 255, 0.05);
-                border-radius: 15px;
-                padding: 40px;
-                text-align: center;
-                max-width: 600px;
-                margin: 0 auto;
-            }
-
-            .setup-container h2 {
-                margin-bottom: 30px;
-                font-size: 28px;
-            }
-
-            .bracket-size-options {
-                display: flex;
-                gap: 20px;
-                justify-content: center;
-                margin-bottom: 30px;
-                flex-wrap: wrap;
-            }
-
-            .size-option {
-                background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
-                border: none;
-                color: white;
-                padding: 20px 40px;
-                border-radius: 12px;
-                font-size: 24px;
-                font-weight: 700;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-
-            .size-option:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 10px 30px rgba(253, 203, 110, 0.4);
-            }
-
-            .size-option.active {
-                background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
-            }
-
-            .generate-btn {
-                background: linear-gradient(135deg, #0984e3 0%, #6c5ce7 100%);
-                border: none;
-                color: white;
-                padding: 15px 50px;
-                border-radius: 12px;
-                font-size: 18px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-
-            .generate-btn:hover {
-                transform: translateY(-3px);
-                box-shadow: 0 8px 25px rgba(9, 132, 227, 0.4);
-            }
-
-            .generate-btn:disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
-                transform: none;
-            }
-
-            .bracket-container {
-                display: none;
-                margin-top: 30px;
-                overflow-x: auto;
-                overflow-y: hidden;
-                padding: 20px;
-                -webkit-overflow-scrolling: touch;
-                position: relative;
-            }
-
-            .third-place-container {
-                background: rgba(205, 127, 50, 0.15);
-                border: 2px solid rgba(205, 127, 50, 0.5);
-                border-radius: 15px;
-                padding: 30px;
-                margin-top: 40px;
-                text-align: center;
-                display: none;
-                max-width: 500px;
-                margin-left: auto;
-                margin-right: auto;
-            }
-
-            .third-place-title {
-                font-size: 24px;
-                font-weight: 700;
-                color: #cd7f32;
-                margin-bottom: 25px;
-                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-            }
-
-            .third-place-bracket {
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 12px;
-                padding: 20px;
-                display: inline-block;
-                min-width: 400px;
-            }
-
-            .bracket {
-                display: flex;
-                justify-content: space-around;
-                gap: 30px;
-                min-width: fit-content;
-                padding: 15px 0;
-            }
-
-            .round {
-                display: flex;
-                flex-direction: column;
-                justify-content: space-around;
-                min-height: 500px;
-                flex: 1;
-            }
-
-            .round-title {
-                text-align: center;
-                font-size: 18px;
-                font-weight: 700;
-                margin-bottom: 15px;
-                color: #fdcb6e;
-            }
-
-            .match {
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
-                margin: 10px 0;
-            }
-
-            .player {
-                background: linear-gradient(135deg, #ffa502 0%, #ff6348 100%);
-                padding: 12px 16px;
-                border-radius: 8px;
-                min-width: 150px;
-                max-width: 200px;
-                font-weight: 600;
-                position: relative;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                border: 3px solid transparent;
-                font-size: 13px;
-                text-align: center;
-                word-break: break-word;
-            }
-
-            .player:hover:not(.empty) {
-                transform: translateX(5px);
-                box-shadow: 0 5px 15px rgba(255, 165, 2, 0.4);
-            }
-
-            .player.winner {
-                border-color: #00b894;
-                box-shadow: 0 0 20px rgba(0, 184, 148, 0.5);
-            }
-
-            .player.empty {
-                background: rgba(255, 255, 255, 0.1);
-                color: #666;
-                cursor: default;
-            }
-
-            .final-winner {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .trophy {
-                font-size: 80px;
-                margin: 20px 0;
-            }
-
-            .winner-name {
-                background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-                padding: 20px 40px;
-                border-radius: 12px;
-                font-size: 24px;
-                font-weight: 700;
-                color: #2d3436;
-                box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
-            }
-
-            .info-text {
-                color: #ddd;
-                margin-top: 20px;
-                font-size: 14px;
-            }
-
-            /* ============================================
-                       RESPONSIVE BREAKPOINTS
-                       ============================================ */
-
-            /* Large Tablet - 1024px and below */
-            @media (max-width: 1024px) {
-                body {
-                    padding: 15px;
-                }
-
-                .bracket {
-                    gap: 25px;
-                }
-
-                .round {
-                    min-height: 450px;
-                }
-
-                .player {
-                    min-width: 140px;
-                    max-width: 190px;
-                    padding: 11px 15px;
-                    font-size: 12px;
-                }
-
-                .round-title {
-                    font-size: 17px;
-                }
-
-                .trophy {
-                    font-size: 70px;
-                }
-
-                .winner-name {
-                    font-size: 22px;
-                    padding: 18px 35px;
-                }
-            }
-
-            /* Tablet - 768px and below */
-            @media (max-width: 768px) {
-                body {
-                    padding: 10px;
-                }
-
-                .header {
-                    padding: 15px;
-                    margin-bottom: 20px;
-                }
-
-                .setup-container {
-                    padding: 25px;
-                    max-width: 100%;
-                }
-
-                .setup-container h2 {
-                    font-size: 24px;
-                    margin-bottom: 20px;
-                }
-
-                .bracket-size-options {
-                    gap: 12px;
-                }
-
-                .size-option {
-                    padding: 15px 30px;
-                    font-size: 20px;
-                }
-
-                .generate-btn {
-                    padding: 12px 40px;
-                    font-size: 16px;
-                }
-
-                .bracket-container {
-                    padding: 15px;
-                    margin-top: 20px;
-                }
-
-                .bracket {
-                    gap: 25px;
-                }
-
-                .round {
-                    min-height: 550px;
-                }
-
-                .round-title {
-                    font-size: 18px;
-                    margin-bottom: 15px;
-                }
-
-                .player {
-                    min-width: 160px;
-                    max-width: 220px;
-                    padding: 12px 16px;
-                    font-size: 14px;
-                }
-
-                .trophy {
-                    font-size: 60px;
-                    margin: 15px 0;
-                }
-
-                .winner-name {
-                    font-size: 20px;
-                    padding: 15px 30px;
-                }
-
-                .third-place-container {
-                    padding: 20px;
-                    margin-top: 30px;
-                    max-width: 90%;
-                }
-
-                .third-place-title {
-                    font-size: 20px;
-                    margin-bottom: 20px;
-                }
-
-                .third-place-bracket {
-                    min-width: 100%;
-                    padding: 15px;
-                }
-            }
-
-            /* Mobile Landscape - 640px and below */
-            @media (max-width: 640px) {
-                body {
-                    padding: 8px;
-                }
-
-                .header {
-                    padding: 12px;
-                }
-
-                .back-btn {
-                    padding: 8px 16px;
-                    font-size: 14px;
-                }
-
-                .setup-container {
-                    padding: 20px;
-                }
-
-                .setup-container h2 {
-                    font-size: 20px;
-                }
-
-                .bracket-size-options {
-                    gap: 10px;
-                    flex-direction: column;
-                }
-
-                .size-option {
-                    padding: 12px 25px;
-                    font-size: 18px;
-                    width: 100%;
-                }
-
-                .generate-btn {
-                    padding: 10px 35px;
-                    font-size: 15px;
-                    width: 100%;
-                }
-
-                .bracket-container {
-                    padding: 10px;
-                }
-
-                .bracket {
-                    gap: 20px;
-                }
-
-                .round {
-                    min-height: 400px;
-                }
-
-                .round-title {
-                    font-size: 14px;
-                    margin-bottom: 12px;
-                }
-
-                .match {
-                    gap: 4px;
-                    margin: 8px 0;
-                }
-
-                .player {
-                    min-width: 120px;
-                    max-width: 180px;
-                    padding: 9px 12px;
-                    font-size: 11px;
-                    border-radius: 6px;
-                }
-
-                .trophy {
-                    font-size: 50px;
-                    margin: 12px 0;
-                }
-
-                .winner-name {
-                    font-size: 18px;
-                    padding: 12px 25px;
-                    border-radius: 10px;
-                }
-
-                .info-text {
-                    font-size: 12px;
-                    margin-top: 15px;
-                }
-
-                .third-place-container {
-                    padding: 15px;
-                    margin-top: 25px;
-                }
-
-                .third-place-title {
-                    font-size: 18px;
-                    margin-bottom: 15px;
-                    flex-direction: column;
-                    gap: 8px;
-                }
-
-                .third-place-bracket {
-                    padding: 12px;
-                }
-            }
-
-            /* Mobile Portrait - 480px and below */
-            @media (max-width: 480px) {
-                body {
-                    padding: 6px;
-                }
-
-                .header {
-                    padding: 10px;
-                    border-radius: 12px;
-                }
-
-                .back-btn {
-                    padding: 7px 14px;
-                    font-size: 13px;
-                    margin-bottom: 15px;
-                }
-
-                .setup-container {
-                    padding: 15px;
-                    border-radius: 12px;
-                }
-
-                .setup-container h2 {
-                    font-size: 18px;
-                    margin-bottom: 15px;
-                }
-
-                .bracket-size-options {
-                    gap: 8px;
-                }
-
-                .size-option {
-                    padding: 10px 20px;
-                    font-size: 16px;
-                    border-radius: 10px;
-                }
-
-                .generate-btn {
-                    padding: 9px 30px;
-                    font-size: 14px;
-                    border-radius: 10px;
-                }
-
-                .bracket-container {
-                    padding: 8px;
-                    margin-top: 15px;
-                }
-
-                .bracket {
-                    gap: 15px;
-                }
-
-                .round {
-                    min-height: 350px;
-                }
-
-                .round-title {
-                    font-size: 13px;
-                    margin-bottom: 10px;
-                }
-
-                .match {
-                    gap: 3px;
-                    margin: 6px 0;
-                }
-
-                .player {
-                    min-width: 100px;
-                    max-width: 150px;
-                    padding: 8px 10px;
-                    font-size: 10px;
-                    border-radius: 6px;
-                    border: 2px solid transparent;
-                }
-
-                .trophy {
-                    font-size: 40px;
-                    margin: 10px 0;
-                }
-
-                .winner-name {
-                    font-size: 16px;
-                    padding: 10px 20px;
-                    border-radius: 8px;
-                }
-
-                .info-text {
-                    font-size: 11px;
-                    margin-top: 12px;
-                }
-
-                .third-place-container {
-                    padding: 12px;
-                    margin-top: 20px;
-                    border-radius: 12px;
-                }
-
-                .third-place-title {
-                    font-size: 16px;
-                    margin-bottom: 12px;
-                }
-
-                .third-place-bracket {
-                    padding: 10px;
-                    border-radius: 10px;
-                }
-            }
-
-            /* Very Small Mobile - 360px and below */
-            @media (max-width: 360px) {
-                body {
-                    padding: 5px;
-                }
-
-                .header {
-                    padding: 8px;
-                }
-
-                .back-btn {
-                    padding: 6px 12px;
-                    font-size: 12px;
-                }
-
-                .setup-container {
-                    padding: 12px;
-                }
-
-                .setup-container h2 {
-                    font-size: 16px;
-                }
-
-                .size-option {
-                    padding: 8px 16px;
-                    font-size: 14px;
-                }
-
-                .generate-btn {
-                    padding: 8px 25px;
-                    font-size: 13px;
-                }
-
-                .bracket {
-                    gap: 12px;
-                }
-
-                .round {
-                    min-height: 300px;
-                }
-
-                .round-title {
-                    font-size: 12px;
-                    margin-bottom: 8px;
-                }
-
-                .match {
-                    gap: 3px;
-                    margin: 5px 0;
-                }
-
-                .player {
-                    min-width: 85px;
-                    max-width: 130px;
-                    padding: 7px 8px;
-                    font-size: 9px;
-                    border-radius: 5px;
-                }
-
-                .trophy {
-                    font-size: 35px;
-                    margin: 8px 0;
-                }
-
-                .winner-name {
-                    font-size: 14px;
-                    padding: 8px 16px;
-                    border-radius: 7px;
-                }
-
-                .info-text {
-                    font-size: 10px;
-                    margin-top: 10px;
-                }
-
-                .third-place-container {
-                    padding: 10px;
-                    margin-top: 15px;
-                }
-
-                .third-place-title {
-                    font-size: 14px;
-                    margin-bottom: 10px;
-                }
-
-                .third-place-bracket {
-                    padding: 8px;
-                }
-            }
-
-            /* Horizontal Scroll Indicator for Brackets */
-            .bracket-container::after {
-                content: '← Geser untuk melihat →';
-                display: block;
-                text-align: center;
-                color: rgba(255, 255, 255, 0.5);
-                font-size: 12px;
-                margin-top: 10px;
-                font-style: italic;
-            }
-
-            @media (min-width: 1400px) {
-                .bracket-container::after {
-                    display: none;
-                }
-            }
-
-            /* Smooth scrolling for bracket container */
-            .bracket-container {
-                scroll-behavior: smooth;
-            }
-
-            /* Custom scrollbar for bracket container */
-            .bracket-container::-webkit-scrollbar {
-                height: 8px;
-            }
-
-            .bracket-container::-webkit-scrollbar-track {
-                background: rgba(255, 255, 255, 0.05);
-                border-radius: 10px;
-            }
-
-            .bracket-container::-webkit-scrollbar-thumb {
-                background: rgba(253, 203, 110, 0.5);
-                border-radius: 10px;
-            }
-
-            .bracket-container::-webkit-scrollbar-thumb:hover {
-                background: rgba(253, 203, 110, 0.7);
-            }
-
-            /* Touch-friendly hover states for mobile */
-            @media (hover: none) and (pointer: coarse) {
-                .player:hover:not(.empty) {
-                    transform: none;
-                }
-
-                .player:active:not(.empty) {
-                    transform: scale(0.98);
-                    box-shadow: 0 3px 10px rgba(255, 165, 2, 0.4);
-                }
-
-                .size-option:hover {
-                    transform: none;
-                }
-
-                .size-option:active {
-                    transform: scale(0.95);
-                }
-
-                .generate-btn:hover {
-                    transform: none;
-                }
-
-                .generate-btn:active {
-                    transform: scale(0.98);
-                }
-            }
+            .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+            .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+            .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(253,203,110,0.5); border-radius: 3px; }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(253,203,110,0.7); }
+
+            .player-card { transition: all 0.2s ease; }
+            .player-card:hover:not(.empty) { transform: translateX(4px); }
+            .player-card.winner { border-color: #16a34a !important; box-shadow: 0 0 20px rgba(22,163,74,0.4); }
+            .player-card.empty { background: rgba(255,255,255,0.1) !important; cursor: default; }
+
+            .size-btn.active { background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%) !important; }
+
+            @media print { .no-print { display: none !important; } }
         </style>
     </head>
 
-    <body>
-        <div class="container">
-            <a href="detail.php?id=<?= $kegiatan_id ?>" class="back-btn">←
-                Kembali</a>
+    <body class="min-h-screen bg-gradient-to-br from-zinc-800 to-zinc-950 text-white p-4 md:p-6">
+        <div class="max-w-7xl mx-auto">
+            <!-- Back Button -->
+            <a href="detail.php?id=<?= $kegiatan_id ?>"
+               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-white text-sm font-medium hover:bg-white/20 transition-colors mb-6 no-print">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </a>
 
-            <div class="header">
-                <h1>Tournament Eliminasi / Aduan</h1>
-                <h3><?= htmlspecialchars($kategoriData['name']) ?></h3>
-                <p><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
-                <p style="margin-top: 10px; color: #74b9ff;">Total Peserta: <?= count($pesertaList) ?> orang</p>
+            <!-- Header -->
+            <div class="bg-white/5 rounded-2xl p-6 mb-6 text-center border border-white/10">
+                <div class="w-14 h-14 rounded-xl bg-amber-500/20 flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-sitemap text-amber-400 text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white mb-1">Tournament Eliminasi / Aduan</h1>
+                <h3 class="text-lg font-semibold text-amber-400"><?= htmlspecialchars($kategoriData['name']) ?></h3>
+                <p class="text-sm text-slate-400 mt-1"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
+                <p class="text-sm text-cyan-400 mt-3">
+                    <i class="fas fa-users mr-1"></i> Total Peserta: <?= count($pesertaList) ?> orang
+                </p>
             </div>
 
-            <div class="setup-container" id="setupContainer">
-                <h2>Pilih Jumlah Peserta Eliminasi / Aduan</h2>
+            <!-- Setup Container -->
+            <div class="bg-white/5 rounded-2xl p-8 text-center max-w-xl mx-auto border border-white/10" id="setupContainer">
+                <h2 class="text-xl md:text-2xl font-bold text-white mb-6">Pilih Jumlah Peserta Eliminasi / Aduan</h2>
 
-                <div class="bracket-size-options">
-                    <button class="size-option" onclick="selectBracketSize(16)" id="size16">16</button>
-                    <button class="size-option" onclick="selectBracketSize(32)" id="size32">32</button>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+                    <button class="size-btn px-10 py-5 rounded-xl text-2xl font-bold text-white cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all"
+                            style="background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);"
+                            onclick="selectBracketSize(16)" id="size16">16</button>
+                    <button class="size-btn px-10 py-5 rounded-xl text-2xl font-bold text-white cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all"
+                            style="background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);"
+                            onclick="selectBracketSize(32)" id="size32">32</button>
                 </div>
 
-                <p class="info-text">
+                <p class="text-sm text-slate-400 mb-6">
                     Pilih jumlah peserta untuk Eliminasi / Aduan
                 </p>
 
-                <button class="generate-btn" id="startBracketBtn" onclick="startBracket()" disabled
-                    style="margin-top: 30px;">
-                    🏆 Masuk ke Eliminasi / Aduan
+                <button class="w-full sm:w-auto px-12 py-4 rounded-xl text-lg font-semibold text-white cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                        style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);"
+                        id="startBracketBtn" onclick="startBracket()" disabled>
+                    <i class="fas fa-trophy mr-2"></i> Masuk ke Eliminasi / Aduan
                 </button>
             </div>
 
-            <div class="bracket-container" id="bracketContainer">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <button class="generate-btn" id="generateBtn" onclick="generateBracket()">
-                        🎲 Generate & Acak Eliminasi / Aduan
-                    </button>
-                    <button class="generate-btn" onclick="backToSetup()"
-                        style="background: linear-gradient(135deg, #636e72 0%, #2d3436 100%); margin-left: 10px;">
-                        ← Kembali
-                    </button>
-                    <p class="info-text" style="margin-top: 15px;">
+            <!-- Bracket Container -->
+            <div class="hidden mt-8 overflow-x-auto custom-scrollbar p-4" id="bracketContainer">
+                <div class="text-center mb-8 no-print">
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                        <button class="px-8 py-3 rounded-xl text-base font-semibold text-white cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all"
+                                style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);"
+                                id="generateBtn" onclick="generateBracket()">
+                            <i class="fas fa-random mr-2"></i> Generate & Acak Eliminasi / Aduan
+                        </button>
+                        <button class="px-6 py-3 rounded-xl text-base font-semibold text-white cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all"
+                                style="background: linear-gradient(135deg, #52525b 0%, #27272a 100%);"
+                                onclick="backToSetup()">
+                            <i class="fas fa-arrow-left mr-2"></i> Kembali
+                        </button>
+                    </div>
+                    <p class="text-sm text-slate-400 mt-4">
                         Klik tombol "Generate & Acak Eliminasi / Aduan" untuk mengacak posisi peserta secara random
                     </p>
                 </div>
@@ -1008,17 +321,18 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     <!-- Bracket akan di-generate di sini -->
                 </div>
 
-                <div class="third-place-container" id="thirdPlaceSection">
-                    <div class="third-place-title">
+                <!-- Third Place Section -->
+                <div class="hidden bg-amber-900/20 border-2 border-amber-600/30 rounded-2xl p-6 mt-10 text-center max-w-lg mx-auto" id="thirdPlaceSection">
+                    <div class="text-xl font-bold text-amber-500 mb-6 flex items-center justify-center gap-3">
                         <span>🥉</span>
                         <span>PEREBUTAN JUARA 3</span>
                         <span>🥉</span>
                     </div>
-                    <div class="third-place-bracket">
+                    <div class="bg-black/20 rounded-xl p-5 inline-block min-w-[300px] md:min-w-[400px]">
                         <div id="thirdPlaceMatch">
-                            <div class="match">
-                                <div class="player empty">Menunggu Semifinal</div>
-                                <div class="player empty">Menunggu Semifinal</div>
+                            <div class="match flex flex-col gap-2">
+                                <div class="player-card empty px-4 py-3 rounded-lg text-sm font-semibold text-center text-slate-500">Menunggu Semifinal</div>
+                                <div class="player-card empty px-4 py-3 rounded-lg text-sm font-semibold text-center text-slate-500">Menunggu Semifinal</div>
                             </div>
                         </div>
                     </div>
@@ -1036,7 +350,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
             function selectBracketSize(size) {
                 selectedSize = size;
 
-                document.querySelectorAll('.size-option').forEach(btn => {
+                document.querySelectorAll('.size-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
                 document.getElementById('size' + size).classList.add('active');
@@ -1056,7 +370,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 }
 
                 document.getElementById('setupContainer').style.display = 'none';
-                document.getElementById('bracketContainer').style.display = 'block';
+                document.getElementById('bracketContainer').classList.remove('hidden');
 
                 showPlaceholderBracket();
             }
@@ -1064,11 +378,11 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
             function backToSetup() {
                 if (confirm('Kembali ke setup akan mereset semua data bracket. Lanjutkan?')) {
                     document.getElementById('setupContainer').style.display = 'block';
-                    document.getElementById('bracketContainer').style.display = 'none';
+                    document.getElementById('bracketContainer').classList.add('hidden');
 
                     document.getElementById('bracketContent').innerHTML = '';
                     document.getElementById('thirdPlaceMatch').innerHTML = '';
-                    document.getElementById('thirdPlaceSection').style.display = 'none';
+                    document.getElementById('thirdPlaceSection').classList.add('hidden');
                     bracketData = {};
                     shuffledPeserta = [];
                     semifinalLosers = [];
@@ -1085,27 +399,27 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 
             function showPlaceholder16Bracket() {
                 const bracketHTML = `
-                    <div class="bracket">
-                        <div class="round">
-                            <div class="round-title">Round of 16</div>
+                    <div class="flex justify-around gap-8 min-w-fit py-4">
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 16</div>
                             ${generatePlaceholderMatches(8)}
                         </div>
-                        <div class="round">
-                            <div class="round-title">Quarter Finals</div>
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Quarter Finals</div>
                             ${generatePlaceholderMatches(4)}
                         </div>
-                        <div class="round">
-                            <div class="round-title">Semi Finals</div>
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Semi Finals</div>
                             ${generatePlaceholderMatches(2)}
                         </div>
-                        <div class="round final-winner">
-                            <div class="round-title">Finals</div>
-                            <div class="trophy">🏆</div>
-                            <div class="match">
-                                <div class="player empty">Finalist 1</div>
-                                <div class="player empty">Finalist 2</div>
+                        <div class="flex flex-col items-center justify-center min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Finals</div>
+                            <div class="text-[80px] my-5">🏆</div>
+                            <div class="flex flex-col gap-1.5 my-2.5">
+                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">Finalist 1</div>
+                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">Finalist 2</div>
                             </div>
-                            <div class="winner-name" id="champion" style="margin-top: 30px; display: none;">Champion</div>
+                            <div class="hidden mt-8 px-10 py-5 rounded-xl text-2xl font-bold text-slate-900 shadow-lg" style="background: linear-gradient(135deg, #ffd700 0%, #fde68a 100%);" id="champion">Champion</div>
                         </div>
                     </div>
                 `;
@@ -1114,31 +428,31 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 
             function showPlaceholder32Bracket() {
                 const bracketHTML = `
-                    <div class="bracket">
-                        <div class="round">
-                            <div class="round-title">Round of 32</div>
+                    <div class="flex justify-around gap-8 min-w-fit py-4">
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 32</div>
                             ${generatePlaceholderMatches(16)}
                         </div>
-                        <div class="round">
-                            <div class="round-title">Round of 16</div>
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 16</div>
                             ${generatePlaceholderMatches(8)}
                         </div>
-                        <div class="round">
-                            <div class="round-title">Quarter Finals</div>
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Quarter Finals</div>
                             ${generatePlaceholderMatches(4)}
                         </div>
-                        <div class="round">
-                            <div class="round-title">Semi Finals</div>
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Semi Finals</div>
                             ${generatePlaceholderMatches(2)}
                         </div>
-                        <div class="round final-winner">
-                            <div class="round-title">Finals</div>
-                            <div class="trophy">🏆</div>
-                            <div class="match">
-                                <div class="player empty">Finalist 1</div>
-                                <div class="player empty">Finalist 2</div>
+                        <div class="flex flex-col items-center justify-center min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Finals</div>
+                            <div class="text-[80px] my-5">🏆</div>
+                            <div class="flex flex-col gap-1.5 my-2.5">
+                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">Finalist 1</div>
+                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">Finalist 2</div>
                             </div>
-                            <div class="winner-name" id="champion" style="margin-top: 30px; display: none;">Champion</div>
+                            <div class="hidden mt-8 px-10 py-5 rounded-xl text-2xl font-bold text-slate-900 shadow-lg" style="background: linear-gradient(135deg, #ffd700 0%, #fde68a 100%);" id="champion">Champion</div>
                         </div>
                     </div>
                 `;
@@ -1149,9 +463,9 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 let html = '';
                 for (let i = 0; i < numMatches; i++) {
                     html += `
-                        <div class="match">
-                            <div class="player empty">TBD</div>
-                            <div class="player empty">TBD</div>
+                        <div class="flex flex-col gap-1.5 my-2.5">
+                            <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">TBD</div>
+                            <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500">TBD</div>
                         </div>
                     `;
                 }
@@ -1200,32 +514,32 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     generate32Bracket();
                 }
 
-                document.getElementById('thirdPlaceSection').style.display = 'block';
+                document.getElementById('thirdPlaceSection').classList.remove('hidden');
             }
 
             function generate16Bracket() {
                 const bracketHTML = `
-                    <div class="bracket">
-                        <div class="round">
-                            <div class="round-title">Round of 16</div>
+                    <div class="flex justify-around gap-8 min-w-fit py-4">
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 16</div>
                             ${generateMatches(0, 16, 1, 'r16')}
                         </div>
-                        <div class="round">
-                            <div class="round-title">Quarter Finals</div>
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Quarter Finals</div>
                             ${generateEmptyMatches(4, 2, 'qf')}
                         </div>
-                        <div class="round">
-                            <div class="round-title">Semi Finals</div>
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Semi Finals</div>
                             ${generateEmptyMatches(2, 3, 'sf')}
                         </div>
-                        <div class="round final-winner">
-                            <div class="round-title">Finals</div>
-                            <div class="trophy">🏆</div>
-                            <div class="match" data-match="final">
-                                <div class="player empty" data-slot="final-1">Finalist 1</div>
-                                <div class="player empty" data-slot="final-2">Finalist 2</div>
+                        <div class="flex flex-col items-center justify-center min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Finals</div>
+                            <div class="text-[80px] my-5">🏆</div>
+                            <div class="flex flex-col gap-1.5 my-2.5" data-match="final">
+                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="final-1">Finalist 1</div>
+                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="final-2">Finalist 2</div>
                             </div>
-                            <div class="winner-name" id="champion" style="margin-top: 30px; display: none;">Champion</div>
+                            <div class="hidden mt-8 px-10 py-5 rounded-xl text-2xl font-bold text-slate-900 shadow-lg" style="background: linear-gradient(135deg, #ffd700 0%, #fde68a 100%);" id="champion">Champion</div>
                         </div>
                     </div>
                 `;
@@ -1234,31 +548,31 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 
             function generate32Bracket() {
                 const bracketHTML = `
-                    <div class="bracket">
-                        <div class="round">
-                            <div class="round-title">Round of 32</div>
+                    <div class="flex justify-around gap-8 min-w-fit py-4">
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 32</div>
                             ${generateMatches(0, 32, 1, 'r32')}
                         </div>
-                        <div class="round">
-                            <div class="round-title">Round of 16</div>
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Round of 16</div>
                             ${generateEmptyMatches(8, 2, 'r16')}
                         </div>
-                        <div class="round">
-                            <div class="round-title">Quarter Finals</div>
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Quarter Finals</div>
                             ${generateEmptyMatches(4, 3, 'qf')}
                         </div>
-                        <div class="round">
-                            <div class="round-title">Semi Finals</div>
+                        <div class="flex flex-col justify-around min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Semi Finals</div>
                             ${generateEmptyMatches(2, 4, 'sf')}
                         </div>
-                        <div class="round final-winner">
-                            <div class="round-title">Finals</div>
-                            <div class="trophy">🏆</div>
-                            <div class="match" data-match="final">
-                                <div class="player empty" data-slot="final-1">Finalist 1</div>
-                                <div class="player empty" data-slot="final-2">Finalist 2</div>
+                        <div class="flex flex-col items-center justify-center min-h-[500px] flex-1">
+                            <div class="text-center text-lg font-bold mb-4 text-amber-400">Finals</div>
+                            <div class="text-[80px] my-5">🏆</div>
+                            <div class="flex flex-col gap-1.5 my-2.5" data-match="final">
+                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="final-1">Finalist 1</div>
+                                <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="final-2">Finalist 2</div>
                             </div>
-                            <div class="winner-name" id="champion" style="margin-top: 30px; display: none;">Champion</div>
+                            <div class="hidden mt-8 px-10 py-5 rounded-xl text-2xl font-bold text-slate-900 shadow-lg" style="background: linear-gradient(135deg, #ffd700 0%, #fde68a 100%);" id="champion">Champion</div>
                         </div>
                     </div>
                 `;
@@ -1275,15 +589,17 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     const matchId = `${prefix}-m${matchIndex}`;
 
                     html += `
-                        <div class="match" data-match="${matchId}">
-                            <div class="player ${player1.empty ? 'empty' : ''}" 
+                        <div class="flex flex-col gap-1.5 my-2.5" data-match="${matchId}">
+                            <div class="player-card ${player1.empty ? 'empty' : ''} px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-white border-2 border-transparent break-words cursor-pointer"
+                                 style="${player1.empty ? '' : 'background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);'}"
                                  data-slot="${matchId}-1"
                                  data-player-index="${i}"
                                  data-player-id="${player1.id || ''}"
                                  onclick="${player1.empty ? '' : `selectWinner('${matchId}', 1, ${i})`}">
                                 ${player1.nama_peserta}
                             </div>
-                            <div class="player ${player2.empty ? 'empty' : ''}" 
+                            <div class="player-card ${player2.empty ? 'empty' : ''} px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-white border-2 border-transparent break-words cursor-pointer"
+                                 style="${player2.empty ? '' : 'background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);'}"
                                  data-slot="${matchId}-2"
                                  data-player-index="${i + 1}"
                                  data-player-id="${player2.id || ''}"
@@ -1302,9 +618,9 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 for (let i = 0; i < count; i++) {
                     const matchId = `${prefix}-m${i}`;
                     html += `
-                        <div class="match" data-match="${matchId}">
-                            <div class="player empty" data-slot="${matchId}-1">TBD</div>
-                            <div class="player empty" data-slot="${matchId}-2">TBD</div>
+                        <div class="flex flex-col gap-1.5 my-2.5" data-match="${matchId}">
+                            <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="${matchId}-1">TBD</div>
+                            <div class="player-card empty px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-slate-500 border-2 border-transparent" data-slot="${matchId}-2">TBD</div>
                         </div>
                     `;
                 }
@@ -1455,21 +771,21 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 if (semifinalLosers.length === 2) {
                     const thirdPlaceMatch = document.getElementById('thirdPlaceMatch');
                     thirdPlaceMatch.innerHTML = `
-                        <div class="match" data-match="third-place" style="margin: 0 auto;">
-                            <div class="player" 
+                        <div class="flex flex-col gap-2" data-match="third-place">
+                            <div class="player-card px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-white border-2 border-transparent break-words cursor-pointer mx-auto"
+                                 style="background: linear-gradient(135deg, #cd7f32 0%, #b87333 100%);"
                                  data-slot="third-1"
                                  data-player-id="${semifinalLosers[0].id}"
                                  data-player-index="${semifinalLosers[0].index}"
-                                 onclick="selectThirdPlace(0)"
-                                 style="background: linear-gradient(135deg, #cd7f32 0%, #b87333 100%); color: white;">
+                                 onclick="selectThirdPlace(0)">
                                 ${semifinalLosers[0].nama_peserta}
                             </div>
-                            <div class="player" 
+                            <div class="player-card px-4 py-3 rounded-lg min-w-[150px] max-w-[200px] font-semibold text-sm text-center text-white border-2 border-transparent break-words cursor-pointer mx-auto"
+                                 style="background: linear-gradient(135deg, #cd7f32 0%, #b87333 100%);"
                                  data-slot="third-2"
                                  data-player-id="${semifinalLosers[1].id}"
                                  data-player-index="${semifinalLosers[1].index}"
-                                 onclick="selectThirdPlace(1)"
-                                 style="background: linear-gradient(135deg, #cd7f32 0%, #b87333 100%); color: white;">
+                                 onclick="selectThirdPlace(1)">
                                 ${semifinalLosers[1].nama_peserta}
                             </div>
                         </div>
@@ -1570,7 +886,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
             function declareChampion(championName) {
                 const championElement = document.getElementById('champion');
                 championElement.textContent = '🏆 ' + championName + ' 🏆';
-                championElement.style.display = 'block';
+                championElement.classList.remove('hidden');
 
                 // Get champion and runner-up IDs
                 const finalMatch = document.querySelector(`[data-match="final"]`);
@@ -1589,7 +905,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 let thirdPlaceId = null;
                 const thirdPlaceMatch = document.querySelector(`[data-match="third-place"]`);
                 if (thirdPlaceMatch) {
-                    const thirdWinner = thirdPlaceMatch.querySelector('.player.winner');
+                    const thirdWinner = thirdPlaceMatch.querySelector('.player-card.winner');
                     if (thirdWinner) {
                         thirdPlaceId = thirdWinner.getAttribute('data-player-id');
                     }
@@ -1833,1696 +1149,208 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
     // BAGIAN SCORECARD SETUP
     ?>
-    </script>
-    </body>
-
-    </html>
     <!DOCTYPE html>
-    <html lang="id">
-
+    <html lang="id" class="h-full">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Setup Scorecard Panahan - <?= htmlspecialchars($kategoriData['name']) ?></title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            'archery': {
+                                50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
+                                400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
+                                800: '#166534', 900: '#14532d',
+                            }
+                        }
+                    }
+                }
+            }
+        </script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #2D3436 0%, #636e72 100%);
-                min-height: 100vh;
-                padding: 20px;
-                color: white;
-            }
-
-            .container {
-                max-width: 1200px;
-                margin: 0 auto;
-            }
-
-            .back-btn {
-                background: rgba(255, 255, 255, 0.1);
-                border: none;
-                color: white;
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                margin-bottom: 20px;
-                transition: background 0.3s ease;
-                text-decoration: none;
-            }
-
-            .back-btn:hover {
-                background: rgba(255, 255, 255, 0.2);
-            }
-
-            .setup-form {
-                background: rgba(45, 52, 54, 0.95);
-                border-radius: 20px;
-                padding: 30px;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-                margin-bottom: 20px;
-            }
-
-            .header {
-                text-align: center;
-                margin-bottom: 30px;
-            }
-
-            .logo {
-                width: 60px;
-                height: 60px;
-                background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
-                border-radius: 15px;
-                margin: 0 auto 20px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 30px;
-            }
-
-            .title {
-                font-size: 20px;
-                font-weight: 600;
-                margin-bottom: 10px;
-            }
-
-            .subtitle {
-                font-size: 14px;
-                color: #ddd;
-            }
-
-            .category-info {
-                background: rgba(116, 185, 255, 0.1);
-                border: 1px solid rgba(116, 185, 255, 0.3);
-                border-radius: 12px;
-                padding: 15px;
-                margin-bottom: 25px;
-                text-align: center;
-            }
-
-            .category-name {
-                font-size: 16px;
-                font-weight: 600;
-                color: #74b9ff;
-                margin-bottom: 5px;
-            }
-
-            .event-name {
-                font-size: 14px;
-                color: #ddd;
-            }
-
-            .peserta-count {
-                font-size: 18px;
-                font-weight: 700;
-                color: #fdcb6e;
-                margin-top: 10px;
-            }
-
-            .form-group {
-                margin-bottom: 25px;
-            }
-
-            .form-label {
-                display: block;
-                font-size: 16px;
-                font-weight: 500;
-                margin-bottom: 10px;
-                color: #74b9ff;
-            }
-
-            .form-input {
-                width: 100%;
-                background: rgba(116, 185, 255, 0.1);
-                border: 1px solid rgba(116, 185, 255, 0.3);
-                border-radius: 12px;
-                padding: 15px;
-                color: white;
-                font-size: 18px;
-                text-align: center;
-                transition: all 0.3s ease;
-            }
-
-            .form-input:focus {
-                outline: none;
-                border-color: #74b9ff;
-                background: rgba(116, 185, 255, 0.15);
-                box-shadow: 0 0 0 3px rgba(116, 185, 255, 0.1);
-            }
-
-            .create-btn {
-                width: 100%;
-                background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
-                border: none;
-                border-radius: 15px;
-                padding: 16px;
-                font-size: 16px;
-                font-weight: 600;
-                color: white;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-
-            .create-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 25px rgba(253, 203, 110, 0.3);
-            }
-
-            .create-btn:disabled {
-                opacity: 0.6;
-                cursor: not-allowed;
-                transform: none;
-            }
-
-            .alert {
-                padding: 15px;
-                border-radius: 8px;
-                margin-bottom: 20px;
-            }
-
-            .alert-warning {
-                background: rgba(255, 193, 7, 0.1);
-                border: 1px solid rgba(255, 193, 7, 0.3);
-                color: #ffc107;
-            }
-
-            /* Dropdown Styles - Integrated Version */
-            .peserta-selector-inline {
-                background: rgba(116, 185, 255, 0.05);
-                border: 2px dashed rgba(116, 185, 255, 0.3);
-                border-radius: 15px;
-                padding: 25px;
-                margin-bottom: 25px;
-            }
-
-            .peserta-selector-inline .selector-header {
-                text-align: center;
-                margin-bottom: 20px;
-            }
-
-            .peserta-selector-inline .selector-title {
-                font-size: 18px;
-                font-weight: 600;
-                color: #74b9ff;
-                margin-bottom: 8px;
-            }
-
-            .peserta-selector-inline .selector-subtitle {
-                font-size: 13px;
-                color: #ddd;
-                opacity: 0.9;
-            }
-
-            .dropdown-container {
-                position: relative;
-                width: 100%;
-                max-width: 400px;
-                margin: 0 auto;
-            }
-
-            .dropdown-btn {
-                width: 100%;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                border: none;
-                color: white;
-                padding: 15px 20px;
-                border-radius: 12px;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                transition: all 0.3s ease;
-                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-            }
-
-            .dropdown-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-            }
-
-            .dropdown-arrow {
-                transition: transform 0.3s ease;
-                font-size: 12px;
-            }
-
-            .dropdown-btn.active .dropdown-arrow {
-                transform: rotate(180deg);
-            }
-
-            .dropdown-menu {
-                position: absolute;
-                top: calc(100% + 10px);
-                left: 0;
-                right: 0;
-                background: rgba(45, 52, 54, 0.98);
-                border: 2px solid rgba(116, 185, 255, 0.3);
-                border-radius: 12px;
-                max-height: 300px;
-                overflow-y: auto;
-                z-index: 1000;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            }
-
-            .dropdown-item {
-                padding: 15px 20px;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                border-bottom: 1px solid rgba(116, 185, 255, 0.1);
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-
-            .dropdown-item:last-child {
-                border-bottom: none;
-            }
-
-            .dropdown-item:hover {
-                background: rgba(116, 185, 255, 0.15);
-            }
-
-            .dropdown-item-icon {
-                font-size: 24px;
-                width: 30px;
-                text-align: center;
-            }
-
-            .dropdown-item-info {
-                flex: 1;
-            }
-
-            .dropdown-item-name {
-                font-size: 15px;
-                font-weight: 600;
-                color: white;
-                margin-bottom: 3px;
-            }
-
-            .dropdown-item-gender {
-                font-size: 12px;
-                color: #ddd;
-                opacity: 0.8;
-            }
-
-            .selected-peserta-info {
-                background: rgba(253, 203, 110, 0.1);
-                border: 1px solid rgba(253, 203, 110, 0.3);
-                border-radius: 12px;
-                padding: 15px;
-                text-align: center;
-                margin-bottom: 20px;
-            }
-
-            .selected-peserta-name {
-                font-size: 18px;
-                font-weight: 700;
-                color: #fdcb6e;
-            }
-
-            .change-peserta-btn {
-                background: rgba(116, 185, 255, 0.2);
-                border: 1px solid rgba(116, 185, 255, 0.5);
-                color: white;
-                padding: 10px 20px;
-                border-radius: 8px;
-                font-size: 14px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                margin-top: 10px;
-            }
-
-            .change-peserta-btn:hover {
-                background: rgba(116, 185, 255, 0.3);
-                transform: translateY(-2px);
-            }
-
-            .scorecard-container {
-                background: rgba(45, 52, 54, 0.95);
-                border-radius: 20px;
-                padding: 20px;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-                display: none;
-                max-width: none;
-                width: 100%;
-            }
-
-            .scorecard-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 20px;
-                background: rgba(116, 185, 255, 0.1);
-                padding: 15px;
-                border-radius: 12px;
-                flex-wrap: wrap;
-                gap: 10px;
-            }
-
-            .category-header-info {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-
-            .category-icon {
-                width: 30px;
-                height: 30px;
-                background: #fdcb6e;
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 16px;
-            }
-
-            .scorecard-title {
-                text-align: center;
-                font-size: 16px;
-                font-weight: 600;
-                margin-bottom: 15px;
-                background: rgba(0, 0, 0, 0.3);
-                padding: 10px;
-                border-radius: 8px;
-            }
-
-            .player-section {
-                margin-bottom: 40px;
-                background: rgba(0, 0, 0, 0.2);
-                border-radius: 15px;
-                padding: 25px;
-                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            }
-
-            .player-header {
-                font-size: 18px;
-                font-weight: 700;
-                margin-bottom: 20px;
-                color: white;
-                text-align: center;
-                background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-                padding: 15px;
-                border-radius: 12px;
-                box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
-            }
-
-            .score-table-container {
-                overflow-x: auto;
-                margin: 20px 0;
-                border-radius: 12px;
-                background: white;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            }
-
-            .score-table {
-                width: 100%;
-                border-collapse: collapse;
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                font-size: 14px;
-                background: white;
-                min-width: 600px;
-            }
-
-            .score-table th {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 12px 8px;
-                text-align: center;
-                font-weight: 600;
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                position: sticky;
-                top: 0;
-                z-index: 5;
-            }
-
-            .score-table td {
-                padding: 8px;
-                border: 1px solid #e1e8ed;
-                text-align: center;
-                vertical-align: middle;
-            }
-
-            .session-row:nth-child(even) {
-                background: rgba(79, 172, 254, 0.05);
-            }
-
-            .session-row:hover {
-                background: rgba(79, 172, 254, 0.1);
-            }
-
-            .session-label {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                font-weight: 600;
-                font-size: 14px;
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                min-width: 60px;
-            }
-
-            .arrow-input {
-                width: 50px;
-                height: 40px;
-                background: transparent;
-                border: 2px solid transparent;
-                border-radius: 6px;
-                padding: 8px 4px;
-                text-align: center;
-                font-size: 14px;
-                font-weight: 600;
-                color: #333;
-                transition: all 0.3s ease;
-                box-sizing: border-box;
-            }
-
-            .arrow-input:hover {
-                background: rgba(79, 172, 254, 0.1);
-                border-color: #4facfe;
-            }
-
-            .arrow-input:focus {
-                outline: none;
-                background: white;
-                border-color: #4facfe;
-                box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2);
-            }
-
-            .arrow-input:disabled {
-                background: #f8f9fa;
-                color: #666;
-                cursor: not-allowed;
-            }
-
-            .total-cell {
-                background: rgba(253, 203, 110, 0.1);
-                font-weight: 700;
-                color: #e17055;
-            }
-
-            .end-cell {
-                background: rgba(0, 184, 148, 0.1);
-                color: #00b894;
-                font-weight: 700;
-            }
-
-            .arrow-input[value="x"],
-            .arrow-input[value="X"] {
-                background: rgba(40, 167, 69, 0.1);
-                border-color: #28a745;
-                color: #28a745;
-                font-weight: 700;
-            }
-
-            .arrow-input[value="m"],
-            .arrow-input[value="M"] {
-                background: rgba(220, 53, 69, 0.1);
-                border-color: #dc3545;
-                color: #dc3545;
-                font-weight: 700;
-            }
-
-            .arrow-input[value="10"] {
-                background: rgba(40, 167, 69, 0.1);
-                border-color: #28a745;
-                color: #28a745;
-                font-weight: 700;
-            }
-
-            .arrow-input[value="9"],
-            .arrow-input[value="8"] {
-                background: rgba(255, 193, 7, 0.1);
-                border-color: #ffc107;
-                color: #856404;
-                font-weight: 600;
-            }
-
-            .total-summary {
-                background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-                border-radius: 12px;
-                padding: 20px;
-                text-align: center;
-                margin-top: 20px;
-                color: white;
-                box-shadow: 0 4px 15px rgba(67, 233, 123, 0.3);
-            }
-
-            .grand-total {
-                font-size: 24px;
-                font-weight: 700;
-                margin-bottom: 5px;
-            }
-
-            .x-count {
-                font-size: 16px;
-                font-weight: 600;
-                opacity: 0.9;
-            }
-
-            .edit-btn {
-                background: rgba(116, 185, 255, 0.2);
-                border: 1px solid rgba(116, 185, 255, 0.5);
-                color: white;
-                padding: 12px 20px;
-                border-radius: 8px;
-                font-size: 14px;
-                cursor: pointer;
-                margin-top: 20px;
-                width: 100%;
-            }
-
-            .edit-btn:hover {
-                background: rgba(116, 185, 255, 0.3);
-            }
-
-            .table-wrapper {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                margin: 1rem 0;
-                border-radius: 12px;
-                background: white;
-                box-shadow: 0 8px 24px rgba(22, 28, 37, 0.08);
-                padding: 0;
-            }
-
-            .styled-table {
-                width: 100%;
-                border-collapse: collapse;
-                font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-                font-size: 14px;
-                color: #1f2937;
-                min-width: 640px;
-                background: white;
-            }
-
-            .styled-table thead th {
-                text-align: left;
-                padding: 16px 20px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                font-weight: 600;
-                position: sticky;
-                top: 0;
-                z-index: 2;
-                border: none;
-                text-transform: uppercase;
-                font-size: 12px;
-                letter-spacing: 0.5px;
-            }
-
-            .styled-table thead th:first-child {
-                border-radius: 12px 0 0 0;
-            }
-
-            .styled-table thead th:last-child {
-                border-radius: 0 12px 0 0;
-            }
-
-            .styled-table tbody td {
-                padding: 14px 20px;
-                vertical-align: middle;
-                border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-            }
-
-            .styled-table tbody tr {
-                transition: all 0.2s ease;
-            }
-
-            .styled-table tbody tr:nth-child(even) {
-                background: rgba(102, 126, 234, 0.02);
-            }
-
-            .styled-table tbody tr:hover {
-                background: rgba(102, 126, 234, 0.08);
-                transform: scale(1.01);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            }
-
-            .styled-table tbody tr:last-child td {
-                border-bottom: none;
-            }
-
-            .styled-table tbody td:first-child {
-                width: 64px;
-                text-align: center;
-                font-weight: 600;
-                color: #667eea;
-            }
-
-            .styled-table tbody td:nth-child(2) {
-                color: #6b7280;
-                font-weight: 500;
-            }
-
-            .styled-table tbody td:nth-child(3),
-            .styled-table tbody td:nth-child(4) {
-                font-weight: 600;
-                color: #374151;
-            }
-
-            .styled-table tbody td:last-child {
-                white-space: nowrap;
-            }
-
-            .btn {
-                display: inline-block;
-                padding: 8px 14px;
-                font-size: 12px;
-                border-radius: 8px;
-                border: none;
-                cursor: pointer;
-                margin-right: 6px;
-                margin-bottom: 4px;
-                text-decoration: none;
-                font-weight: 500;
-                transition: all 0.3s ease;
-                text-align: center;
-            }
-
-            .btn:last-child {
-                margin-right: 0;
-            }
-
-            .btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            }
-
-            .btn:active {
-                transform: translateY(0);
-            }
-
-            .styled-table .btn:nth-child(1) {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-            }
-
-            .styled-table .btn:nth-child(1):hover {
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-            }
-
-            .styled-table .btn:nth-child(2) {
-                background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-                color: white;
-            }
-
-            .styled-table .btn:nth-child(2):hover {
-                box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
-            }
-
-            .styled-table .btn:nth-child(3) {
-                background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-                color: white;
-            }
-
-            .styled-table .btn:nth-child(3):hover {
-                box-shadow: 0 4px 12px rgba(67, 233, 123, 0.4);
-            }
-
-            .styled-table .btn:nth-child(4) {
-                background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-                color: white;
-            }
-
-            .styled-table .btn:nth-child(4):hover {
-                box-shadow: 0 4px 12px rgba(250, 112, 154, 0.4);
-            }
-
-            .header-bar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 8px 12px;
-            }
-
-            .add-link {
-                text-decoration: none;
-                background: #2563eb;
-                color: white;
-                padding: 6px 12px;
-                border-radius: 6px;
-                font-size: 14px;
-            }
-
-            .header-flex {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 1rem;
-            }
-
-            h3 {
-                margin: 0;
-                color: white;
-            }
-
-            .table-container {
-                position: relative;
-                width: 100%;
-            }
-
-            .table-loading {
-                opacity: 0.5;
-                pointer-events: none;
-            }
-
-            .table-empty {
-                text-align: center;
-                padding: 40px 20px;
-                color: #6b7280;
-                font-style: italic;
-            }
-
-            .table-empty::before {
-                content: "📋";
-                display: block;
-                font-size: 48px;
-                margin-bottom: 16px;
-            }
-
-            @keyframes fadeIn {
-                from {
-                    opacity: 0;
-                    transform: translateY(10px);
-                }
-
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            .styled-table tbody tr {
-                animation: fadeIn 0.3s ease-in-out;
-            }
-
-            .styled-table tbody tr:nth-child(1) {
-                animation-delay: 0.05s;
-            }
-
-            .styled-table tbody tr:nth-child(2) {
-                animation-delay: 0.1s;
-            }
-
-            .styled-table tbody tr:nth-child(3) {
-                animation-delay: 0.15s;
-            }
-
-            .styled-table tbody tr:nth-child(4) {
-                animation-delay: 0.2s;
-            }
-
-            .styled-table tbody tr:nth-child(5) {
-                animation-delay: 0.25s;
-            }
-
-            .export-btn {
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                border: none;
-                color: white;
-                padding: 6px 12px;
-                border-radius: 6px;
-                font-size: 14px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                text-decoration: none;
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-            }
-
-            .export-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-            }
-
-            .header-actions {
-                display: flex;
-                gap: 10px;
-                flex-wrap: wrap;
-            }
-
-            .hidden {
-                display: none !important;
-            }
-
-            /* RESPONSIVE */
-            @media (max-width: 1024px) {
-                .container {
-                    max-width: 100%;
-                    padding: 0 15px;
-                }
-
-                .setup-form,
-                .scorecard-container {
-                    padding: 20px;
-                }
-
-                .player-section {
-                    padding: 20px;
-                }
-            }
-
-            @media (max-width: 768px) {
-                body {
-                    padding: 10px;
-                }
-
-                .container {
-                    padding: 0 5px;
-                }
-
-                .setup-form,
-                .scorecard-container,
-                .peserta-selector-inline {
-                    padding: 12px;
-                    border-radius: 12px;
-                }
-
-                .peserta-selector-inline {
-                    padding: 15px;
-                }
-
-                .peserta-selector-inline .selector-title {
-                    font-size: 16px;
-                }
-
-                .peserta-selector-inline .selector-subtitle {
-                    font-size: 12px;
-                }
-
-                .dropdown-container {
-                    max-width: 100%;
-                }
-
-                .dropdown-btn {
-                    padding: 12px 15px;
-                    font-size: 14px;
-                }
-
-                .dropdown-item {
-                    padding: 12px 15px;
-                }
-
-                .dropdown-item-name {
-                    font-size: 14px;
-                }
-
-                .logo {
-                    width: 45px;
-                    height: 45px;
-                    font-size: 22px;
-                }
-
-                .title {
-                    font-size: 17px;
-                }
-
-                .subtitle {
-                    font-size: 12px;
-                }
-
-                .scorecard-header {
-                    flex-direction: column;
-                    text-align: center;
-                    padding: 10px;
-                    gap: 8px;
-                }
-
-                .category-header-info {
-                    justify-content: center;
-                    flex-wrap: wrap;
-                }
-
-                .player-section {
-                    padding: 12px;
-                    margin-bottom: 25px;
-                }
-
-                .player-header {
-                    font-size: 15px;
-                    padding: 10px;
-                }
-
-                .score-table {
-                    font-size: 11px;
-                    min-width: 420px;
-                }
-
-                .score-table th,
-                .score-table td {
-                    padding: 5px 3px;
-                }
-
-                .arrow-input {
-                    width: 38px;
-                    height: 32px;
-                    padding: 5px 2px;
-                    font-size: 11px;
-                }
-
-                .grand-total {
-                    font-size: 19px;
-                }
-
-                .x-count {
-                    font-size: 13px;
-                }
-
-                .total-summary {
-                    padding: 12px;
-                }
-
-                .styled-table {
-                    font-size: 11px;
-                    min-width: 100%;
-                }
-
-                .styled-table thead th,
-                .styled-table tbody td {
-                    padding: 8px 6px;
-                }
-
-                .styled-table thead th {
-                    font-size: 10px;
-                }
-
-                .styled-table tbody td:first-child {
-                    width: 40px;
-                }
-
-                .btn {
-                    padding: 5px 8px;
-                    font-size: 9px;
-                    margin-right: 2px;
-                    margin-bottom: 3px;
-                    display: inline-block;
-                }
-
-                .header-flex {
-                    flex-direction: column;
-                    gap: 8px;
-                    align-items: stretch;
-                }
-
-                .add-link {
-                    width: 100%;
-                    text-align: center;
-                    display: block;
-                    padding: 10px 12px;
-                    font-size: 13px;
-                }
-
-                .form-input {
-                    padding: 12px;
-                    font-size: 16px;
-                }
-
-                .create-btn {
-                    padding: 13px;
-                    font-size: 15px;
-                }
-
-                .table-wrapper {
-                    margin: 0.5rem 0;
-                    border-radius: 8px;
-                }
-
-                .header-bar {
-                    flex-direction: column;
-                    align-items: stretch;
-                }
-
-                .header-actions {
-                    width: 100%;
-                }
-
-                .export-btn,
-                .add-link {
-                    flex: 1;
-                    text-align: center;
-                    justify-content: center;
-                }
-            }
-
-            @media (max-width: 640px) {
-                body {
-                    padding: 8px;
-                }
-
-                .setup-form,
-                .scorecard-container,
-                .peserta-selector-inline {
-                    padding: 10px;
-                    border-radius: 10px;
-                }
-
-                .peserta-selector-inline {
-                    padding: 12px;
-                }
-
-                .logo {
-                    width: 40px;
-                    height: 40px;
-                    font-size: 18px;
-                    margin-bottom: 12px;
-                }
-
-                .title {
-                    font-size: 15px;
-                }
-
-                .subtitle {
-                    font-size: 11px;
-                }
-
-                .form-input {
-                    padding: 10px;
-                    font-size: 15px;
-                }
-
-                .create-btn {
-                    padding: 11px;
-                    font-size: 14px;
-                }
-
-                .category-info {
-                    padding: 10px;
-                }
-
-                .category-name {
-                    font-size: 13px;
-                }
-
-                .event-name {
-                    font-size: 12px;
-                }
-
-                .peserta-count {
-                    font-size: 15px;
-                }
-
-                .player-section {
-                    padding: 10px;
-                    margin-bottom: 20px;
-                }
-
-                .score-table {
-                    min-width: 380px;
-                    font-size: 10px;
-                }
-
-                .score-table th {
-                    padding: 6px 2px;
-                    font-size: 10px;
-                }
-
-                .score-table td {
-                    padding: 5px 2px;
-                }
-
-                .arrow-input {
-                    width: 34px;
-                    height: 28px;
-                    font-size: 10px;
-                    padding: 4px 1px;
-                }
-
-                .session-label {
-                    font-size: 10px;
-                    min-width: 45px;
-                }
-
-                .styled-table {
-                    font-size: 10px;
-                    min-width: 100%;
-                }
-
-                .styled-table thead th,
-                .styled-table tbody td {
-                    padding: 7px 4px;
-                }
-
-                .styled-table thead th {
-                    font-size: 9px;
-                }
-
-                .styled-table tbody td:first-child {
-                    width: 35px;
-                }
-
-                .styled-table tbody td:nth-child(2) {
-                    font-size: 9px;
-                }
-
-                .btn {
-                    padding: 4px 6px;
-                    font-size: 8px;
-                    margin-right: 2px;
-                    margin-bottom: 2px;
-                    border-radius: 6px;
-                }
-
-                .player-header {
-                    font-size: 14px;
-                    padding: 9px;
-                }
-
-                .total-summary {
-                    padding: 10px;
-                }
-
-                .grand-total {
-                    font-size: 17px;
-                }
-
-                .x-count {
-                    font-size: 12px;
-                }
-
-                h3 {
-                    font-size: 16px;
-                }
-
-                .add-link {
-                    padding: 9px 12px;
-                    font-size: 12px;
-                }
-
-                .export-btn {
-                    padding: 9px 12px;
-                    font-size: 12px;
-                }
-            }
-
-            @media (max-width: 480px) {
-                body {
-                    padding: 6px;
-                }
-
-                .back-btn {
-                    width: 34px;
-                    height: 34px;
-                    margin-bottom: 12px;
-                }
-
-                .setup-form,
-                .scorecard-container,
-                .peserta-selector-inline {
-                    padding: 8px;
-                    border-radius: 8px;
-                }
-
-                .peserta-selector-inline {
-                    padding: 10px;
-                }
-
-                .peserta-selector-inline .selector-title {
-                    font-size: 14px;
-                }
-
-                .peserta-selector-inline .selector-subtitle {
-                    font-size: 11px;
-                }
-
-                .header {
-                    margin-bottom: 15px;
-                }
-
-                .logo {
-                    width: 36px;
-                    height: 36px;
-                    font-size: 16px;
-                    margin-bottom: 10px;
-                }
-
-                .title {
-                    font-size: 14px;
-                }
-
-                .subtitle {
-                    font-size: 10px;
-                }
-
-                .form-label {
-                    font-size: 13px;
-                    margin-bottom: 8px;
-                }
-
-                .form-input {
-                    padding: 9px;
-                    font-size: 14px;
-                }
-
-                .create-btn {
-                    padding: 10px;
-                    font-size: 13px;
-                }
-
-                .category-info {
-                    padding: 8px;
-                }
-
-                .scorecard-header {
-                    padding: 8px;
-                }
-
-                .category-icon {
-                    width: 24px;
-                    height: 24px;
-                    font-size: 13px;
-                }
-
-                .scorecard-title {
-                    font-size: 13px;
-                    padding: 7px;
-                }
-
-                .player-section {
-                    padding: 8px;
-                    margin-bottom: 18px;
-                }
-
-                .player-header {
-                    font-size: 13px;
-                    padding: 8px;
-                }
-
-                .score-table {
-                    min-width: 340px;
-                    font-size: 9px;
-                }
-
-                .score-table th {
-                    padding: 5px 2px;
-                    font-size: 9px;
-                }
-
-                .score-table td {
-                    padding: 4px 1px;
-                }
-
-                .arrow-input {
-                    width: 30px;
-                    height: 26px;
-                    font-size: 9px;
-                    padding: 3px 1px;
-                    border-radius: 4px;
-                }
-
-                .session-label {
-                    font-size: 9px;
-                    min-width: 40px;
-                }
-
-                .total-summary {
-                    padding: 10px;
-                }
-
-                .grand-total {
-                    font-size: 16px;
-                }
-
-                .x-count {
-                    font-size: 11px;
-                }
-
-                .edit-btn {
-                    padding: 9px 14px;
-                    font-size: 12px;
-                }
-
-                .styled-table {
-                    font-size: 9px;
-                    min-width: 100%;
-                }
-
-                .styled-table thead th,
-                .styled-table tbody td {
-                    padding: 6px 3px;
-                }
-
-                .styled-table thead th {
-                    font-size: 8px;
-                    padding: 8px 3px;
-                }
-
-                .styled-table thead th:first-child {
-                    border-radius: 8px 0 0 0;
-                }
-
-                .styled-table thead th:last-child {
-                    border-radius: 0 8px 0 0;
-                }
-
-                .styled-table tbody td:first-child {
-                    width: 30px;
-                    font-size: 8px;
-                }
-
-                .styled-table tbody td:nth-child(2) {
-                    font-size: 8px;
-                }
-
-                .styled-table tbody td:nth-child(3),
-                .styled-table tbody td:nth-child(4) {
-                    font-size: 8px;
-                }
-
-                .btn {
-                    padding: 3px 5px;
-                    font-size: 7px;
-                    margin-right: 1px;
-                    margin-bottom: 2px;
-                    white-space: nowrap;
-                    border-radius: 4px;
-                }
-
-                .add-link {
-                    padding: 8px 10px;
-                    font-size: 11px;
-                }
-
-                .export-btn {
-                    padding: 8px 10px;
-                    font-size: 11px;
-                }
-
-                h3 {
-                    font-size: 14px;
-                }
-
-                .table-empty {
-                    padding: 25px 12px;
-                    font-size: 11px;
-                }
-
-                .table-empty::before {
-                    font-size: 32px;
-                    margin-bottom: 10px;
-                }
-
-                .form-group {
-                    margin-bottom: 18px;
-                }
-
-                .alert {
-                    padding: 10px;
-                    font-size: 11px;
-                }
-
-                .table-wrapper {
-                    border-radius: 8px;
-                    padding: 0;
-                }
-            }
-
-            @media (max-width: 360px) {
-                body {
-                    padding: 5px;
-                }
-
-                .setup-form,
-                .scorecard-container,
-                .peserta-selector-inline {
-                    padding: 6px;
-                }
-
-                .peserta-selector-inline {
-                    padding: 8px;
-                }
-
-                .logo {
-                    width: 32px;
-                    height: 32px;
-                    font-size: 14px;
-                }
-
-                .title {
-                    font-size: 13px;
-                }
-
-                .subtitle {
-                    font-size: 9px;
-                }
-
-                .form-input {
-                    padding: 8px;
-                    font-size: 13px;
-                }
-
-                .create-btn {
-                    padding: 9px;
-                    font-size: 12px;
-                }
-
-                .score-table {
-                    min-width: 300px;
-                    font-size: 8px;
-                }
-
-                .score-table th {
-                    padding: 4px 1px;
-                    font-size: 8px;
-                }
-
-                .score-table td {
-                    padding: 3px 1px;
-                }
-
-                .arrow-input {
-                    width: 28px;
-                    height: 24px;
-                    font-size: 8px;
-                    padding: 2px 1px;
-                }
-
-                .session-label {
-                    font-size: 8px;
-                    min-width: 35px;
-                }
-
-                .styled-table {
-                    min-width: 100%;
-                    font-size: 8px;
-                }
-
-                .styled-table thead th,
-                .styled-table tbody td {
-                    padding: 5px 2px;
-                }
-
-                .styled-table thead th {
-                    font-size: 7px;
-                    letter-spacing: 0.3px;
-                }
-
-                .styled-table tbody td:first-child {
-                    width: 25px;
-                    font-size: 7px;
-                }
-
-                .styled-table tbody td:nth-child(2) {
-                    font-size: 7px;
-                }
-
-                .styled-table tbody td:nth-child(3),
-                .styled-table tbody td:nth-child(4) {
-                    font-size: 7px;
-                }
-
-                .btn {
-                    padding: 2px 4px;
-                    font-size: 6px;
-                    border-radius: 3px;
-                    margin-right: 1px;
-                    margin-bottom: 1px;
-                }
-
-                .player-header {
-                    font-size: 12px;
-                    padding: 7px;
-                }
-
-                .grand-total {
-                    font-size: 15px;
-                }
-
-                .x-count {
-                    font-size: 10px;
-                }
-
-                .category-name {
-                    font-size: 12px;
-                }
-
-                .event-name {
-                    font-size: 11px;
-                }
-
-                .peserta-count {
-                    font-size: 14px;
-                }
-
-                h3 {
-                    font-size: 13px;
-                }
-
-                .add-link {
-                    padding: 7px 8px;
-                    font-size: 10px;
-                }
-
-                .export-btn {
-                    padding: 7px 8px;
-                    font-size: 10px;
-                }
-            }
+            .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+            .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+            .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+            .dropdown-menu { display: none; }
+            .dropdown-menu.show { display: block; }
+            .hidden { display: none !important; }
+
+            /* Score input styling */
+            .arrow-input { transition: all 0.2s ease; }
+            .arrow-input:focus { outline: none; box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.3); }
+            .arrow-input.score-x { background: #dcfce7 !important; border-color: #16a34a !important; color: #15803d !important; }
+            .arrow-input.score-m { background: #fee2e2 !important; border-color: #dc2626 !important; color: #dc2626 !important; }
+            .arrow-input.score-10 { background: #dcfce7 !important; border-color: #16a34a !important; color: #15803d !important; }
+            .arrow-input.score-high { background: #fef3c7 !important; border-color: #f59e0b !important; color: #92400e !important; }
+            .arrow-input.saving { border-color: #f59e0b !important; opacity: 0.7; }
+            .arrow-input.saved { border-color: #16a34a !important; }
+            .arrow-input.error { border-color: #dc2626 !important; }
 
             @media print {
-                body {
-                    background: white;
-                    padding: 0;
-                }
-
-                .back-btn,
-                .edit-btn,
-                .add-link,
-                .export-btn,
-                .change-peserta-btn,
-                .peserta-selector-inline,
-                .selected-peserta-info {
-                    display: none;
-                }
-
-                .setup-form,
-                .scorecard-container {
-                    box-shadow: none;
-                    background: white;
-                    color: black;
-                }
-
-                .table-wrapper {
-                    box-shadow: none;
-                    border: 1px solid #ddd;
-                }
-
-                .styled-table .btn {
-                    display: none;
-                }
-
-                .styled-table tbody tr:hover {
-                    background: transparent;
-                    transform: none;
-                    box-shadow: none;
-                }
-
-                .score-table-container {
-                    box-shadow: none;
-                }
+                .no-print { display: none !important; }
             }
         </style>
     </head>
-
-    <body>
-        <div class="container">
+    <body class="h-full bg-slate-50">
+        <div class="max-w-6xl mx-auto px-4 py-6">
             <?php if (isset($_GET['resource'])) { ?>
                 <?php if ($_GET['resource'] == 'form') { ?>
-                    <a class="back-btn"
-                        href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>">←</a>
-                    <form action="" method="post">
-                        <div class="setup-form" id="setupForm">
-                            <input type="hidden" id="local_time" name="local_time">
-                            <div class="header">
-                                <div class="logo">🏹</div>
-                                <div class="title">Setup Scorecard</div>
-                                <div class="subtitle">Atur jumlah sesi dan anak panah</div>
-                            </div>
+                    <!-- Scorecard Setup Form -->
+                    <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
+                       class="inline-flex items-center gap-2 text-archery-600 hover:text-archery-700 font-medium text-sm mb-6 no-print">
+                        <i class="fas fa-arrow-left"></i> Kembali
+                    </a>
 
-                            <div class="category-info">
-                                <div class="category-name"><?= htmlspecialchars($kategoriData['name']) ?></div>
-                                <div class="event-name"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></div>
-                                <div class="peserta-count"><?= count($pesertaList) ?> Peserta Terdaftar</div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="bg-gradient-to-br from-archery-600 to-archery-800 px-6 py-5 text-white text-center">
+                            <div class="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-bullseye text-2xl"></i>
+                            </div>
+                            <h2 class="text-xl font-bold">Setup Scorecard</h2>
+                            <p class="text-white/80 text-sm">Atur jumlah sesi dan anak panah</p>
+                        </div>
+
+                        <form action="" method="post" class="p-6">
+                            <input type="hidden" id="local_time" name="local_time">
+
+                            <div class="bg-archery-50 border border-archery-200 rounded-xl p-4 mb-6 text-center">
+                                <p class="font-semibold text-archery-700"><?= htmlspecialchars($kategoriData['name']) ?></p>
+                                <p class="text-sm text-slate-600"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
+                                <p class="text-lg font-bold text-amber-600 mt-2"><?= count($pesertaList) ?> Peserta Terdaftar</p>
                             </div>
 
                             <?php if (count($pesertaList) == 0): ?>
-                                <div class="alert alert-warning">
+                                <div class="bg-amber-50 border border-amber-200 text-amber-700 rounded-lg p-4 mb-6">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>
                                     <strong>Peringatan:</strong> Tidak ada peserta yang terdaftar dalam kategori ini.
                                 </div>
                             <?php endif; ?>
 
-                            <div class="form-group">
-                                <label class="form-label">Jumlah Sesi</label>
-                                <input type="number" class="form-input" name="jumlahSesi" id="jumlahSesi" min="1" value="9"
-                                    placeholder="9">
+                            <div class="space-y-5">
+                                <div>
+                                    <label for="jumlahSesi" class="block text-sm font-medium text-slate-700 mb-2">Jumlah Sesi</label>
+                                    <input type="number" id="jumlahSesi" name="jumlahSesi" min="1" value="9"
+                                           class="w-full px-4 py-3 rounded-lg border border-slate-300 text-center text-lg font-semibold focus:ring-2 focus:ring-archery-500 focus:border-archery-500">
+                                </div>
+
+                                <div>
+                                    <label for="jumlahPanah" class="block text-sm font-medium text-slate-700 mb-2">Jumlah Anak Panah per Sesi</label>
+                                    <input type="number" id="jumlahPanah" name="jumlahPanah" min="1" value="3"
+                                           class="w-full px-4 py-3 rounded-lg border border-slate-300 text-center text-lg font-semibold focus:ring-2 focus:ring-archery-500 focus:border-archery-500">
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                <label class="form-label">Jumlah Anak Panah per Sesi</label>
-                                <input type="number" class="form-input" name="jumlahPanah" id="jumlahPanah" min="1" value="3"
-                                    placeholder="3">
-                            </div>
-
-                            <button type="submit" name="create" class="create-btn" <?= count($pesertaList) == 0 ? 'disabled' : '' ?>>
-                                Buat Scorecard
+                            <button type="submit" name="create"
+                                    class="w-full mt-6 px-6 py-3 rounded-xl bg-archery-600 text-white font-semibold hover:bg-archery-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    <?= count($pesertaList) == 0 ? 'disabled' : '' ?>>
+                                <i class="fas fa-plus mr-2"></i> Buat Scorecard
                             </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 <?php } ?>
 
                 <?php if ($_GET['resource'] == 'index') { ?>
                     <?php if (!isset($_GET['scoreboard'])) { ?>
-                        <div class="setup-form" id="setupForm">
-                            <div class="header-bar">
-                                <button class="back-btn" onclick="goBack()">←</button>
-                                <div class="header-actions">
+                        <!-- Scorecard List -->
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div class="flex items-center gap-3">
+                                    <button onclick="goBack()" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors no-print">
+                                        <i class="fas fa-arrow-left"></i>
+                                    </button>
+                                    <div>
+                                        <h2 class="font-semibold text-slate-900">Daftar Scorecard</h2>
+                                        <p class="text-sm text-slate-500"><?= htmlspecialchars($kategoriData['name']) ?> - <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2 no-print">
                                     <a href="detail.php?action=scorecard&resource=form&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
-                                        class="add-link">Tambah data +</a>
-                                    <button onclick="exportTableToExcel()" class="export-btn">📊 Export Excel</button>
+                                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                        <i class="fas fa-plus"></i> Tambah
+                                    </a>
+                                    <button onclick="exportTableToExcel()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors">
+                                        <i class="fas fa-file-excel"></i> Export
+                                    </button>
                                 </div>
                             </div>
-                            <div class="table-wrapper">
-                                <table class="styled-table" id="scorecardTable">
-                                    <thead>
+
+                            <div class="overflow-x-auto custom-scrollbar">
+                                <table id="scorecardTable" class="w-full">
+                                    <thead class="bg-zinc-800 text-white">
                                         <tr>
-                                            <th>No</th>
-                                            <th>Tanggal</th>
-                                            <th>Jumlah Sesi</th>
-                                            <th>Jumlah Anak Panah</th>
-                                            <th>Aksi</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16">No</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tanggal</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Jumlah Sesi</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Jumlah Anak Panah</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-48 no-print">Aksi</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody class="divide-y divide-slate-100">
                                         <?php
                                         $loopNumber = 1;
-                                        while ($a = mysqli_fetch_array($mysql_table_score_board)) { ?>
-                                            <tr>
-                                                <td><?= $loopNumber++ ?></td>
-                                                <td><?= $a['created'] ?></td>
-                                                <td><?= $a['jumlah_sesi'] ?></td>
-                                                <td><?= $a['jumlah_anak_panah'] ?></td>
-                                                <td>
-                                                    <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>&rangking=true"
-                                                        class="btn">Ranking</a>
-                                                    <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>"
-                                                        class="btn">Detail</a>
-                                                    <a href="detail.php?aduan=true&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>"
-                                                        class="btn">Aduan</a>
-                                                    <button
-                                                        onclick="delete_score_board('<?= $kegiatan_id ?>', '<?= $category_id ?>', '<?= $a['id'] ?>')"
-                                                        class="btn">Hapus</button>
+                                        $hasData = false;
+                                        while ($a = mysqli_fetch_array($mysql_table_score_board)) {
+                                            $hasData = true;
+                                        ?>
+                                            <tr class="hover:bg-slate-50 transition-colors">
+                                                <td class="px-4 py-3">
+                                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-archery-100 text-archery-700 text-sm font-semibold">
+                                                        <?= $loopNumber++ ?>
+                                                    </span>
+                                                </td>
+                                                <td class="px-4 py-3 text-sm text-slate-600"><?= $a['created'] ?></td>
+                                                <td class="px-4 py-3 text-center">
+                                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700"><?= $a['jumlah_sesi'] ?> Sesi</span>
+                                                </td>
+                                                <td class="px-4 py-3 text-center">
+                                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700"><?= $a['jumlah_anak_panah'] ?> Panah</span>
+                                                </td>
+                                                <td class="px-4 py-3 no-print">
+                                                    <div class="flex items-center justify-center gap-1 flex-wrap">
+                                                        <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>&rangking=true"
+                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium hover:bg-amber-200 transition-colors">
+                                                            <i class="fas fa-trophy text-xs"></i> Ranking
+                                                        </a>
+                                                        <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>"
+                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200 transition-colors">
+                                                            <i class="fas fa-edit text-xs"></i> Detail
+                                                        </a>
+                                                        <a href="detail.php?aduan=true&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>"
+                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-100 text-purple-700 text-xs font-medium hover:bg-purple-200 transition-colors">
+                                                            <i class="fas fa-sitemap text-xs"></i> Aduan
+                                                        </a>
+                                                        <button onclick="delete_score_board('<?= $kegiatan_id ?>', '<?= $category_id ?>', '<?= $a['id'] ?>')"
+                                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors">
+                                                            <i class="fas fa-trash text-xs"></i>
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         <?php } ?>
+                                        <?php if (!$hasData): ?>
+                                            <tr>
+                                                <td colspan="5" class="px-4 py-12">
+                                                    <div class="flex flex-col items-center text-center">
+                                                        <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                                                            <i class="fas fa-clipboard-list text-slate-400 text-2xl"></i>
+                                                        </div>
+                                                        <p class="text-slate-500 font-medium">Belum ada scorecard</p>
+                                                        <p class="text-slate-400 text-sm mb-4">Klik tombol "Tambah" untuk membuat scorecard baru</p>
+                                                        <a href="detail.php?action=scorecard&resource=form&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
+                                                           class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                                            <i class="fas fa-plus"></i> Buat Scorecard
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endif; ?>
                                     </tbody>
                                 </table>
                             </div>
@@ -3531,126 +1359,149 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 <?php } ?>
             <?php } ?>
 
-            <!-- Selector Peserta dengan Dropdown (Diintegrasikan ke dalam scorecard) -->
+            <!-- Scorecard Detail / Input Mode -->
             <?php if (isset($_GET['scoreboard']) && !isset($_GET['rangking'])) { ?>
-                <div class="scorecard-container" id="scorecardContainer" style="display: block;">
-                    <div class="header-flex">
-                        <a class="back-btn"
-                            href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>">←</a>
-                        <h3>Score Board</h3>
-                        <button onclick="exportScorecardToExcel()" class="export-btn" id="exportBtn"
-                            style="visibility: hidden;">📊 Export</button>
-                    </div>
-
-                    <div class="scorecard-header">
-                        <div class="category-header-info">
-                            <div class="category-icon">🎯</div>
+                <div id="scorecardContainer" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
+                               class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors no-print">
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
                             <div>
-                                <div class="category-name" style="font-size: 14px; margin: 0;">
-                                    <?= htmlspecialchars($kategoriData['name']) ?>
-                                </div>
-                                <div style="font-size: 12px; color: #ddd;">
-                                    <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?>
-                                </div>
+                                <h2 class="font-semibold text-slate-900">Score Board - Input Skor</h2>
+                                <p class="text-sm text-slate-500"><?= htmlspecialchars($kategoriData['name']) ?></p>
                             </div>
                         </div>
-                        <div class="category-header-info">
-                            <div class="category-icon">👥</div>
-                            <div>
-                                <div class="category-name" style="font-size: 14px; margin: 0;" id="pesertaCount">
-                                    <?= count($pesertaList) ?>
-                                </div>
-                                <div style="font-size: 12px; color: #ddd;">Peserta</div>
-                            </div>
-                        </div>
-                        <div class="category-header-info">
-                            <div class="category-icon">🏹</div>
-                            <div>
-                                <div class="category-name" style="font-size: 14px; margin: 0;" id="panahCount">-</div>
-                                <div style="font-size: 12px; color: #ddd;">Anak Panah</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Dropdown Pilih Peserta -->
-                    <div class="peserta-selector-inline" id="pesertaSelectorInline">
-                        <div class="selector-header">
-                            <div class="selector-title">🏹 Pilih Peserta untuk Input Score</div>
-                            <div class="selector-subtitle">Pilih peserta dari dropdown untuk mulai mengisi score</div>
-                        </div>
-
-                        <div class="dropdown-container">
-                            <button class="dropdown-btn" id="dropdownBtn" onclick="toggleDropdown()">
-                                <span id="dropdownText">Pilih Peserta</span>
-                                <span class="dropdown-arrow">▼</span>
-                            </button>
-                            <div class="dropdown-menu hidden" id="dropdownMenu">
-                                <!-- Akan diisi dengan JavaScript -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Info Peserta yang Sedang Diisi -->
-                    <div class="selected-peserta-info hidden" id="selectedPesertaInfo">
-                        <div style="font-size: 14px; margin-bottom: 5px;">Sedang mengisi score untuk:</div>
-                        <div class="selected-peserta-name" id="selectedPesertaName"></div>
-                        <button class="change-peserta-btn" onclick="changePeserta()">
-                            🔄 Ganti Peserta
+                        <button onclick="exportScorecardToExcel()" id="exportBtn" class="hidden inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors no-print">
+                            <i class="fas fa-file-excel"></i> Export
                         </button>
                     </div>
 
-                    <div class="scorecard-title" id="scorecardTitle" style="display: none;">Informasi Skor</div>
+                    <!-- Stats Header -->
+                    <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <div class="w-10 h-10 rounded-lg bg-archery-100 flex items-center justify-center mx-auto mb-1">
+                                    <i class="fas fa-bullseye text-archery-600"></i>
+                                </div>
+                                <p class="text-sm font-medium text-slate-900"><?= htmlspecialchars($kategoriData['name']) ?></p>
+                                <p class="text-xs text-slate-500"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
+                            </div>
+                            <div>
+                                <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mx-auto mb-1">
+                                    <i class="fas fa-users text-blue-600"></i>
+                                </div>
+                                <p class="text-sm font-medium text-slate-900" id="pesertaCount"><?= count($pesertaList) ?></p>
+                                <p class="text-xs text-slate-500">Peserta</p>
+                            </div>
+                            <div>
+                                <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mx-auto mb-1">
+                                    <i class="fas fa-crosshairs text-amber-600"></i>
+                                </div>
+                                <p class="text-sm font-medium text-slate-900" id="panahCount">-</p>
+                                <p class="text-xs text-slate-500">Anak Panah</p>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div id="playersContainer"></div>
+                    <!-- Peserta Selector Dropdown -->
+                    <div id="pesertaSelectorInline" class="p-6">
+                        <div class="bg-archery-50 border-2 border-dashed border-archery-300 rounded-xl p-6 text-center">
+                            <div class="w-14 h-14 rounded-full bg-archery-100 flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-bullseye text-archery-600 text-xl"></i>
+                            </div>
+                            <h3 class="font-semibold text-slate-900 mb-1">Pilih Peserta untuk Input Score</h3>
+                            <p class="text-sm text-slate-500 mb-4">Pilih peserta dari dropdown untuk mulai mengisi score</p>
+
+                            <div class="relative max-w-sm mx-auto">
+                                <button id="dropdownBtn" onclick="toggleDropdown()"
+                                        class="w-full px-4 py-3 rounded-lg bg-archery-600 text-white font-medium flex items-center justify-between hover:bg-archery-700 transition-colors">
+                                    <span id="dropdownText">Pilih Peserta</span>
+                                    <i class="fas fa-chevron-down dropdown-arrow transition-transform"></i>
+                                </button>
+                                <div id="dropdownMenu" class="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto z-50">
+                                    <!-- Populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Selected Peserta Info -->
+                    <div id="selectedPesertaInfo" class="hidden px-6 pb-4">
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+                            <p class="text-sm text-slate-600 mb-1">Sedang mengisi score untuk:</p>
+                            <p class="font-bold text-amber-700 text-lg" id="selectedPesertaName"></p>
+                            <button onclick="changePeserta()" class="mt-3 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors no-print">
+                                <i class="fas fa-sync-alt mr-1"></i> Ganti Peserta
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="scorecardTitle" class="hidden px-6 pb-2">
+                        <h3 class="font-semibold text-slate-700 text-center">Informasi Skor</h3>
+                    </div>
+
+                    <div id="playersContainer" class="px-6 pb-6"></div>
                 </div>
             <?php } ?>
 
-            <!-- Mode Ranking (Tampil Semua Peserta) -->
+            <!-- Ranking Mode -->
             <?php if (isset($_GET['scoreboard']) && isset($_GET['rangking'])) { ?>
-                <div class="scorecard-container" id="scorecardContainer" style="display: block;">
-                    <div class="header-flex">
-                        <a class="back-btn"
-                            href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>">←</a>
-                        <h3>Score Board (Ranking)</h3>
-                        <button onclick="exportScorecardToExcel()" class="export-btn">📊 Export</button>
-                    </div>
-                    <div class="scorecard-header">
-                        <div class="category-header-info">
-                            <div class="category-icon">🎯</div>
+                <div id="scorecardContainer" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
+                               class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors no-print">
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
                             <div>
-                                <div class="category-name" style="font-size: 14px; margin: 0;">
-                                    <?= htmlspecialchars($kategoriData['name']) ?>
-                                </div>
-                                <div style="font-size: 12px; color: #ddd;">
-                                    <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?>
-                                </div>
+                                <h2 class="font-semibold text-slate-900">Score Board - Ranking</h2>
+                                <p class="text-sm text-slate-500"><?= htmlspecialchars($kategoriData['name']) ?></p>
                             </div>
                         </div>
-                        <div class="category-header-info">
-                            <div class="category-icon">👥</div>
-                            <div>
-                                <div class="category-name" style="font-size: 14px; margin: 0;" id="pesertaCount">
-                                    <?= count($pesertaList) ?>
-                                </div>
-                                <div style="font-size: 12px; color: #ddd;">Peserta</div>
-                            </div>
-                        </div>
-                        <div class="category-header-info">
-                            <div class="category-icon">🏹</div>
-                            <div>
-                                <div class="category-name" style="font-size: 14px; margin: 0;" id="panahCount">-</div>
-                                <div style="font-size: 12px; color: #ddd;">Anak Panah</div>
-                            </div>
-                        </div>
+                        <button onclick="exportScorecardToExcel()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors no-print">
+                            <i class="fas fa-file-excel"></i> Export
+                        </button>
                     </div>
 
-                    <div class="scorecard-title">Informasi Skor</div>
+                    <!-- Stats Header -->
+                    <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <div class="w-10 h-10 rounded-lg bg-archery-100 flex items-center justify-center mx-auto mb-1">
+                                    <i class="fas fa-bullseye text-archery-600"></i>
+                                </div>
+                                <p class="text-sm font-medium text-slate-900"><?= htmlspecialchars($kategoriData['name']) ?></p>
+                                <p class="text-xs text-slate-500"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
+                            </div>
+                            <div>
+                                <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mx-auto mb-1">
+                                    <i class="fas fa-users text-blue-600"></i>
+                                </div>
+                                <p class="text-sm font-medium text-slate-900" id="pesertaCount"><?= count($pesertaList) ?></p>
+                                <p class="text-xs text-slate-500">Peserta</p>
+                            </div>
+                            <div>
+                                <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mx-auto mb-1">
+                                    <i class="fas fa-crosshairs text-amber-600"></i>
+                                </div>
+                                <p class="text-sm font-medium text-slate-900" id="panahCount">-</p>
+                                <p class="text-xs text-slate-500">Anak Panah</p>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div id="playersContainer"></div>
+                    <div class="px-6 py-4">
+                        <h3 class="font-semibold text-slate-700 text-center mb-4">Informasi Skor</h3>
+                        <div id="playersContainer"></div>
+                    </div>
 
-                    <button class="edit-btn" onclick="editScorecard()">
-                        Edit Setup
-                    </button>
+                    <div class="px-6 pb-6 no-print">
+                        <button onclick="editScorecard()" class="w-full px-4 py-3 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors">
+                            <i class="fas fa-cog mr-2"></i> Edit Setup
+                        </button>
+                    </div>
                 </div>
             <?php } ?>
         </div>
@@ -3662,7 +1513,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     + String(now.getMonth() + 1).padStart(2, '0') + "-"
                     + String(now.getDate()).padStart(2, '0') + " "
                     + String(now.getHours()).padStart(2, '0') + ":"
-                    + String(now.getMin        utes()).padStart(2, '0') + ":"
+                    + String(now.getMinutes()).padStart(2, '0') + ":"
                     + String(now.getSeconds()).padStart(2, '0');
 
                 document.getElementById("local_time").value = formatted;
@@ -3672,7 +1523,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             let selectedPesertaId = null;
             let saveTimeout = null;
             let inputTimeout = null;
-            const SAVE_DELAY = 500; // 500ms delay sebelum save
+            const SAVE_DELAY = 500;
             const INPUT_DELAY = 500;
 
             <?php if (isset($_GET['rangking'])) { ?>
@@ -3701,7 +1552,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 <?php if (isset($_GET['rangking'])) { ?>
                     openScoreBoard("<?= $show_score_board['jumlah_sesi'] ?>", "<?= $show_score_board['jumlah_anak_panah'] ?>");
                 <?php } else { ?>
-                    // Initialize dropdown untuk mode input
                     document.addEventListener('DOMContentLoaded', function () {
                         init();
                     });
@@ -3725,18 +1575,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             <?php }
             ?>
 
-            // Initialize
             function init() {
                 renderDropdownMenu();
 
-                // Close dropdown when clicking outside
                 document.addEventListener('click', function (event) {
                     const dropdown = document.getElementById('dropdownMenu');
                     const dropdownBtn = document.getElementById('dropdownBtn');
 
                     if (dropdown && dropdownBtn && !dropdownBtn.contains(event.target) && !dropdown.contains(event.target)) {
-                        dropdown.classList.add('hidden');
-                        dropdownBtn.classList.remove('active');
+                        dropdown.classList.remove('show');
+                        dropdownBtn.querySelector('.dropdown-arrow').style.transform = 'rotate(0deg)';
                     }
                 });
             }
@@ -3749,16 +1597,18 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                 pesertaData.forEach(peserta => {
                     const item = document.createElement('div');
-                    item.className = 'dropdown-item';
+                    item.className = 'px-4 py-3 hover:bg-slate-50 cursor-pointer flex items-center gap-3 border-b border-slate-100 last:border-0';
                     item.onclick = () => selectPeserta(peserta.id);
 
                     item.innerHTML = `
-            <div class="dropdown-item-icon">${peserta.jenis_kelamin === 'P' ? '👧' : '👦'}</div>
-            <div class="dropdown-item-info">
-                <div class="dropdown-item-name">${peserta.nama_peserta}</div>
-                <div class="dropdown-item-gender">${peserta.jenis_kelamin === 'P' ? 'Putri' : 'Putra'}</div>
-            </div>
-        `;
+                        <div class="w-8 h-8 rounded-full ${peserta.jenis_kelamin === 'P' ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'} flex items-center justify-center">
+                            <i class="fas ${peserta.jenis_kelamin === 'P' ? 'fa-venus' : 'fa-mars'} text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-slate-900 text-sm">${peserta.nama_peserta}</p>
+                            <p class="text-xs text-slate-500">${peserta.jenis_kelamin === 'P' ? 'Putri' : 'Putra'}</p>
+                        </div>
+                    `;
 
                     menu.appendChild(item);
                 });
@@ -3769,8 +1619,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 const dropdownBtn = document.getElementById('dropdownBtn');
 
                 if (dropdown && dropdownBtn) {
-                    dropdown.classList.toggle('hidden');
-                    dropdownBtn.classList.toggle('active');
+                    dropdown.classList.toggle('show');
+                    const arrow = dropdownBtn.querySelector('.dropdown-arrow');
+                    arrow.style.transform = dropdown.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
                 }
             }
 
@@ -3779,87 +1630,61 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 const peserta = pesertaData.find(p => p.id === pesertaId);
 
                 if (peserta) {
-                    // Close dropdown
                     const dropdown = document.getElementById('dropdownMenu');
                     const dropdownBtn = document.getElementById('dropdownBtn');
-                    if (dropdown) dropdown.classList.add('hidden');
-                    if (dropdownBtn) dropdownBtn.classList.remove('active');
+                    if (dropdown) dropdown.classList.remove('show');
+                    if (dropdownBtn) dropdownBtn.querySelector('.dropdown-arrow').style.transform = 'rotate(0deg)';
 
-                    // Update selected info
                     const selectedName = document.getElementById('selectedPesertaName');
                     const selectedInfo = document.getElementById('selectedPesertaInfo');
                     if (selectedName) selectedName.textContent = peserta.nama_peserta;
                     if (selectedInfo) selectedInfo.classList.remove('hidden');
 
-                    // Hide selector, show scorecard content
                     const selectorInline = document.getElementById('pesertaSelectorInline');
                     const scorecardTitle = document.getElementById('scorecardTitle');
                     const exportBtn = document.getElementById('exportBtn');
 
                     if (selectorInline) selectorInline.style.display = 'none';
-                    if (scorecardTitle) scorecardTitle.style.display = 'block';
-                    if (exportBtn) exportBtn.style.visibility = 'visible';
+                    if (scorecardTitle) scorecardTitle.classList.remove('hidden');
+                    if (exportBtn) exportBtn.classList.remove('hidden');
 
-                    // Generate scorecard untuk peserta ini
                     const jumlahSesi = parseInt("<?= $show_score_board['jumlah_sesi'] ?? 9 ?>");
                     const jumlahPanah = parseInt("<?= $show_score_board['jumlah_anak_panah'] ?? 3 ?>");
                     document.getElementById('panahCount').textContent = jumlahSesi * jumlahPanah;
                     generatePlayerSection(peserta, jumlahSesi, jumlahPanah);
 
-                    // LOAD DATA SCORE YANG SUDAH ADA untuk peserta ini
                     setTimeout(() => {
                         loadExistingScores(pesertaId, jumlahPanah);
                     }, 100);
                 }
             }
 
-            // Fungsi untuk load data score yang sudah tersimpan
             function loadExistingScores(pesertaId, jumlahPanah) {
                 const playerId = `peserta_${pesertaId}`;
 
                 <?php
                 if (isset($mysql_data_score)) {
-                    // Reset pointer ke awal
                     mysqli_data_seek($mysql_data_score, 0);
 
                     while ($jatuh = mysqli_fetch_array($mysql_data_score)) { ?>
-                        // Cek apakah data ini untuk peserta yang dipilih
                         if (<?= $jatuh['peserta_id'] ?> == pesertaId) {
                             const inputElement = document.getElementById("peserta_<?= $jatuh['peserta_id'] ?>_a<?= $jatuh['arrow'] ?>_s<?= $jatuh['session'] ?>");
                             if (inputElement) {
                                 inputElement.value = "<?= $jatuh['score'] ?>";
-                                validateArrowInput(inputElement); // Apply styling
+                                validateArrowInput(inputElement);
                                 hitungPerArrow('peserta_<?= $jatuh['peserta_id'] ?>', '<?= $jatuh['arrow'] ?>', '<?= $jatuh['session'] ?>', jumlahPanah, null);
                             }
                         }
                     <?php } ?>
                 <?php }
                 ?>
-                console.log("✅ Data loaded for peserta:", pesertaId);
+                console.log("Data loaded for peserta:", pesertaId);
             }
 
             function changePeserta() {
-                // Reset selection
-                selectedPesertaId = null;
-
-                // Reset dropdown text
-                const dropdownText = document.getElementById('dropdownText');
-                if (dropdownText) dropdownText.textContent = 'Pilih Peserta';
-
-                // Show selector, hide scorecard content
-                const selectorInline = document.getElementById('pesertaSelectorInline');
-                const selectedInfo = document.getElementById('selectedPesertaInfo');
-                const scorecardTitle = document.getElementById('scorecardTitle');
-                const exportBtn = document.getElementById('exportBtn');
-
-                if (selectorInline) selectorInline.style.display = 'block';
-                if (selectedInfo) selectedInfo.classList.add('hidden');
-                if (scorecardTitle) scorecardTitle.style.display = 'none';
-                if (exportBtn) exportBtn.style.visibility = 'hidden';
-
-                // Clear scorecard
-                const container = document.getElementById('playersContainer');
-                if (container) container.innerHTML = '';
+                if (confirm('Yakin ingin ganti peserta? Data yang telah diinput sudah tersimpan.')) {
+                    location.reload();
+                }
             }
 
             function goBack() {
@@ -3871,11 +1696,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 const jumlahPanah = parseInt(jumlahPanah_data);
                 document.getElementById('panahCount').textContent = jumlahSesi * jumlahPanah;
                 generatePlayerSections(jumlahSesi, jumlahPanah);
-                const setupForm = document.getElementById('setupForm');
-                const scorecardContainer = document.getElementById('scorecardContainer');
-                if (setupForm) setupForm.style.display = 'none';
-                if (scorecardContainer) scorecardContainer.style.display = 'block';
-                document.querySelector('.container').style.maxWidth = '1200px';
             }
 
             function generatePlayerSections(jumlahSesi, jumlahPanah) {
@@ -3886,37 +1706,46 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 pesertaData.forEach((peserta, index) => {
                     const playerId = `peserta_${peserta.id}`;
                     const playerName = peserta.nama_peserta;
+                    const rankBadge = index < 3 ? ['bg-amber-500', 'bg-slate-400', 'bg-amber-700'][index] : 'bg-slate-200';
+                    const rankText = index < 3 ? 'text-white' : 'text-slate-600';
 
                     const playerSection = document.createElement('div');
-                    playerSection.className = 'player-section';
+                    playerSection.className = 'bg-slate-50 rounded-xl border border-slate-200 p-4 mb-4';
                     playerSection.innerHTML = `
-            <div class="player-header">
-                ${playerName} (${peserta.jenis_kelamin}) ${typeof peserta.total_score !== 'undefined' ? ` - Juara ${index + 1}` : ''}
-            </div>
-            <div class="score-table-container">
-                <table class="score-table">
-                    <thead>
-                        <tr>
-                            <th rowspan="2" style="width: 60px;">Sesi</th>
-                            <th colspan="${jumlahPanah}">Anak Panah</th>
-                            <th rowspan="2" style="width: 60px;">Total</th>
-                            <th rowspan="2" style="width: 60px;">End</th>
-                        </tr>
-                        <tr>
-                            ${Array.from({ length: jumlahPanah }, (_, i) => `<th style="width: 50px;">${i + 1}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${generateTableRows(playerId, jumlahSesi, jumlahPanah)}
-                    </tbody>
-                </table>
-            </div>
-            <div class="total-summary" id="${playerId}_summary">
-                <div style="font-size: 14px; margin-bottom: 8px;">Total Keseluruhan</div>
-                <div class="grand-total" id="${playerId}_grand_total">0 poin</div>
-                ${typeof peserta.x_score !== 'undefined' ? `<div class="x-count">X Score: ${peserta.x_score}</div>` : ''}
-            </div>
-        `;
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-full ${rankBadge} ${rankText} flex items-center justify-center font-bold">
+                                ${index + 1}
+                            </div>
+                            <div>
+                                <p class="font-semibold text-slate-900">${playerName}</p>
+                                <p class="text-sm text-slate-500">${peserta.jenis_kelamin === 'P' ? 'Putri' : 'Putra'}</p>
+                            </div>
+                            ${typeof peserta.total_score !== 'undefined' ? `<span class="ml-auto px-3 py-1 rounded-full bg-archery-100 text-archery-700 text-sm font-semibold">${peserta.total_score} poin</span>` : ''}
+                        </div>
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full min-w-[500px]">
+                                <thead>
+                                    <tr class="bg-zinc-800 text-white">
+                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">Sesi</th>
+                                        <th colspan="${jumlahPanah}" class="px-3 py-2 text-xs font-semibold text-center">Anak Panah</th>
+                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">Total</th>
+                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">End</th>
+                                    </tr>
+                                    <tr class="bg-zinc-700 text-white">
+                                        ${Array.from({ length: jumlahPanah }, (_, i) => `<th class="px-2 py-1 text-xs font-medium text-center w-12">${i + 1}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-100">
+                                    ${generateTableRows(playerId, jumlahSesi, jumlahPanah)}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 bg-gradient-to-r from-archery-500 to-archery-600 rounded-lg p-4 text-white text-center">
+                            <p class="text-sm opacity-80">Total Keseluruhan</p>
+                            <p class="text-2xl font-bold" id="${playerId}_grand_total">${typeof peserta.total_score !== 'undefined' ? peserta.total_score + ' poin' : '0 poin'}</p>
+                            ${typeof peserta.x_score !== 'undefined' ? `<p class="text-sm opacity-80">X Score: ${peserta.x_score}</p>` : ''}
+                        </div>
+                    `;
 
                     playersContainer.appendChild(playerSection);
                 });
@@ -3930,34 +1759,40 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 if (!playersContainer) return;
 
                 playersContainer.innerHTML = `
-        <div class="player-section">
-            <div class="player-header">
-                ${playerName} (${peserta.jenis_kelamin})
-            </div>
-            <div class="score-table-container">
-                <table class="score-table">
-                    <thead>
-                        <tr>
-                            <th rowspan="2" style="width: 60px;">Sesi</th>
-                            <th colspan="${jumlahPanah}">Anak Panah</th>
-                            <th rowspan="2" style="width: 60px;">Total</th>
-                            <th rowspan="2" style="width: 60px;">End</th>
-                        </tr>
-                        <tr>
-                            ${Array.from({ length: jumlahPanah }, (_, i) => `<th style="width: 50px;">${i + 1}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${generateTableRows(playerId, jumlahSesi, jumlahPanah)}
-                    </tbody>
-                </table>
-            </div>
-            <div class="total-summary" id="${playerId}_summary">
-                <div style="font-size: 14px; margin-bottom: 8px;">Total Keseluruhan</div>
-                <div class="grand-total" id="${playerId}_grand_total">0 poin</div>
-            </div>
-        </div>
-    `;
+                    <div class="bg-slate-50 rounded-xl border border-slate-200 p-4">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-full ${peserta.jenis_kelamin === 'P' ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'} flex items-center justify-center">
+                                <i class="fas ${peserta.jenis_kelamin === 'P' ? 'fa-venus' : 'fa-mars'}"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-slate-900">${playerName}</p>
+                                <p class="text-sm text-slate-500">${peserta.jenis_kelamin === 'P' ? 'Putri' : 'Putra'}</p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full min-w-[500px]">
+                                <thead>
+                                    <tr class="bg-zinc-800 text-white">
+                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">Sesi</th>
+                                        <th colspan="${jumlahPanah}" class="px-3 py-2 text-xs font-semibold text-center">Anak Panah</th>
+                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">Total</th>
+                                        <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-16">End</th>
+                                    </tr>
+                                    <tr class="bg-zinc-700 text-white">
+                                        ${Array.from({ length: jumlahPanah }, (_, i) => `<th class="px-2 py-1 text-xs font-medium text-center w-12">${i + 1}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-100">
+                                    ${generateTableRows(playerId, jumlahSesi, jumlahPanah)}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 bg-gradient-to-r from-archery-500 to-archery-600 rounded-lg p-4 text-white text-center">
+                            <p class="text-sm opacity-80">Total Keseluruhan</p>
+                            <p class="text-2xl font-bold" id="${playerId}_grand_total">0 poin</p>
+                        </div>
+                    </div>
+                `;
             }
 
             function generateTableRows(playerId, jumlahSesi, jumlahPanah) {
@@ -3965,47 +1800,44 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                 for (let session = 1; session <= jumlahSesi; session++) {
                     const arrowInputs = Array.from({ length: jumlahPanah }, (_, arrow) => `
-            <td>
-                <input type="text" 
-                       class="arrow-input" 
-                       <?= (isset($_GET['rangking'])) ? 'disabled' : '' ?>
-                       id="${playerId}_a${arrow + 1}_s${session}"
-                       placeholder=""
-                       data-player-id="${playerId}"
-                       data-arrow="${arrow + 1}"
-                       data-session="${session}"
-                       data-total-arrow="${jumlahPanah}"
-                       oninput="handleArrowInput(this)"
-                       onkeydown="handleArrowKeydown(event, this)">
-            </td>
-        `).join('');
+                        <td class="px-1 py-2 text-center">
+                            <input type="text"
+                                   class="arrow-input w-10 h-8 text-center text-sm font-semibold rounded border border-slate-300 focus:border-archery-500"
+                                   <?= (isset($_GET['rangking'])) ? 'disabled' : '' ?>
+                                   id="${playerId}_a${arrow + 1}_s${session}"
+                                   placeholder=""
+                                   data-player-id="${playerId}"
+                                   data-arrow="${arrow + 1}"
+                                   data-session="${session}"
+                                   data-total-arrow="${jumlahPanah}"
+                                   oninput="handleArrowInput(this)"
+                                   onkeydown="handleArrowKeydown(event, this)">
+                        </td>
+                    `).join('');
 
                     rowsHtml += `
-            <tr class="session-row">
-                <td class="session-label">S${session}</td>
-                ${arrowInputs}
-                <td class="total-cell">
-                    <input type="text" 
-                           class="arrow-input" 
-                           id="${playerId}_total_a${session}"
-                           readonly
-                           style="background: rgba(253, 203, 110, 0.1); border-color: #e17055;">
-                </td>
-                <td class="end-cell">
-                    <input type="text" 
-                           class="arrow-input" 
-                           id="${playerId}_end_a${session}"
-                           readonly
-                           style="background: rgba(0, 184, 148, 0.1); border-color: #00b894;">
-                </td>
-            </tr>
-        `;
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-3 py-2 text-center font-semibold text-slate-700 bg-slate-100">S${session}</td>
+                            ${arrowInputs}
+                            <td class="px-1 py-2 text-center">
+                                <input type="text"
+                                       class="w-10 h-8 text-center text-sm font-bold rounded bg-amber-50 border border-amber-300 text-amber-700"
+                                       id="${playerId}_total_a${session}"
+                                       readonly>
+                            </td>
+                            <td class="px-1 py-2 text-center">
+                                <input type="text"
+                                       class="w-10 h-8 text-center text-sm font-bold rounded bg-archery-50 border border-archery-300 text-archery-700"
+                                       id="${playerId}_end_a${session}"
+                                       readonly>
+                            </td>
+                        </tr>
+                    `;
                 }
 
                 return rowsHtml;
             }
 
-            // Handler untuk input dengan auto-move (3 detik timeout)
             function handleArrowInput(el) {
                 const playerId = el.getAttribute('data-player-id');
                 const arrow = el.getAttribute('data-arrow');
@@ -4015,12 +1847,10 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 validateArrowInput(el);
                 hitungPerArrow(playerId, arrow, session, totalArrow, el);
 
-                // Clear timeout sebelumnya
                 if (inputTimeout) {
                     clearTimeout(inputTimeout);
                 }
 
-                // Set timeout baru untuk auto-move setelah 3 detik
                 const val = el.value.trim().toLowerCase();
                 if (val !== '') {
                     inputTimeout = setTimeout(() => {
@@ -4029,18 +1859,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 }
             }
 
-            function changePeserta() {
-                // Konfirmasi sebelum ganti peserta
-                if (confirm('Yakin ingin ganti peserta? Data yang telah diinput sudah tersimpan.')) {
-                    // Refresh halaman untuk reset state
-                    location.reload();
-                }
-            }
-
             function hitungPerArrow(playerId, arrow, session, totalArrow, el) {
                 let sessionTotal = 0;
 
-                // Hitung total untuk session ini
                 for (let a = 1; a <= totalArrow; a++) {
                     const input = document.getElementById(`${playerId}_a${a}_s${session}`);
                     if (input && input.value) {
@@ -4057,13 +1878,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     }
                 }
 
-                // Update total session
                 const totalInput = document.getElementById(`${playerId}_total_a${session}`);
                 if (totalInput) {
                     totalInput.value = sessionTotal;
                 }
 
-                // Update running total (End)
                 let maxSession = 20;
                 let runningTotal = 0;
 
@@ -4081,24 +1900,18 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     }
                 }
 
-                // Update grand total
                 const grandTotalElement = document.getElementById(`${playerId}_grand_total`);
                 if (grandTotalElement) {
                     grandTotalElement.innerText = runningTotal + " poin";
                 }
 
-                // AUTO SAVE dengan debounce jika ada element
                 if (el != null) {
-                    // Clear timeout sebelumnya
                     if (saveTimeout) {
                         clearTimeout(saveTimeout);
                     }
 
-                    // Tampilkan indikator loading
-                    el.style.borderColor = '#ffa500';
-                    el.style.opacity = '0.7';
+                    el.classList.add('saving');
 
-                    // Set timeout baru untuk save
                     saveTimeout = setTimeout(() => {
                         saveScoreToDatabase(playerId, arrow, session, el);
                     }, SAVE_DELAY);
@@ -4107,7 +1920,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 return 0;
             }
 
-            // Fungsi terpisah untuk save ke database
             function saveScoreToDatabase(playerId, arrow, session, el) {
                 let arr_playerID = playerId.split("_");
                 let scoreValue = el.value.trim();
@@ -4132,42 +1944,34 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         }
                     })
                     .then(data => {
-                        console.log("✅ Score saved:", data);
+                        console.log("Score saved:", data);
+                        el.classList.remove('saving');
+                        el.classList.add('saved');
 
-                        // Tampilkan indikator berhasil
-                        el.style.borderColor = '#28a745';
-                        el.style.opacity = '1';
-
-                        // Kembalikan style setelah 1 detik
                         setTimeout(() => {
+                            el.classList.remove('saved');
                             validateArrowInput(el);
                         }, 1000);
                     })
                     .catch(err => {
-                        console.error("❌ Save error:", err);
+                        console.error("Save error:", err);
+                        el.classList.remove('saving');
+                        el.classList.add('error');
 
-                        // Tampilkan indikator error
-                        el.style.borderColor = '#dc3545';
-                        el.style.opacity = '1';
-
-                        // Kembalikan style setelah 2 detik
                         setTimeout(() => {
+                            el.classList.remove('error');
                             validateArrowInput(el);
                         }, 2000);
                     });
             }
 
-            // Fungsi untuk auto-move ke input berikutnya
             function moveToNextInput(currentElement, playerId, currentArrow, currentSession, totalArrow) {
-                // Cari input berikutnya
                 let nextArrow = parseInt(currentArrow);
                 let nextSession = parseInt(currentSession);
 
                 if (nextArrow < totalArrow) {
-                    // Pindah ke arrow berikutnya di session yang sama
                     nextArrow++;
                 } else {
-                    // Pindah ke arrow pertama di session berikutnya
                     nextArrow = 1;
                     nextSession++;
                 }
@@ -4190,516 +1994,197 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     return;
                 }
 
+                el.classList.remove('score-x', 'score-m', 'score-10', 'score-high');
+
                 if (val === 'x' || val === 'X') {
-                    el.style.background = 'rgba(40, 167, 69, 0.1)';
-                    el.style.borderColor = '#28a745';
-                    el.style.color = '#28a745';
-                    el.style.fontWeight = '700';
+                    el.classList.add('score-x');
                 } else if (val === 'm' || val === 'M') {
-                    el.style.background = 'rgba(220, 53, 69, 0.1)';
-                    el.style.borderColor = '#dc3545';
-                    el.style.color = '#dc3545';
-                    el.style.fontWeight = '700';
+                    el.classList.add('score-m');
                 } else if (val === '10') {
-                    el.style.background = 'rgba(40, 167, 69, 0.1)';
-                    el.style.borderColor = '#28a745';
-                    el.style.color = '#28a745';
-                    el.style.fontWeight = '700';
+                    el.classList.add('score-10');
                 } else if (val === '9' || val === '8') {
-                    el.style.background = 'rgba(255, 193, 7, 0.1)';
-                    el.style.borderColor = '#ffc107';
-                    el.style.color = '#856404';
-                    el.style.fontWeight = '600';
-                } else {
-                    el.style.background = 'transparent';
-                    el.style.borderColor = 'transparent';
-                    el.style.color = '#333';
-                    el.style.fontWeight = '600';
+                    el.classList.add('score-high');
                 }
             }
 
             function editScorecard() {
-                document.getElementById('setupForm').style.display = 'block';
-                document.getElementById('scorecardContainer').style.display = 'none';
-                document.querySelector('.container').style.maxWidth = '500px';
+                window.location.href = 'detail.php?action=scorecard&resource=form&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>';
             }
 
-            // FUNGSI EXPORT EXCEL UNTUK TABLE LIST
-            // FUNGSI EXPORT EXCEL UNTUK TABLE LIST
             function exportTableToExcel() {
                 const table = document.getElementById('scorecardTable');
                 if (!table) return;
 
-                // Clone table untuk modifikasi
                 const tableClone = table.cloneNode(true);
-
-                // Hapus kolom Aksi
+                tableClone.querySelectorAll('.no-print').forEach(el => el.remove());
                 tableClone.querySelectorAll('thead th:last-child').forEach(th => th.remove());
                 tableClone.querySelectorAll('tbody td:last-child').forEach(td => td.remove());
 
-                // Buat HTML dengan styling
                 const htmlContent = `
-        <html xmlns:x="urn:schemas-microsoft-com:office:excel">
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                table { border-collapse: collapse; width: 100%; }
-                th, td { 
-                    border: 1px solid #000; 
-                    padding: 8px; 
-                    text-align: center;
+                    <html xmlns:x="urn:schemas-microsoft-com:office:excel">
+                    <head>
+                        <meta charset="UTF-8">
+                        <style>
+                            table { border-collapse: collapse; width: 100%; }
+                            th, td { border: 1px solid #000; padding: 8px; text-align: center; }
+                            th { background-color: #000; color: white; font-weight: bold; }
+                        </style>
+                    </head>
+                    <body>${tableClone.outerHTML}</body>
+                    </html>
+                `;
+
+                const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Scorecard_List_${new Date().toISOString().split('T')[0]}.xls`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            }
+
+            function exportScorecardToExcel() {
+                const categoryName = '<?= htmlspecialchars($kategoriData['name']) ?>';
+                const eventName = '<?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?>';
+
+                const firstPlayerSection = document.querySelector('.overflow-x-auto table');
+                let jumlahSesi = 0;
+                let jumlahPanah = 0;
+
+                if (firstPlayerSection) {
+                    const sessionRows = firstPlayerSection.querySelectorAll('tbody tr');
+                    jumlahSesi = sessionRows.length;
+
+                    const secondHeaderRow = firstPlayerSection.querySelectorAll('thead tr:nth-child(2) th');
+                    jumlahPanah = secondHeaderRow.length;
                 }
-                th { 
-                    background-color: #000; 
-                    color: white; 
-                    font-weight: bold;
+
+                if (jumlahPanah === 0 && pesertaData.length > 0) {
+                    const firstPlayerId = `peserta_${pesertaData[0].id}`;
+                    let arrowCount = 1;
+                    while (document.getElementById(`${firstPlayerId}_a${arrowCount}_s1`)) {
+                        arrowCount++;
+                    }
+                    jumlahPanah = arrowCount - 1;
                 }
-            </style>
-        </head>
-        <body>${tableClone.outerHTML}</body>
-        </html>
-    `;
 
-            const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Scorecard_List_${new Date().toISOString().split('T')[0]}.xls`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-        }
-
-        // FUNGSI EXPORT EXCEL UNTUK SCORECARD DETAIL (2 Sheet Terpisah)
-        function exportScorecardToExcel() {
-            const categoryName = document.querySelector('.category-name') ? document.querySelector('.category-name').textContent : 'Kategori';
-            const eventName = document.querySelector('.event-name') ? document.querySelector('.event-name').textContent : 'REKAP TOTAL';
-
-            const firstPlayerSection = document.querySelector('.player-section');
-            const firstTable = firstPlayerSection ? firstPlayerSection.querySelector('.score-table') : null;
-            let jumlahSesi = 0;
-            let jumlahPanah = 0;
-
-            if (firstTable) {
-                const sessionRows = firstTable.querySelectorAll('tbody tr');
-                jumlahSesi = sessionRows.length;
-
-                const secondHeaderRow = firstTable.querySelectorAll('thead tr:nth-child(2) th');
-                jumlahPanah = secondHeaderRow.length;
-            }
-
-            if (jumlahPanah === 0 && pesertaData.length > 0) {
-                const firstPlayerId = `peserta_${pesertaData[0].id}`;
-                let arrowCount = 1;
-                while (document.getElementById(`${firstPlayerId}_a${arrowCount}_s1`)) {
-                    arrowCount++;
+                if (jumlahPanah === 0 || pesertaData.length === 0) {
+                    alert('Data tidak lengkap untuk export!');
+                    return;
                 }
-                jumlahPanah = arrowCount - 1;
-            }
 
-            // Validasi data
-            if (jumlahPanah === 0 || pesertaData.length === 0) {
-                alert('Data tidak lengkap untuk export!');
-                return;
-            }
-
-            // ==================== BUILD SHEET 1: REKAP TOTAL ====================
-            let sheet1HTML = '<table border="1" cellpadding="6" cellspacing="0">';
-            sheet1HTML += '<tr><td colspan="20" style="font-size: 18px; font-weight: bold; border: 1px solid #000;">' + categoryName + '</td></tr>';
-            sheet1HTML += '<tr><td colspan="20" style="font-size: 14px; border: 1px solid #000;">' + eventName + '</td></tr>';
-            sheet1HTML += '<tr>';
-            sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">No</td>';
-            sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Nama</td>';
-
-            for (let i = 1; i <= jumlahSesi; i++) {
-                sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Rambalan ' + i + '</td>';
-            }
-            sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Total</td></tr>';
-
-            for (let index = 0; index < pesertaData.length; index++) {
-                const peserta = pesertaData[index];
-                const playerId = 'peserta_' + peserta.id;
+                let sheet1HTML = '<table border="1" cellpadding="6" cellspacing="0">';
+                sheet1HTML += '<tr><td colspan="20" style="font-size: 18px; font-weight: bold; border: 1px solid #000;">' + categoryName + '</td></tr>';
+                sheet1HTML += '<tr><td colspan="20" style="font-size: 14px; border: 1px solid #000;">' + eventName + '</td></tr>';
                 sheet1HTML += '<tr>';
-                sheet1HTML += '<td style="border: 1px solid #000;">' + (index + 1) + '</td>';
-                sheet1HTML += '<td style="text-align: left; border: 1px solid #000;">' + peserta.nama_peserta + '</td>';
+                sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">No</td>';
+                sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Nama</td>';
 
-                for (let s = 1; s <= jumlahSesi; s++) {
-                    const totalInput = document.getElementById(playerId + '_total_a' + s);
-                    const value = totalInput ? (totalInput.value || '0') : '0';
-                    sheet1HTML += '<td style="border: 1px solid #000;">' + value + '</td>';
+                for (let i = 1; i <= jumlahSesi; i++) {
+                    sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Rambalan ' + i + '</td>';
                 }
+                sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Total</td></tr>';
 
-                const grandTotalEl = document.getElementById(playerId + '_grand_total');
-                const grandTotal = grandTotalEl ? grandTotalEl.textContent.replace(' poin', '') : '0';
-                sheet1HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + grandTotal + '</td>';
-                sheet1HTML += '</tr>';
-            }
+                for (let index = 0; index < pesertaData.length; index++) {
+                    const peserta = pesertaData[index];
+                    const playerId = 'peserta_' + peserta.id;
+                    sheet1HTML += '<tr>';
+                    sheet1HTML += '<td style="border: 1px solid #000;">' + (index + 1) + '</td>';
+                    sheet1HTML += '<td style="text-align: left; border: 1px solid #000;">' + peserta.nama_peserta + '</td>';
 
-            sheet1HTML += '</table>';
-
-            // ==================== BUILD SHEET 2: TRAINING DETAIL ====================
-            let sheet2HTML = '<table border="1" cellpadding="6" cellspacing="0">';
-            sheet2HTML += '<tr><td colspan="20" style="font-size: 18px; font-weight: bold; border: 1px solid #000;">' + categoryName + '</td></tr>';
-            sheet2HTML += '<tr><td colspan="20" style="font-size: 14px; border: 1px solid #000;">' + eventName + ' - TRAINING</td></tr>';
-            sheet2HTML += '</table>';
-
-            for (let pesertaIndex = 0; pesertaIndex < pesertaData.length; pesertaIndex++) {
-                const peserta = pesertaData[pesertaIndex];
-                const playerId = 'peserta_' + peserta.id;
-
-                sheet2HTML += '<br/><table border="1" cellpadding="6" cellspacing="0">';
-                sheet2HTML += '<tr><td colspan="20" style="background-color: #ddd; font-weight: bold; padding: 8px; border: 1px solid #000;">Rank#' + (pesertaIndex + 1) + ' ' + peserta.nama_peserta + '</td></tr>';
-                sheet2HTML += '<tr>';
-                sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Rambalan</td>';
-
-                for (let a = 1; a <= jumlahPanah; a++) {
-                    sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Shot ' + a + '</td>';
-                }
-                sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Total</td>';
-                sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">End</td></tr>';
-
-                for (let s = 1; s <= jumlahSesi; s++) {
-                    sheet2HTML += '<tr>';
-                    sheet2HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + s + '</td>';
-
-                    for (let a = 1; a <= jumlahPanah; a++) {
-                        const input = document.getElementById(playerId + '_a' + a + '_s' + s);
-                        const value = input ? (input.value || '') : '';
-                        sheet2HTML += '<td style="border: 1px solid #000;">' + value + '</td>';
+                    for (let s = 1; s <= jumlahSesi; s++) {
+                        const totalInput = document.getElementById(playerId + '_total_a' + s);
+                        const value = totalInput ? (totalInput.value || '0') : '0';
+                        sheet1HTML += '<td style="border: 1px solid #000;">' + value + '</td>';
                     }
 
-                    const totalInput = document.getElementById(playerId + '_total_a' + s);
-                    const totalValue = totalInput ? (totalInput.value || '0') : '0';
-                    sheet2HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + totalValue + '</td>';
-
-                    const endInput = document.getElementById(playerId + '_end_a' + s);
-                    const endValue = endInput ? (endInput.value || '0') : '0';
-                    sheet2HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + endValue + '</td>';
-
-                    sheet2HTML += '</tr>';
+                    const grandTotalEl = document.getElementById(playerId + '_grand_total');
+                    const grandTotal = grandTotalEl ? grandTotalEl.textContent.replace(' poin', '') : '0';
+                    sheet1HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + grandTotal + '</td>';
+                    sheet1HTML += '</tr>';
                 }
 
+                sheet1HTML += '</table>';
+
+                let sheet2HTML = '<table border="1" cellpadding="6" cellspacing="0">';
+                sheet2HTML += '<tr><td colspan="20" style="font-size: 18px; font-weight: bold; border: 1px solid #000;">' + categoryName + '</td></tr>';
+                sheet2HTML += '<tr><td colspan="20" style="font-size: 14px; border: 1px solid #000;">' + eventName + ' - TRAINING</td></tr>';
                 sheet2HTML += '</table>';
+
+                for (let pesertaIndex = 0; pesertaIndex < pesertaData.length; pesertaIndex++) {
+                    const peserta = pesertaData[pesertaIndex];
+                    const playerId = 'peserta_' + peserta.id;
+
+                    sheet2HTML += '<br/><table border="1" cellpadding="6" cellspacing="0">';
+                    sheet2HTML += '<tr><td colspan="20" style="background-color: #ddd; font-weight: bold; padding: 8px; border: 1px solid #000;">Rank#' + (pesertaIndex + 1) + ' ' + peserta.nama_peserta + '</td></tr>';
+                    sheet2HTML += '<tr>';
+                    sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Rambalan</td>';
+
+                    for (let a = 1; a <= jumlahPanah; a++) {
+                        sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Shot ' + a + '</td>';
+                    }
+                    sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Total</td>';
+                    sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">End</td></tr>';
+
+                    for (let s = 1; s <= jumlahSesi; s++) {
+                        sheet2HTML += '<tr>';
+                        sheet2HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + s + '</td>';
+
+                        for (let a = 1; a <= jumlahPanah; a++) {
+                            const input = document.getElementById(playerId + '_a' + a + '_s' + s);
+                            const value = input ? (input.value || '') : '';
+                            sheet2HTML += '<td style="border: 1px solid #000;">' + value + '</td>';
+                        }
+
+                        const totalInput = document.getElementById(playerId + '_total_a' + s);
+                        const totalValue = totalInput ? (totalInput.value || '0') : '0';
+                        sheet2HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + totalValue + '</td>';
+
+                        const endInput = document.getElementById(playerId + '_end_a' + s);
+                        const endValue = endInput ? (endInput.value || '0') : '0';
+                        sheet2HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + endValue + '</td>';
+
+                        sheet2HTML += '</tr>';
+                    }
+
+                    sheet2HTML += '</table>';
+                }
+
+                const fullHTML = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">' +
+                    '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">' +
+                    '<!--[if gte mso 9]><xml>' +
+                    '<x:ExcelWorkbook>' +
+                    '<x:ExcelWorksheets>' +
+                    '<x:ExcelWorksheet>' +
+                    '<x:Name>Rekap Total</x:Name>' +
+                    '<x:WorksheetOptions><x:Panes></x:Panes></x:WorksheetOptions>' +
+                    '</x:ExcelWorksheet>' +
+                    '<x:ExcelWorksheet>' +
+                    '<x:Name>Training Detail</x:Name>' +
+                    '<x:WorksheetOptions><x:Panes></x:Panes></x:WorksheetOptions>' +
+                    '</x:ExcelWorksheet>' +
+                    '</x:ExcelWorksheets>' +
+                    '</x:ExcelWorkbook>' +
+                    '</xml><![endif]-->' +
+                    '</head><body>' +
+                    '<div>' + sheet1HTML + '</div>' +
+                    '<br clear=all style="mso-special-character:line-break;page-break-before:always">' +
+                    '<div>' + sheet2HTML + '</div>' +
+                    '</body></html>';
+
+                const blob = new Blob([fullHTML], { type: 'application/vnd.ms-excel' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'Scorecard_' + categoryName + '_' + new Date().toISOString().split('T')[0] + '.xls';
+                a.click();
+                window.URL.revokeObjectURL(url);
             }
-
-            // ==================== GABUNGKAN JADI FILE EXCEL 2 SHEET ====================
-            const fullHTML = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">' +
-                '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">' +
-                '<!--[if gte mso 9]><xml>' +
-                '<x:ExcelWorkbook>' +
-                '<x:ExcelWorksheets>' +
-                '<x:ExcelWorksheet>' +
-                '<x:Name>Rekap Total</x:Name>' +
-                '<x:WorksheetOptions><x:Panes></x:Panes></x:WorksheetOptions>' +
-                '</x:ExcelWorksheet>' +
-                '<x:ExcelWorksheet>' +
-                '<x:Name>Training Detail</x:Name>' +
-                '<x:WorksheetOptions><x:Panes></x:Panes></x:WorksheetOptions>' +
-                '</x:ExcelWorksheet>' +
-                '</x:ExcelWorksheets>' +
-                '</x:ExcelWorkbook>' +
-                '</xml><![endif]-->' +
-                '</head><body>' +
-                '<div>' + sheet1HTML + '</div>' +
-                '<br clear=all style="mso-special-character:line-break;page-break-before:always">' +
-                '<div>' + sheet2HTML + '</div>' +
-                '</body></html>';
-
-            // Download file
-            const blob = new Blob([fullHTML], { type: 'application/vnd.ms-excel' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'Scorecard_' + categoryName + '_' + new Date().toISOString().split('T')[0] + '.xls';
-            a.click();
-            window.URL.revokeObjectURL(url);
-        }
-    </script>
-</body>
-
-</html>
-<?php
+        </script>
+    </body>
+    </html>
+    <?php
         exit;
-}
-
-// ============================================
-// CEK EXPORT EXCEL
-// ============================================
-if (isset($_GET['export']) && $_GET['export'] == 'excel') {
-    try {
-        include '../config/panggil.php';
-    } catch (Exception $e) {
-        die("Error koneksi database: " . $e->getMessage());
-    }
-
-    $kegiatan_id = isset($_GET['kegiatan_id']) ? intval($_GET['kegiatan_id']) : null;
-    $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-    $filter_kategori = isset($_GET['filter_kategori']) ? intval($_GET['filter_kategori']) : 0;
-    $filter_gender = isset($_GET['filter_gender']) ? $_GET['filter_gender'] : '';
-
-    if (!$kegiatan_id) {
-        die("ID Kegiatan tidak valid.");
-    }
-
-    $kegiatanData = [];
-    try {
-        $queryKegiatan = "SELECT id, nama_kegiatan FROM kegiatan WHERE id = ?";
-        $stmtKegiatan = $conn->prepare($queryKegiatan);
-        $stmtKegiatan->bind_param("i", $kegiatan_id);
-        $stmtKegiatan->execute();
-        $resultKegiatan = $stmtKegiatan->get_result();
-
-        if ($resultKegiatan->num_rows > 0) {
-            $kegiatanData = $resultKegiatan->fetch_assoc();
-        } else {
-            die("Kegiatan tidak ditemukan.");
-        }
-        $stmtKegiatan->close();
-    } catch (Exception $e) {
-        die("Error mengambil data kegiatan: " . $e->getMessage());
-    }
-
-    $whereConditions = ["p.kegiatan_id = ?"];
-    $params = [$kegiatan_id];
-    $types = "i";
-
-    if (!empty($search)) {
-        $whereConditions[] = "(p.nama_peserta LIKE ? OR p.asal_kota LIKE ? OR p.nama_club LIKE ? OR p.sekolah LIKE ?)";
-        $searchParam = "%$search%";
-        $params = array_merge($params, [$searchParam, $searchParam, $searchParam, $searchParam]);
-        $types .= "ssss";
-    }
-
-    if ($filter_kategori > 0) {
-        $whereConditions[] = "p.category_id = ?";
-        $params[] = $filter_kategori;
-        $types .= "i";
-    }
-
-    if (!empty($filter_gender)) {
-        $whereConditions[] = "p.jenis_kelamin = ?";
-        $params[] = $filter_gender;
-        $types .= "s";
-    }
-
-    $whereClause = implode(" AND ", $whereConditions);
-
-    $queryPeserta = "
-        SELECT 
-            p.id,
-            p.nama_peserta,
-            p.tanggal_lahir,
-            p.jenis_kelamin,
-            p.asal_kota,
-            p.nama_club,
-            p.sekolah,
-            p.kelas,
-            p.nomor_hp,
-            p.bukti_pembayaran,
-            c.name as category_name,
-            c.min_age,
-            c.max_age,
-            c.gender as category_gender,
-            TIMESTAMPDIFF(YEAR, p.tanggal_lahir, CURDATE()) as umur
-        FROM peserta p
-        LEFT JOIN categories c ON p.category_id = c.id
-        WHERE $whereClause
-        ORDER BY p.nama_peserta ASC
-    ";
-
-    $pesertaList = [];
-    try {
-        $stmtPeserta = $conn->prepare($queryPeserta);
-        if (!empty($params)) {
-            $stmtPeserta->bind_param($types, ...$params);
-        }
-        $stmtPeserta->execute();
-        $resultPeserta = $stmtPeserta->get_result();
-
-        while ($row = $resultPeserta->fetch_assoc()) {
-            $pesertaList[] = $row;
-        }
-        $stmtPeserta->close();
-    } catch (Exception $e) {
-        die("Error mengambil data peserta: " . $e->getMessage());
-    }
-
-    $filename = "Daftar_Peserta_" . preg_replace('/[^A-Za-z0-9_\-]/', '_', $kegiatanData['nama_kegiatan']) . "_" . date('Y-m-d_H-i-s') . ".xls";
-
-    header('Content-Type: application/vnd.ms-excel');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Cache-Control: max-age=0');
-
-    echo '<!DOCTYPE html>';
-    echo '<html>';
-    echo '<head>';
-    echo '<meta charset="UTF-8">';
-    echo '<style>';
-    echo 'table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; }';
-    echo 'th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }';
-    echo 'th { background-color: #4472C4; color: white; font-weight: bold; text-align: center; }';
-    echo '.center { text-align: center; }';
-    echo '.badge { background-color: #E7E6E6; padding: 2px 6px; border-radius: 3px; font-size: 11px; }';
-    echo '.badge-male { background-color: #D4E6F1; color: #1B4F72; }';
-    echo '.badge-female { background-color: #FADBD8; color: #922B21; }';
-    echo '.badge-paid { background-color: #D5F4E6; color: #0E6655; }';
-    echo '.badge-unpaid { background-color: #FADBD8; color: #922B21; }';
-    echo '.header-info { margin-bottom: 20px; }';
-    echo '.header-info h2 { color: #2E86C1; margin: 5px 0; }';
-    echo '.header-info p { margin: 3px 0; color: #566573; }';
-    echo '</style>';
-    echo '</head>';
-    echo '<body>';
-
-    echo '<div class="header-info">';
-    echo '<h2>' . htmlspecialchars($kegiatanData['nama_kegiatan']) . '</h2>';
-    echo '<p><strong>Total Peserta:</strong> ' . count($pesertaList) . ' orang</p>';
-    echo '<p><strong>Tanggal Export:</strong> ' . date('d F Y, H:i:s') . '</p>';
-
-    if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)) {
-        echo '<p><strong>Filter yang diterapkan:</strong>';
-        $filters = [];
-        if (!empty($search))
-            $filters[] = "Pencarian: \"$search\"";
-        if ($filter_kategori > 0) {
-            $queryKat = "SELECT name FROM categories WHERE id = ?";
-            $stmtKat = $conn->prepare($queryKat);
-            $stmtKat->bind_param("i", $filter_kategori);
-            $stmtKat->execute();
-            $resultKat = $stmtKat->get_result();
-            if ($resultKat->num_rows > 0) {
-                $kategori = $resultKat->fetch_assoc();
-                $filters[] = "Kategori: " . $kategori['name'];
-            }
-            $stmtKat->close();
-        }
-        if (!empty($filter_gender))
-            $filters[] = "Gender: $filter_gender";
-        echo ' ' . implode(', ', $filters);
-        echo '</p>';
-    }
-    echo '</div>';
-
-    echo '<table>';
-    echo '<thead>';
-    echo '<tr>';
-    echo '<th style="width: 40px;">No</th>';
-    echo '<th style="width: 200px;">Nama Peserta</th>';
-    echo '<th style="width: 100px;">Tanggal Lahir</th>';
-    echo '<th style="width: 60px;">Umur</th>';
-    echo '<th style="width: 100px;">Jenis Kelamin</th>';
-    echo '<th style="width: 150px;">Kategori</th>';
-    echo '<th style="width: 120px;">Asal Kota</th>';
-    echo '<th style="width: 150px;">Nama Club</th>';
-    echo '<th style="width: 150px;">Sekolah</th>';
-    echo '<th style="width: 80px;">Kelas</th>';
-    echo '<th style="width: 130px;">Nomor HP</th>';
-    echo '<th style="width: 120px;">Status Pembayaran</th>';
-    echo '</tr>';
-    echo '</thead>';
-    echo '<tbody>';
-
-    if (count($pesertaList) > 0) {
-        foreach ($pesertaList as $index => $peserta) {
-            echo '<tr>';
-            echo '<td class="center">' . ($index + 1) . '</td>';
-            echo '<td><strong>' . htmlspecialchars($peserta['nama_peserta']) . '</strong></td>';
-            echo '<td class="center">' . date('d/m/Y', strtotime($peserta['tanggal_lahir'])) . '</td>';
-            echo '<td class="center">' . $peserta['umur'] . ' tahun</td>';
-
-            $genderClass = $peserta['jenis_kelamin'] == 'Laki-laki' ? 'badge-male' : 'badge-female';
-            echo '<td class="center"><span class="badge ' . $genderClass . '">' . htmlspecialchars($peserta['jenis_kelamin']) . '</span></td>';
-
-            echo '<td>';
-            echo '<span class="badge">' . htmlspecialchars($peserta['category_name']) . '</span><br>';
-            echo '<small>(' . $peserta['min_age'] . '-' . $peserta['max_age'] . ' thn, ';
-            echo ($peserta['category_gender'] == 'Campuran' ? 'Putra/Putri' : $peserta['category_gender']) . ')</small>';
-            echo '</td>';
-
-            echo '<td>' . htmlspecialchars($peserta['asal_kota'] ?: '-') . '</td>';
-            echo '<td>' . htmlspecialchars($peserta['nama_club'] ?: '-') . '</td>';
-            echo '<td>' . htmlspecialchars($peserta['sekolah'] ?: '-') . '</td>';
-            echo '<td class="center">' . htmlspecialchars($peserta['kelas'] ?: '-') . '</td>';
-            echo '<td>' . htmlspecialchars($peserta['nomor_hp']) . '</td>';
-
-            if (!empty($peserta['bukti_pembayaran'])) {
-                echo '<td class="center"><span class="badge badge-paid">SUDAH BAYAR</span><br><small>File: ' . htmlspecialchars($peserta['bukti_pembayaran']) . '</small></td>';
-            } else {
-                echo '<td class="center"><span class="badge badge-unpaid">BELUM BAYAR</span></td>';
-            }
-
-            echo '</tr>';
-        }
-    } else {
-        echo '<tr>';
-        echo '<td colspan="12" class="center" style="padding: 30px; font-style: italic; color: #666;">Tidak ada data peserta yang ditemukan</td>';
-        echo '</tr>';
-    }
-
-    echo '</tbody>';
-    echo '</table>';
-
-    echo '<br><br>';
-    echo '<div class="header-info">';
-    echo '<h3>Ringkasan Statistik</h3>';
-
-    $statistik = [
-        'total' => count($pesertaList),
-        'laki_laki' => 0,
-        'perempuan' => 0,
-        'sudah_bayar' => 0,
-        'belum_bayar' => 0,
-        'kategori' => []
-    ];
-
-    foreach ($pesertaList as $peserta) {
-        if ($peserta['jenis_kelamin'] == 'Laki-laki') {
-            $statistik['laki_laki']++;
-        } else {
-            $statistik['perempuan']++;
-        }
-
-        if (!empty($peserta['bukti_pembayaran'])) {
-            $statistik['sudah_bayar']++;
-        } else {
-            $statistik['belum_bayar']++;
-        }
-
-        $kategori = $peserta['category_name'];
-        if (!isset($statistik['kategori'][$kategori])) {
-            $statistik['kategori'][$kategori] = 0;
-        }
-        $statistik['kategori'][$kategori]++;
-    }
-
-    echo '<table style="width: 50%; margin-top: 10px;">';
-    echo '<tr><th>Keterangan</th><th>Jumlah</th></tr>';
-    echo '<tr><td>Total Peserta</td><td class="center"><strong>' . $statistik['total'] . '</strong></td></tr>';
-    echo '<tr><td>Laki-laki</td><td class="center">' . $statistik['laki_laki'] . '</td></tr>';
-    echo '<tr><td>Perempuan</td><td class="center">' . $statistik['perempuan'] . '</td></tr>';
-    echo '<tr><td>Sudah Bayar</td><td class="center">' . $statistik['sudah_bayar'] . '</td></tr>';
-    echo '<tr><td>Belum Bayar</td><td class="center">' . $statistik['belum_bayar'] . '</td></tr>';
-    echo '</table>';
-
-    if (!empty($statistik['kategori'])) {
-        echo '<br>';
-        echo '<h4>Distribusi per Kategori:</h4>';
-        echo '<table style="width: 50%;">';
-        echo '<tr><th>Kategori</th><th>Jumlah Peserta</th></tr>';
-        foreach ($statistik['kategori'] as $kategori => $jumlah) {
-            echo '<tr>';
-            echo '<td>' . htmlspecialchars($kategori) . '</td>';
-            echo '<td class="center"><strong>' . $jumlah . '</strong></td>';
-            echo '</tr>';
-        }
-        echo '</table>';
-    }
-
-    echo '</div>';
-    echo '</body>';
-    echo '</html>';
-
-    $conn->close();
-    exit;
 }
 
 // ============================================
@@ -4873,831 +2358,124 @@ foreach ($pesertaList as $peserta) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="h-full">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar Peserta - <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'archery': {
+                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
+                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
+                            800: '#166534', 900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-
-        .header p {
-            font-size: 16px;
-            opacity: 0.9;
-        }
-
-        .kegiatan-info {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-        }
-
-        .content {
-            padding: 30px;
-        }
-
-        .back-link {
-            display: inline-block;
-            margin-bottom: 20px;
-            color: #4facfe;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        .statistics {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-        }
-
-        .stat-card.primary {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-
-        .stat-card.success {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        }
-
-        .stat-card.warning {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        }
-
-        .stat-card.info {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .stat-card.danger {
-            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-        }
-
-        .stat-number {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 13px;
-            opacity: 0.9;
-        }
-
-        .filters {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-        }
-
-        .filters-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto;
-            gap: 15px;
-            align-items: end;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .filter-group label {
-            font-size: 14px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        .form-control {
-            padding: 10px 12px;
-            border: 2px solid #e1e8ed;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: #4facfe;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .filter-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .btn-input {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: none;
-            text-align: center;
-        }
-
-        .btn-input:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-        }
-
-        .btn-input.show {
-            display: inline-block;
-        }
-
-        .table-container {
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        .table th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 10px;
-            text-align: left;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .table td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #e9ecef;
-            vertical-align: top;
-        }
-
-        .table tbody tr:hover {
-            background: #f8f9fa;
-        }
-
-        .table tbody tr:nth-child(even) {
-            background: rgba(79, 172, 254, 0.02);
-        }
-
-        .table tbody tr:nth-child(even):hover {
-            background: #f0f8ff;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            text-align: center;
-        }
-
-        .badge-male {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .badge-female {
-            background: #fce4ec;
-            color: #c2185b;
-        }
-
-        .badge-category {
-            background: #f3e5f5;
-            color: #7b1fa2;
-            margin-bottom: 3px;
-        }
-
-        .age-info {
-            font-size: 12px;
-            color: #666;
-            font-style: italic;
-        }
-
-        .payment-status {
-            text-align: center;
-            padding: 8px;
-        }
-
-        .payment-icon {
-            font-size: 24px;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-
-        .payment-icon:hover {
-            transform: scale(1.2);
-        }
-
-        .payment-success {
-            color: #28a745;
-            filter: drop-shadow(0 2px 4px rgba(40, 167, 69, 0.3));
-        }
-
-        .payment-pending {
-            color: #dc3545;
-            filter: drop-shadow(0 2px 4px rgba(220, 53, 69, 0.3));
-        }
-
-        .payment-tooltip {
-            position: relative;
-            display: inline-block;
-        }
-
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .btn-input { display: none; }
+        .btn-input.show { display: inline-block; }
+        .payment-icon { cursor: pointer; transition: transform 0.2s; }
+        .payment-icon:hover { transform: scale(1.2); }
+        .payment-tooltip { position: relative; display: inline-block; }
         .payment-tooltip .tooltip-text {
-            visibility: hidden;
-            width: 140px;
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            border-radius: 6px;
-            padding: 8px;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            margin-left: -70px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 12px;
+            visibility: hidden; width: 140px; background: #333; color: #fff;
+            text-align: center; border-radius: 6px; padding: 8px; position: absolute;
+            z-index: 50; bottom: 125%; left: 50%; margin-left: -70px; opacity: 0;
+            transition: opacity 0.3s; font-size: 12px;
         }
-
-        .payment-tooltip:hover .tooltip-text {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-        }
-
-        .modal-content {
-            position: relative;
-            margin: 5% auto;
-            width: 90%;
-            max-width: 700px;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        .modal-header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .modal-body {
-            padding: 20px;
-            text-align: center;
-        }
-
-        .modal-body img {
-            max-width: 100%;
-            max-height: 500px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .close {
-            position: absolute;
-            right: 20px;
-            top: 15px;
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 1001;
-        }
-
-        .close:hover {
-            opacity: 0.7;
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 50px 20px;
-            color: #666;
-            font-style: italic;
-        }
-
-        .actions {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .export-btn {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-            color: white;
-            padding: 12px 20px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .export-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(67, 233, 123, 0.3);
-        }
-
-        .category-distribution {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 12px;
-        }
-
-        .category-distribution h4 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .category-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-        }
-
-        .category-item {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Mobile Card View */
-        .mobile-card-view {
-            display: none;
-        }
-
-        .participant-card {
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            border-left: 4px solid #4facfe;
-        }
-
-        .participant-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 12px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .participant-number {
-            background: #667eea;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 14px;
-            flex-shrink: 0;
-        }
-
-        .participant-name {
-            font-size: 16px;
-            font-weight: 700;
-            color: #333;
-            flex: 1;
-            margin: 0 12px;
-            word-break: break-word;
-        }
-
-        .participant-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .detail-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .detail-item.full-width {
-            grid-column: 1 / -1;
-        }
-
-        .detail-label {
-            font-size: 11px;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-        }
-
-        .detail-value {
-            font-size: 14px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        .participant-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 10px;
-            border-top: 1px solid #e9ecef;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .contact-link {
-            color: #4facfe;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        /* Tablet Responsive */
-        @media (max-width: 1024px) {
-            .filters-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 15px;
-            }
-
-            .filter-group:first-child {
-                grid-column: 1 / -1;
-            }
-
-            .filter-buttons {
-                flex-direction: row;
-                gap: 10px;
-                grid-column: 1 / -1;
-            }
-
-            .statistics {
-                grid-template-columns: repeat(3, 1fr);
-            }
-
-            .table-container {
-                overflow-x: auto;
-            }
-
-            .table {
-                min-width: 1000px;
-            }
-
-            .category-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* Mobile Responsive */
+        .payment-tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+        /* Mobile card view */
+        .mobile-card-view { display: none; }
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            .container {
-                border-radius: 10px;
-            }
-
-            .content {
-                padding: 15px;
-            }
-
-            .header {
-                padding: 20px 15px;
-            }
-
-            .header h1 {
-                font-size: 22px;
-            }
-
-            .header p {
-                font-size: 14px;
-            }
-
-            .kegiatan-info h3 {
-                font-size: 16px;
-            }
-
-            .kegiatan-info p {
-                font-size: 14px;
-            }
-
-            .statistics {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
-            }
-
-            .stat-card {
-                padding: 15px 10px;
-            }
-
-            .stat-number {
-                font-size: 24px;
-            }
-
-            .stat-label {
-                font-size: 11px;
-            }
-
-            .filters {
-                padding: 15px;
-            }
-
-            .filters-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-
-            .filter-group:first-child {
-                grid-column: 1;
-            }
-
-            .filter-buttons {
-                flex-direction: column;
-                gap: 8px;
-                grid-column: 1;
-            }
-
-            .btn,
-            .btn-input {
-                width: 100%;
-                padding: 12px;
-            }
-
-            .actions {
-                flex-direction: column;
-                gap: 12px;
-                align-items: stretch;
-            }
-
-            .actions>div {
-                width: 100%;
-            }
-
-            .export-btn {
-                display: block;
-                text-align: center;
-                width: 100%;
-            }
-
-            .actions>div:last-child {
-                text-align: center;
-            }
-
-            /* Hide table, show cards on mobile */
-            .table-container {
-                display: none;
-            }
-
-            .mobile-card-view {
-                display: block;
-            }
-
-            .category-distribution {
-                padding: 15px;
-            }
-
-            .category-grid {
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-
-            .category-item {
-                padding: 10px;
-            }
-
-            .modal-content {
-                margin: 10% auto;
-                width: 95%;
-            }
-
-            .modal-header {
-                padding: 15px;
-            }
-
-            .modal-header h3 {
-                font-size: 16px;
-            }
-
-            .modal-body {
-                padding: 15px;
-            }
-
-            .modal-body img {
-                max-height: 400px;
-            }
-
-            .close {
-                right: 15px;
-                top: 12px;
-                font-size: 24px;
-            }
-
-            .no-data h3 {
-                font-size: 18px;
-            }
-
-            .no-data p {
-                font-size: 14px;
-            }
+            .table-container { display: none; }
+            .mobile-card-view { display: block; }
         }
 
-        /* Extra Small Mobile */
-        @media (max-width: 480px) {
-            .header h1 {
-                font-size: 20px;
-            }
-
-            .statistics {
-                grid-template-columns: 1fr;
-            }
-
-            .participant-details {
-                grid-template-columns: 1fr;
-            }
-
-            .stat-number {
-                font-size: 22px;
-            }
-        }
-
-        /* Landscape Mobile */
-        @media (max-width: 768px) and (orientation: landscape) {
-            .statistics {
-                grid-template-columns: repeat(3, 1fr);
-            }
-
-            .participant-details {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
+        /* Modal - minimal styles needed */
+        .modal { display: none; position: fixed; z-index: 1000; inset: 0; background: rgba(0,0,0,0.8); }
+        .modal-content { position: relative; margin: 5% auto; width: 90%; max-width: 700px; background: white; border-radius: 12px; overflow: hidden; }
+        .modal-close { position: absolute; right: 1rem; top: 0.75rem; color: white; font-size: 1.5rem; cursor: pointer; z-index: 1001; }
+        .modal-close:hover { opacity: 0.7; }
     </style>
 </head>
 
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Daftar Peserta Terdaftar</h1>
-            <p>Kelola dan pantau peserta yang telah mendaftar</p>
-
-            <div class="kegiatan-info">
-                <h3><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></h3>
-                <p>Total Peserta Terdaftar: <?= $totalPeserta ?> orang</p>
+<body class="min-h-screen bg-slate-50">
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <!-- Header Card -->
+        <div class="bg-gradient-to-br from-archery-600 to-archery-800 rounded-t-2xl px-6 py-8 text-white">
+            <h1 class="text-2xl sm:text-3xl font-bold mb-2">Daftar Peserta Terdaftar</h1>
+            <p class="text-white/80 mb-4">Kelola dan pantau peserta yang telah mendaftar</p>
+            <div class="bg-white/20 rounded-lg px-4 py-3 inline-block">
+                <h3 class="font-semibold"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></h3>
+                <p class="text-sm text-white/70">Total Peserta Terdaftar: <?= $totalPeserta ?> orang</p>
             </div>
         </div>
 
-        <div class="content">
-            <a href="kegiatan.view.php" class="back-link">← Kembali Ke Kegiatan</a>
+        <!-- Main Content -->
+        <div class="bg-white rounded-b-2xl shadow-xl p-6 sm:p-8">
+            <a href="kegiatan.view.php" class="inline-flex items-center gap-2 text-archery-600 hover:text-archery-700 font-medium text-sm mb-6">
+                <i class="fas fa-arrow-left"></i> Kembali Ke Kegiatan
+            </a>
 
-            <div class="statistics">
-                <div class="stat-card primary">
-                    <div class="stat-number"><?= $statistik['total'] ?></div>
-                    <div class="stat-label">Total Peserta</div>
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                <div class="bg-white rounded-xl border-l-4 border-archery-500 p-4 shadow-sm">
+                    <p class="text-2xl font-bold text-archery-600"><?= $statistik['total'] ?></p>
+                    <p class="text-xs text-slate-500 mt-1">Total Peserta</p>
                 </div>
-                <div class="stat-card success">
-                    <div class="stat-number"><?= $statistik['laki_laki'] ?></div>
-                    <div class="stat-label">Laki-laki</div>
+                <div class="bg-white rounded-xl border-l-4 border-blue-500 p-4 shadow-sm">
+                    <p class="text-2xl font-bold text-blue-600"><?= $statistik['laki_laki'] ?></p>
+                    <p class="text-xs text-slate-500 mt-1">Laki-laki</p>
                 </div>
-                <div class="stat-card warning">
-                    <div class="stat-number"><?= $statistik['perempuan'] ?></div>
-                    <div class="stat-label">Perempuan</div>
+                <div class="bg-white rounded-xl border-l-4 border-pink-500 p-4 shadow-sm">
+                    <p class="text-2xl font-bold text-pink-600"><?= $statistik['perempuan'] ?></p>
+                    <p class="text-xs text-slate-500 mt-1">Perempuan</p>
                 </div>
-                <div class="stat-card info">
-                    <div class="stat-number"><?= $statistik['sudah_bayar'] ?></div>
-                    <div class="stat-label">Sudah Bayar</div>
+                <div class="bg-white rounded-xl border-l-4 border-emerald-500 p-4 shadow-sm">
+                    <p class="text-2xl font-bold text-emerald-600"><?= $statistik['sudah_bayar'] ?></p>
+                    <p class="text-xs text-slate-500 mt-1">Sudah Bayar</p>
                 </div>
-                <div class="stat-card danger">
-                    <div class="stat-number"><?= $statistik['belum_bayar'] ?></div>
-                    <div class="stat-label">Belum Bayar</div>
+                <div class="bg-white rounded-xl border-l-4 border-red-500 p-4 shadow-sm">
+                    <p class="text-2xl font-bold text-red-600"><?= $statistik['belum_bayar'] ?></p>
+                    <p class="text-xs text-slate-500 mt-1">Belum Bayar</p>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number"><?= count($statistik['kategori']) ?></div>
-                    <div class="stat-label">Kategori</div>
+                <div class="bg-white rounded-xl border-l-4 border-slate-400 p-4 shadow-sm">
+                    <p class="text-2xl font-bold text-slate-600"><?= count($statistik['kategori']) ?></p>
+                    <p class="text-xs text-slate-500 mt-1">Kategori</p>
                 </div>
             </div>
 
-            <div class="filters">
+            <!-- Filter Form - PRESERVED: form method, names, values -->
+            <div class="bg-slate-50 rounded-xl border border-slate-200 p-5 mb-6">
                 <form method="GET" action="">
                     <input type="hidden" name="kegiatan_id" value="<?= $kegiatan_id ?>">
 
-                    <div class="filters-grid">
-                        <div class="filter-group">
-                            <label for="search">Cari Peserta</label>
-                            <input type="text" id="search" name="search" class="form-control"
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label for="search" class="block text-sm font-medium text-slate-700 mb-1">Cari Peserta</label>
+                            <input type="text" id="search" name="search"
+                                class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
                                 placeholder="Nama, kota, club, atau sekolah..."
                                 value="<?= htmlspecialchars($search) ?>">
                         </div>
 
-                        <div class="filter-group">
-                            <label for="filter_kategori">Kategori</label>
-                            <select id="filter_kategori" name="filter_kategori" class="form-control">
+                        <div>
+                            <label for="filter_kategori" class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+                            <select id="filter_kategori" name="filter_kategori" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500">
                                 <option value="">Semua Kategori</option>
                                 <?php foreach ($kategoriesList as $kategori): ?>
                                 <option value="<?= $kategori['id'] ?>" <?= $filter_kategori == $kategori['id'] ? 'selected' : '' ?>>
@@ -5707,40 +2485,41 @@ foreach ($pesertaList as $peserta) {
                             </select>
                         </div>
 
-                        <div class="filter-group">
-                            <label for="filter_gender">Jenis Kelamin</label>
-                            <select id="filter_gender" name="filter_gender" class="form-control">
+                        <div>
+                            <label for="filter_gender" class="block text-sm font-medium text-slate-700 mb-1">Jenis Kelamin</label>
+                            <select id="filter_gender" name="filter_gender" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500">
                                 <option value="">Semua</option>
-                                <option value="Laki-laki" <?= $filter_gender == 'Laki-laki' ? 'selected' : '' ?>>Laki-laki
-                                </option>
-                                <option value="Perempuan" <?= $filter_gender == 'Perempuan' ? 'selected' : '' ?>>Perempuan
-                                </option>
+                                <option value="Laki-laki" <?= $filter_gender == 'Laki-laki' ? 'selected' : '' ?>>Laki-laki</option>
+                                <option value="Perempuan" <?= $filter_gender == 'Perempuan' ? 'selected' : '' ?>>Perempuan</option>
                             </select>
                         </div>
 
-                        <div class="filter-group filter-buttons">
-                            <button type="submit" class="btn btn-primary">Filter</button>
-                            <a href="#" id="inputBtn" class="btn-input <?= $filter_kategori > 0 ? 'show' : '' ?>"
+                        <div class="flex items-end gap-2">
+                            <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                <i class="fas fa-search mr-1"></i> Filter
+                            </button>
+                            <a href="#" id="inputBtn" class="btn-input <?= $filter_kategori > 0 ? 'show' : '' ?> px-3 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 transition-colors"
                                 onclick="goToInput(event)">
-                                📝 Input Score
+                                📝 Input
                             </a>
                         </div>
                     </div>
                 </form>
             </div>
 
-            <div class="actions">
+            <!-- Action Bar - PRESERVED: export link format -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
                     <?php if ($totalPeserta > 0): ?>
                     <a href="?export=excel&kegiatan_id=<?= $kegiatan_id ?>&search=<?= urlencode($search) ?>&filter_kategori=<?= $filter_kategori ?>&filter_gender=<?= urlencode($filter_gender) ?>"
-                        class="export-btn" target="_blank">
-                        📊 Export ke Excel
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors" target="_blank">
+                        <i class="fas fa-file-excel"></i> Export ke Excel
                     </a>
                     <?php endif; ?>
                 </div>
                 <div>
                     <?php if ($totalPeserta > 0): ?>
-                    <span style="color: #666; font-size: 14px;">
+                    <span class="text-sm text-slate-500">
                         Menampilkan <?= $totalPeserta ?> peserta
                         <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
                         dengan filter
@@ -5751,196 +2530,169 @@ foreach ($pesertaList as $peserta) {
             </div>
 
             <!-- Desktop Table View -->
-            <div class="table-container">
+            <div class="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <?php if ($totalPeserta > 0): ?>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th style="width: 30px;">No</th>
-                            <th style="width: 180px;">Nama Peserta</th>
-                            <th style="width: 80px;">Umur</th>
-                            <th style="width: 90px;">Gender</th>
-                            <th style="width: 140px;">Kategori</th>
-                            <th style="width: 100px;">Asal Kota</th>
-                            <th style="width: 130px;">Club</th>
-                            <th style="width: 130px;">Sekolah</th>
-                            <th style="width: 70px;">Kelas</th>
-                            <th style="width: 110px;">No. HP</th>
-                            <th style="width: 80px;">Pembayaran</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($pesertaList as $index => $peserta): ?>
-                        <tr>
-                            <td><?= $index + 1 ?></td>
-                            <td>
-                                <strong><?= htmlspecialchars($peserta['nama_peserta']) ?></strong>
-                                <div class="age-info">
-                                    Lahir: <?= date('d/m/Y', strtotime($peserta['tanggal_lahir'])) ?>
-                                </div>
-                            </td>
-                            <td>
-                                <strong><?= $peserta['umur'] ?> tahun</strong>
-                            </td>
-                            <td>
-                                <span
-                                    class="badge <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'badge-male' : 'badge-female' ?>">
-                                    <?= $peserta['jenis_kelamin'] ?>
-                                </span>
-                            </td>
-                            <td>
-                                <div class="badge badge-category">
-                                    <?= htmlspecialchars($peserta['category_name']) ?>
-                                </div>
-                                <div class="age-info">
-                                    <?= $peserta['min_age'] ?>-<?= $peserta['max_age'] ?> thn
-                                    (<?= $peserta['category_gender'] == 'Campuran' ? 'Putra/Putri' : $peserta['category_gender'] ?>)
-                                </div>
-                            </td>
-                            <td><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></td>
-                            <td><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></td>
-                            <td><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></td>
-                            <td><?= htmlspecialchars($peserta['kelas'] ?: '-') ?></td>
-                            <td>
-                                <a href="tel:<?= htmlspecialchars($peserta['nomor_hp']) ?>"
-                                    style="color: #4facfe; text-decoration: none;">
-                                    <?= htmlspecialchars($peserta['nomor_hp']) ?>
-                                </a>
-                            </td>
-                            <td>
-                                <div class="payment-status">
+                <div class="overflow-x-auto custom-scrollbar" style="max-height: 65vh;">
+                    <table class="w-full">
+                        <thead class="bg-zinc-800 text-white sticky top-0 z-10">
+                            <tr>
+                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider w-12">#</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider w-20">Umur</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider w-24">Gender</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kategori</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kota</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Club</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Sekolah</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16">Kelas</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">No. HP</th>
+                                <th class="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider w-20">Bayar</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <?php foreach ($pesertaList as $index => $peserta): ?>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-3 py-3 text-sm text-slate-500"><?= $index + 1 ?></td>
+                                <td class="px-3 py-3">
+                                    <p class="font-medium text-slate-900"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
+                                    <p class="text-xs text-slate-400">Lahir: <?= date('d/m/Y', strtotime($peserta['tanggal_lahir'])) ?></p>
+                                </td>
+                                <td class="px-3 py-3">
+                                    <span class="font-semibold text-slate-700"><?= $peserta['umur'] ?> th</span>
+                                </td>
+                                <td class="px-3 py-3">
+                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700' ?>">
+                                        <i class="fas <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?>"></i>
+                                        <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'L' : 'P' ?>
+                                    </span>
+                                </td>
+                                <td class="px-3 py-3">
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-archery-100 text-archery-700"><?= htmlspecialchars($peserta['category_name']) ?></span>
+                                    <p class="text-xs text-slate-400 mt-0.5"><?= $peserta['min_age'] ?>-<?= $peserta['max_age'] ?> thn (<?= $peserta['category_gender'] == 'Campuran' ? 'All' : $peserta['category_gender'] ?>)</p>
+                                </td>
+                                <td class="px-3 py-3 text-sm text-slate-600"><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></td>
+                                <td class="px-3 py-3 text-sm text-slate-600 max-w-32 truncate"><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></td>
+                                <td class="px-3 py-3 text-sm text-slate-600 max-w-32 truncate"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></td>
+                                <td class="px-3 py-3 text-sm text-slate-600"><?= htmlspecialchars($peserta['kelas'] ?: '-') ?></td>
+                                <td class="px-3 py-3">
+                                    <a href="tel:<?= htmlspecialchars($peserta['nomor_hp']) ?>" class="text-sm text-archery-600 hover:text-archery-700"><?= htmlspecialchars($peserta['nomor_hp']) ?></a>
+                                </td>
+                                <td class="px-3 py-3 text-center">
                                     <?php if (!empty($peserta['bukti_pembayaran'])): ?>
-                                    <div class="payment-tooltip">
-                                        <span class="payment-icon payment-success"
-                                            onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')">
-                                            📄✅
-                                        </span>
-                                        <span class="tooltip-text">Klik untuk lihat bukti pembayaran</span>
-                                    </div>
+                                    <button class="payment-icon text-lg" onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')" title="Lihat bukti">
+                                        ✅
+                                    </button>
                                     <?php else: ?>
-                                    <div class="payment-tooltip">
-                                        <span class="payment-icon payment-pending">❌</span>
-                                        <span class="tooltip-text">Belum upload bukti pembayaran</span>
-                                    </div>
+                                    <span class="text-lg" title="Belum bayar">❌</span>
                                     <?php endif; ?>
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="px-4 py-3 bg-slate-50 border-t border-slate-200">
+                    <p class="text-sm text-slate-500">Menampilkan <?= count($pesertaList) ?> peserta</p>
+                </div>
                 <?php else: ?>
-                <div class="no-data">
-                    <h3>Belum Ada Peserta Terdaftar</h3>
-                    <p>
-                        <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
-                        Tidak ada peserta yang sesuai dengan filter yang dipilih.
-                        <br><br>
-                        <a href="?kegiatan_id=<?= $kegiatan_id ?>" class="btn btn-secondary">Reset Filter</a>
-                        <?php else: ?>
-                        Belum ada peserta yang mendaftar untuk kegiatan ini.
-                        <br><br>
-                        <a href="pendaftaran.php?kegiatan_id=<?= $kegiatan_id ?>" class="btn btn-success">Daftarkan
-                            Peserta Pertama</a>
-                        <?php endif; ?>
-                    </p>
+                <div class="py-12 text-center">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-inbox text-slate-400 text-2xl"></i>
+                    </div>
+                    <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
+                    <p class="text-slate-500 font-medium">Tidak ada peserta yang sesuai filter</p>
+                    <a href="?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-300 transition-colors">
+                        <i class="fas fa-redo"></i> Reset Filter
+                    </a>
+                    <?php else: ?>
+                    <p class="text-slate-500 font-medium">Belum ada peserta terdaftar</p>
+                    <a href="pendaftaran.php?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                        <i class="fas fa-plus"></i> Daftarkan Peserta
+                    </a>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
             </div>
 
             <!-- Mobile Card View -->
-            <div class="mobile-card-view">
+            <div class="md:hidden space-y-4">
                 <?php if ($totalPeserta > 0): ?>
                 <?php foreach ($pesertaList as $index => $peserta): ?>
-                <div class="participant-card">
-                    <div class="participant-card-header">
-                        <div class="participant-number"><?= $index + 1 ?></div>
-                        <div class="participant-name"><?= htmlspecialchars($peserta['nama_peserta']) ?></div>
-                        <div class="payment-status">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 border-l-4 border-l-archery-500">
+                    <div class="flex items-start gap-3 mb-3 pb-3 border-b border-slate-100">
+                        <div class="w-8 h-8 rounded-full bg-archery-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                            <?= $index + 1 ?>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-slate-900 truncate"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700' ?>">
+                                <i class="fas <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?>"></i>
+                                <?= $peserta['jenis_kelamin'] ?>, <?= $peserta['umur'] ?> th
+                            </span>
+                        </div>
+                        <div class="flex-shrink-0">
                             <?php if (!empty($peserta['bukti_pembayaran'])): ?>
-                            <span class="payment-icon payment-success"
-                                onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')">📄✅</span>
+                            <button class="text-xl" onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')">✅</button>
                             <?php else: ?>
-                            <span class="payment-icon payment-pending">❌</span>
+                            <span class="text-xl">❌</span>
                             <?php endif; ?>
                         </div>
                     </div>
-                    <div class="participant-details">
-                        <div class="detail-item">
-                            <span class="detail-label">Gender</span>
-                            <span class="detail-value">
-                                <span
-                                    class="badge <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'badge-male' : 'badge-female' ?>">
-                                    <?= $peserta['jenis_kelamin'] ?>
-                                </span>
-                            </span>
+                    <div class="grid grid-cols-2 gap-3 text-sm mb-3">
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase tracking-wide">Kategori</p>
+                            <p class="font-medium text-slate-700"><?= htmlspecialchars($peserta['category_name']) ?></p>
+                            <p class="text-xs text-slate-400"><?= $peserta['min_age'] ?>-<?= $peserta['max_age'] ?> thn</p>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Umur</span>
-                            <span class="detail-value"><?= $peserta['umur'] ?> tahun</span>
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase tracking-wide">Kota</p>
+                            <p class="font-medium text-slate-700"><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></p>
                         </div>
-                        <div class="detail-item full-width">
-                            <span class="detail-label">Kategori</span>
-                            <span class="detail-value">
-                                <span
-                                    class="badge badge-category"><?= htmlspecialchars($peserta['category_name']) ?></span>
-                                <span class="age-info" style="display: block; margin-top: 4px;">
-                                    <?= $peserta['min_age'] ?>-<?= $peserta['max_age'] ?> thn
-                                    (<?= $peserta['category_gender'] == 'Campuran' ? 'Putra/Putri' : $peserta['category_gender'] ?>)
-                                </span>
-                            </span>
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase tracking-wide">Club</p>
+                            <p class="font-medium text-slate-700 truncate"><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></p>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Asal Kota</span>
-                            <span class="detail-value"><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Kelas</span>
-                            <span class="detail-value"><?= htmlspecialchars($peserta['kelas'] ?: '-') ?></span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Club</span>
-                            <span class="detail-value"><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Sekolah</span>
-                            <span class="detail-value"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></span>
+                        <div>
+                            <p class="text-xs text-slate-400 uppercase tracking-wide">Sekolah</p>
+                            <p class="font-medium text-slate-700 truncate"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></p>
                         </div>
                     </div>
-                    <div class="participant-footer">
-                        <a href="tel:<?= htmlspecialchars($peserta['nomor_hp']) ?>" class="contact-link">📞
-                            <?= htmlspecialchars($peserta['nomor_hp']) ?></a>
-                        <span class="age-info">Lahir: <?= date('d/m/Y', strtotime($peserta['tanggal_lahir'])) ?></span>
+                    <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <a href="tel:<?= htmlspecialchars($peserta['nomor_hp']) ?>" class="inline-flex items-center gap-1 text-archery-600 text-sm font-medium">
+                            <i class="fas fa-phone"></i> <?= htmlspecialchars($peserta['nomor_hp']) ?>
+                        </a>
+                        <span class="text-xs text-slate-400">Lahir: <?= date('d/m/Y', strtotime($peserta['tanggal_lahir'])) ?></span>
                     </div>
                 </div>
                 <?php endforeach; ?>
                 <?php else: ?>
-                <div class="no-data">
-                    <h3>Belum Ada Peserta Terdaftar</h3>
-                    <p>
-                        <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
-                        Tidak ada peserta yang sesuai dengan filter yang dipilih.
-                        <br><br>
-                        <a href="?kegiatan_id=<?= $kegiatan_id ?>" class="btn btn-secondary">Reset Filter</a>
-                        <?php else: ?>
-                        Belum ada peserta yang mendaftar untuk kegiatan ini.
-                        <br><br>
-                        <a href="pendaftaran.php?kegiatan_id=<?= $kegiatan_id ?>" class="btn btn-success">Daftarkan
-                            Peserta Pertama</a>
-                        <?php endif; ?>
-                    </p>
+                <div class="bg-white rounded-xl border border-slate-200 p-8 text-center">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-inbox text-slate-400 text-2xl"></i>
+                    </div>
+                    <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
+                    <p class="text-slate-500 font-medium mb-3">Tidak ada peserta yang sesuai filter</p>
+                    <a href="?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 text-slate-700 text-sm font-medium">Reset Filter</a>
+                    <?php else: ?>
+                    <p class="text-slate-500 font-medium mb-3">Belum ada peserta terdaftar</p>
+                    <a href="pendaftaran.php?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium">Daftarkan Peserta</a>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
             </div>
 
+            <!-- Category Distribution -->
             <?php if (!empty($statistik['kategori'])): ?>
-            <div class="category-distribution">
-                <h4>Distribusi per Kategori:</h4>
-                <div class="category-grid">
+            <div class="mt-6 bg-slate-50 rounded-xl border border-slate-200 p-5">
+                <h4 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-archery-600"></i> Distribusi per Kategori
+                </h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     <?php foreach ($statistik['kategori'] as $kategori => $jumlah): ?>
-                    <div class="category-item">
-                        <strong><?= htmlspecialchars($kategori) ?></strong><br>
-                        <span style="color: #4facfe; font-size: 18px; font-weight: 600;"><?= $jumlah ?> orang</span>
+                    <div class="bg-white rounded-lg p-3 text-center shadow-sm">
+                        <p class="font-medium text-slate-700 text-sm"><?= htmlspecialchars($kategori) ?></p>
+                        <p class="text-lg font-bold text-archery-600"><?= $jumlah ?></p>
+                        <p class="text-xs text-slate-400">orang</p>
                     </div>
                     <?php endforeach; ?>
                 </div>
@@ -5949,13 +2701,14 @@ foreach ($pesertaList as $peserta) {
         </div>
     </div>
 
+    <!-- Payment Modal - Tailwind styled -->
     <div id="paymentModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <span class="close" onclick="closePaymentModal()">&times;</span>
-                <h3 id="modal-title">Bukti Pembayaran</h3>
+            <div class="bg-gradient-to-br from-archery-600 to-archery-800 text-white px-6 py-4 relative">
+                <button class="modal-close" onclick="closePaymentModal()">&times;</button>
+                <h3 id="modal-title" class="font-semibold text-lg pr-8">Bukti Pembayaran</h3>
             </div>
-            <div class="modal-body">
+            <div class="p-6 text-center">
                 <div id="modal-image-container"></div>
             </div>
         </div>

@@ -1,432 +1,356 @@
 <?php
+/**
+ * User Management View
+ * UI: Intentional Minimalism with Tailwind CSS (consistent with Dashboard)
+ */
 include '../config/panggil.php';
 include '../includes/check_access.php';
 requireAdmin();
 
-$result = $conn->query("SELECT * FROM users ORDER BY id ASC");
+// Filter by search query (UNCHANGED - same GET parameter name)
+$searchQuery = isset($_GET['q']) ? trim($_GET['q']) : '';
 
-if($_SESSION['role']  != 'admin') {
+if (!empty($searchQuery)) {
+    $stmt = $conn->prepare("SELECT * FROM users WHERE name LIKE ? OR email LIKE ? ORDER BY id ASC");
+    $searchLike = "%$searchQuery%";
+    $stmt->bind_param("ss", $searchLike, $searchLike);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $result = $conn->query("SELECT * FROM users ORDER BY id ASC");
+}
+
+if($_SESSION['role'] != 'admin') {
     header('Location: kegiatan.view.php');
     exit;
 }
-?>
 
+// Count by role
+$adminCount = 0;
+$userCount = 0;
+$activeCount = 0;
+$users = [];
+while ($row = $result->fetch_assoc()) {
+    $users[] = $row;
+    if (strtolower($row['role']) === 'admin') $adminCount++;
+    else $userCount++;
+    if (strtolower($row['status']) === 'active') $activeCount++;
+}
+
+$username = $_SESSION['username'] ?? 'User';
+$name = $_SESSION['name'] ?? $username;
+$role = $_SESSION['role'] ?? 'user';
+?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Users - Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <title>Manajemen User - Turnamen Panahan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'archery': {
+                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
+                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
+                            800: '#166534', 900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .main-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            margin: 2rem auto;
-            padding: 2rem;
-            max-width: 1200px;
-        }
-        
-        .page-header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            padding: 1.5rem;
-            border-radius: 15px;
-            margin-bottom: 2rem;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .page-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: shimmer 3s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .page-header h2 {
-            margin: 0;
-            font-weight: 700;
-            font-size: 2rem;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .action-bar {
-            background: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 15px;
-            margin-bottom: 2rem;
-            border: 1px solid #e9ecef;
-        }
-        
-        .btn-add {
-            background: linear-gradient(45deg, #28a745, #20c997);
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 25px;
-            color: white;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-        }
-        
-        .btn-add:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-            color: white;
-        }
-        
-        .search-form {
-            background: white;
-            border-radius: 25px;
-            padding: 0.25rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border: 1px solid #e9ecef;
-        }
-        
-        .search-form .form-control {
-            border: none;
-            border-radius: 25px;
-            padding: 0.75rem 1.5rem;
-            background: transparent;
-        }
-        
-        .search-form .form-control:focus {
-            box-shadow: none;
-            border: none;
-        }
-        
-        .btn-search {
-            background: linear-gradient(45deg, #007bff, #0056b3);
-            border: none;
-            border-radius: 25px;
-            padding: 0.75rem 1.5rem;
-            color: white;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-search:hover {
-            transform: scale(1.05);
-            color: white;
-        }
-        
-        .data-table {
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border: none;
-        }
-        
-        .data-table thead {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .data-table th {
-            border: none;
-            padding: 1rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 0.875rem;
-        }
-        
-        .data-table td {
-            border: none;
-            padding: 1rem;
-            vertical-align: middle;
-            border-bottom: 1px solid #f8f9fa;
-        }
-        
-        .data-table tbody tr {
-            transition: all 0.3s ease;
-        }
-        
-        .data-table tbody tr:hover {
-            background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
-            transform: scale(1.01);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .row-number {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a6f);
-            color: white;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 0.875rem;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .btn-edit {
-            background: linear-gradient(45deg, #ffc107, #ff8f00);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-        
-        .btn-edit:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
-        }
-        
-        .btn-delete {
-            background: linear-gradient(45deg, #dc3545, #c82333);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-        
-        .btn-delete:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
-        }
-        
-        .back-button {
-            background: linear-gradient(45deg, #6c757d, #5a6268);
-            color: white;
-            padding: 0.75rem 2rem;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-top: 2rem;
-        }
-        
-        .back-button:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
-        }
-        
-        .stats-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem;
-            border-radius: 15px;
-            text-align: center;
-            margin-bottom: 1rem;
-        }
-        
-        .stats-number {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: #6c757d;
-        }
-        
-        .empty-state i {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body>
-
-<div class="container-fluid">
-    <div class="main-container">
-        
-        <!-- Page Header -->
-        <div class="page-header">
-            <h2><i class="fas fa-users me-2"></i>User Management System</h2>
-            <p class="mb-0">Manage and organize user data efficiently</p>
-        </div>
-
-        <!-- Stats Card -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="stats-card">
-                    <div class="stats-number"><?= $result->num_rows; ?></div>
-                    <div>Total Users</div>
+<body class="h-full bg-slate-50">
+    <div class="flex h-full">
+        <!-- Sidebar (consistent with Dashboard) -->
+        <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white">
+            <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+                <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                    <i class="fas fa-bullseye text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+                    <p class="text-xs text-zinc-400">Management System</p>
                 </div>
             </div>
-        </div>
 
-        <!-- Action Bar -->
-        <div class="action-bar">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <a href="tambah-user.php" class="btn-add">
-                        <i class="fas fa-plus me-2"></i>Add New User
+            <nav class="flex-1 px-4 py-6 space-y-1">
+                <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-home w-5"></i>
+                    <span class="text-sm">Dashboard</span>
+                </a>
+
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
+                    <a href="users.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
+                        <i class="fas fa-users w-5"></i>
+                        <span class="text-sm font-medium">Users</span>
+                    </a>
+                    <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-tags w-5"></i>
+                        <span class="text-sm">Kategori</span>
                     </a>
                 </div>
-                <div class="col-md-6">
-                    <form class="search-form d-flex" method="get">
-                        <input class="form-control me-2" type="search" name="q" placeholder="Search users...">
-                        <button class="btn-search" type="submit">
+
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
+                    <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-calendar w-5"></i>
+                        <span class="text-sm">Kegiatan</span>
+                    </a>
+                    <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-user-friends w-5"></i>
+                        <span class="text-sm">Peserta</span>
+                    </a>
+                    <a href="pertandingan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-random w-5"></i>
+                        <span class="text-sm">Pertandingan</span>
+                    </a>
+                    <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-chart-bar w-5"></i>
+                        <span class="text-sm">Statistik</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="px-4 py-4 border-t border-zinc-800">
+                <div class="flex items-center gap-3 px-2">
+                    <div class="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center">
+                        <i class="fas fa-user text-zinc-400 text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
+                        <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
+                    </div>
+                </div>
+                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                   class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Mobile Menu Button -->
+        <button id="mobile-menu-btn" class="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-900 text-white shadow-lg">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200">
+                <div class="px-6 lg:px-8 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="pl-12 lg:pl-0">
+                            <h1 class="text-xl font-semibold text-slate-900">Manajemen User</h1>
+                            <p class="text-sm text-slate-500">Kelola akun pengguna sistem</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <a href="tambah-user.php"
+                               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                <i class="fas fa-plus"></i>
+                                <span class="hidden sm:inline">Tambah User</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="px-6 lg:px-8 py-6">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-xl border-l-4 border-archery-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-archery-600"><?= count($users) ?></p>
+                        <p class="text-xs text-slate-500 mt-1">Total Users</p>
+                    </div>
+                    <div class="bg-white rounded-xl border-l-4 border-purple-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-purple-600"><?= $adminCount ?></p>
+                        <p class="text-xs text-slate-500 mt-1">Admin</p>
+                    </div>
+                    <div class="bg-white rounded-xl border-l-4 border-blue-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-blue-600"><?= $userCount ?></p>
+                        <p class="text-xs text-slate-500 mt-1">User Biasa</p>
+                    </div>
+                    <div class="bg-white rounded-xl border-l-4 border-emerald-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-emerald-600"><?= $activeCount ?></p>
+                        <p class="text-xs text-slate-500 mt-1">Aktif</p>
+                    </div>
+                </div>
+
+                <!-- Search Form -->
+                <div class="bg-white rounded-xl border border-slate-200 p-5 mb-6">
+                    <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fas fa-search text-slate-400"></i>
+                        Pencarian
+                    </h3>
+                    <!-- FORM: method=get (UNCHANGED) -->
+                    <form method="get" class="flex gap-3">
+                        <!-- INPUT: name="q" (UNCHANGED) -->
+                        <input type="search" name="q" value="<?= htmlspecialchars($searchQuery) ?>"
+                               class="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
+                               placeholder="Cari berdasarkan nama atau email...">
+                        <button type="submit"
+                                class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                             <i class="fas fa-search"></i>
                         </button>
+                        <?php if (!empty($searchQuery)): ?>
+                            <a href="?" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50 transition-colors">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        <?php endif; ?>
                     </form>
                 </div>
+
+                <!-- Data Table -->
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <?php if (count($users) > 0): ?>
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full">
+                            <thead class="bg-zinc-800 text-white">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-12">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Role</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <?php $no = 1; foreach ($users as $row): ?>
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="px-4 py-3 text-sm text-slate-500"><?= $no++ ?></td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-archery-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm">
+                                                    <?= strtoupper(substr($row['name'], 0, 1)) ?>
+                                                </div>
+                                                <div>
+                                                    <p class="font-medium text-slate-900"><?= htmlspecialchars($row['name']) ?></p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span class="text-sm text-slate-600"><?= htmlspecialchars($row['email']) ?></span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium <?= strtolower($row['role']) === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800' ?>">
+                                                <i class="fas <?= strtolower($row['role']) === 'admin' ? 'fa-shield-alt' : 'fa-user' ?> mr-1 text-xs"></i>
+                                                <?= htmlspecialchars(ucfirst($row['role'])) ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium <?= strtolower($row['status']) === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' ?>">
+                                                <span class="w-1.5 h-1.5 rounded-full <?= strtolower($row['status']) === 'active' ? 'bg-emerald-500' : 'bg-slate-400' ?> mr-1.5"></span>
+                                                <?= htmlspecialchars(ucfirst($row['status'])) ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center justify-center gap-2">
+                                                <!-- LINK: edit-user.php?id=... (UNCHANGED) -->
+                                                <a href="edit-user.php?id=<?= $row['id'] ?>"
+                                                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-xs font-medium hover:bg-amber-100 transition-colors">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                                <!-- LINK: hapus-user.php?id=... (UNCHANGED) -->
+                                                <a href="hapus-user.php?id=<?= $row['id'] ?>"
+                                                   onclick="return confirm('Yakin ingin menghapus user <?= htmlspecialchars($row['name']) ?>?')"
+                                                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 text-xs font-medium hover:bg-red-100 transition-colors">
+                                                    <i class="fas fa-trash"></i> Hapus
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-200">
+                        <p class="text-sm text-slate-500">Menampilkan <?= count($users) ?> user</p>
+                    </div>
+                    <?php else: ?>
+                    <div class="px-4 py-12 text-center">
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                                <i class="fas fa-users text-slate-400 text-2xl"></i>
+                            </div>
+                            <p class="text-slate-500 font-medium">Tidak ada user ditemukan</p>
+                            <?php if (!empty($searchQuery)): ?>
+                                <p class="text-slate-400 text-sm mt-1">Ubah kata kunci pencarian</p>
+                            <?php else: ?>
+                                <p class="text-slate-400 text-sm mt-1">Tambahkan user baru untuk memulai</p>
+                                <a href="tambah-user.php" class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                    <i class="fas fa-plus"></i> Tambah User
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
-        </div>
-
-        <!-- Data Table -->
-        <?php if ($result->num_rows > 0): ?>
-        <div class="table-responsive">
-            <table class="table data-table">
-                <thead>
-                    <tr>
-                        <th style="width: 80px;">
-                            <i class="fas fa-hashtag me-1"></i>No
-                        </th>
-                        <th>
-                            <i class="fas fa-user me-1"></i>Full Name
-                        </th>
-                        <th>
-                            <i class="fas fa-envelope me-1"></i>Email Address
-                        </th>
-                        <th>
-                            <i class="fas fa-envelope me-1"></i>Role
-                        </th>
-                        <th>
-                            <i class="fas fa-envelope me-1"></i>Status
-                        </th>
-                        <th style="width: 200px;">
-                            <i class="fas fa-cogs me-1"></i>Actions
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    $no = 1;
-                    while ($row = $result->fetch_assoc()): 
-                    ?>
-                    <tr>
-                        <td>
-                            <div class="row-number"><?= $no++; ?></div>
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="avatar me-3" style="width: 40px; height: 40px; background: linear-gradient(45deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
-                                    <?= strtoupper(substr($row['name'], 0, 1)); ?>
-                                </div>
-                                <div>
-                                    <div class="fw-bold"><?= htmlspecialchars($row['name']); ?></div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="text-muted"><?= htmlspecialchars($row['email']); ?></span>
-                        </td>
-                        <td>
-                            <span class="text-muted"><?= htmlspecialchars($row['role']); ?></span>
-                        </td>
-                        <td>
-                            <span class="text-muted"><?= htmlspecialchars($row['status']); ?></span>
-                        </td>
-                        <td>
-                            <div class="action-buttons">
-                                <a href="edit-user.php?id=<?= $row['id']; ?>" class="btn-edit">
-                                    <i class="fas fa-edit me-1"></i>Edit
-                                </a>
-                                <a href="hapus-user.php?id=<?= $row['id']; ?>" class="btn-delete" onclick="return confirm('Are you sure you want to delete this user?')">
-                                    <i class="fas fa-trash me-1"></i>Delete
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php else: ?>
-        <div class="empty-state">
-            <i class="fas fa-users"></i>
-            <h4>No Users Found</h4>
-            <p>Start by adding your first user to the system.</p>
-            <a href="tambah-user.php" class="btn-add">
-                <i class="fas fa-plus me-2"></i>Add First User
-            </a>
-        </div>
-        <?php endif; ?>
-
-        <!-- Back Button -->
-        <a href="dashboard.php" class="back-button">
-            <i class="fas fa-arrow-left"></i>Back to Dashboard
-        </a>
-
+        </main>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    // Add smooth animations
-    document.addEventListener('DOMContentLoaded', function() {
-        // Animate table rows on load
-        const rows = document.querySelectorAll('tbody tr');
-        rows.forEach((row, index) => {
-            row.style.opacity = '0';
-            row.style.transform = 'translateY(20px)';
-            setTimeout(() => {
-                row.style.transition = 'all 0.5s ease';
-                row.style.opacity = '1';
-                row.style.transform = 'translateY(0)';
-            }, index * 100);
-        });
-        
-        // Enhanced delete confirmation
-        document.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const userName = this.closest('tr').querySelector('td:nth-child(2) .fw-bold').textContent;
-                if (confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
-                    window.location.href = this.href;
-                }
-            });
-        });
-    });
-</script>
+    <!-- Mobile Sidebar -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden">
+        <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+            <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                <i class="fas fa-bullseye text-white"></i>
+            </div>
+            <div class="flex-1">
+                <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+            </div>
+            <button id="close-mobile-menu" class="p-2 rounded-lg hover:bg-zinc-800">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <nav class="px-4 py-6 space-y-1">
+            <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
+            </a>
+            <a href="users.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
+                <i class="fas fa-users w-5"></i><span class="text-sm font-medium">Users</span>
+            </a>
+            <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+            </a>
+            <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-calendar w-5"></i><span class="text-sm">Kegiatan</span>
+            </a>
+            <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+            </a>
+        </nav>
+    </div>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileOverlay = document.getElementById('mobile-overlay');
+        const mobileSidebar = document.getElementById('mobile-sidebar');
+        const closeMobileMenu = document.getElementById('close-mobile-menu');
+
+        function toggleMobileMenu() {
+            mobileSidebar.classList.toggle('-translate-x-full');
+            mobileOverlay.classList.toggle('hidden');
+        }
+
+        mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
+        mobileOverlay?.addEventListener('click', toggleMobileMenu);
+        closeMobileMenu?.addEventListener('click', toggleMobileMenu);
+    </script>
 </body>
 </html>

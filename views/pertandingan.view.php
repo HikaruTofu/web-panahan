@@ -1,23 +1,24 @@
 <?php
+/**
+ * Pertandingan / Bantalan Assignment View
+ * UI: Intentional Minimalism with Tailwind CSS (consistent with Dashboard)
+ */
 include '../includes/check_access.php';
 requireAdmin();
-// Check if panggil.php exists and includes proper database connection
+
 if (!file_exists('../config/panggil.php')) {
     die("Error: panggil.php file not found!");
 }
 
 include '../config/panggil.php';
 
-// Check if database connection is properly established
-// Assuming your panggil.php uses $conn or $connection variable
 if (!isset($conn) && !isset($connection)) {
     die("Error: Database connection failed. Please check your panggil.php file.");
 }
 
-// Use the connection variable (adjust based on your panggil.php)
 $db = isset($conn) ? $conn : $connection;
 
-// Handle Excel Export
+// Handle Excel Export (UNCHANGED)
 if (isset($_POST['export_excel'])) {
     $participants = json_decode($_POST['participants'], true);
     $categories = json_decode($_POST['categories'], true);
@@ -27,16 +28,13 @@ if (isset($_POST['export_excel'])) {
     $isShuffled = $_POST['is_shuffled'] === '1';
 
     if (!empty($participants) && is_array($participants)) {
-        // Create filename with timestamp
         $timestamp = date('Y-m-d_H-i-s');
         $filename = "Turnamen_Panahan_Bantalan_" . $timestamp . ".xlsx";
 
-        // Set headers for Excel file download
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
 
-        // Excel XML content
         echo '<?xml version="1.0"?>
 <?mso-application progid="Excel.Sheet"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
@@ -130,14 +128,14 @@ if (isset($_POST['export_excel'])) {
    <Column ss:AutoFitWidth="0" ss:Width="120"/>
    <Column ss:AutoFitWidth="0" ss:Width="60"/>
    <Column ss:AutoFitWidth="0" ss:Width="60"/>
-   
+
    <!-- Title -->
    <Row ss:Height="25">
     <Cell ss:MergeAcross="8" ss:StyleID="Title">
      <Data ss:Type="String">TURNAMEN PANAHAN - DAFTAR BANTALAN</Data>
     </Cell>
    </Row>
-   
+
    <!-- Export Info -->
    <Row ss:Height="20">
     <Cell ss:MergeAcross="8" ss:StyleID="Subtitle">
@@ -145,18 +143,17 @@ if (isset($_POST['export_excel'])) {
     </Cell>
    </Row>';
 
-        // Add filter info if any filters are applied
         if ($selectedKegiatan !== 'all' || $selectedCategory !== 'all') {
             echo '
    <Row ss:Height="20">
     <Cell ss:MergeAcross="8" ss:StyleID="Subtitle">
      <Data ss:Type="String">Filter: ';
-            
+
             if ($selectedKegiatan !== 'all') {
                 $kegiatanName = $kegiatan[$selectedKegiatan] ?? "Kegiatan $selectedKegiatan";
                 echo "Kegiatan: $kegiatanName";
             }
-            
+
             if ($selectedCategory !== 'all') {
                 $categoryName = $categories[$selectedCategory] ?? "Kategori $selectedCategory";
                 if ($selectedKegiatan !== 'all') {
@@ -164,7 +161,7 @@ if (isset($_POST['export_excel'])) {
                 }
                 echo "Kategori: $categoryName";
             }
-            
+
             echo '</Data>
     </Cell>
    </Row>';
@@ -180,10 +177,10 @@ if (isset($_POST['export_excel'])) {
         }
 
         echo '
-   
+
    <!-- Empty Row -->
    <Row ss:Height="15"/>
-   
+
    <!-- Headers -->
    <Row ss:Height="20">
     <Cell ss:StyleID="Header"><Data ss:Type="String">No.</Data></Cell>
@@ -197,7 +194,6 @@ if (isset($_POST['export_excel'])) {
     <Cell ss:StyleID="Header"><Data ss:Type="String">Bantalan Huruf</Data></Cell>
    </Row>';
 
-        // Add participant data
         foreach ($participants as $index => $participant) {
             $no = $index + 1;
             $nama = htmlspecialchars($participant['nama_peserta'] ?? '', ENT_XML1);
@@ -208,7 +204,7 @@ if (isset($_POST['export_excel'])) {
             $kegiatanName = htmlspecialchars($kegiatan[$participant['kegiatan_id']] ?? "Kegiatan {$participant['kegiatan_id']}", ENT_XML1);
             $bantalanNo = $participant['randomNumber'];
             $bantalanHuruf = $participant['randomLetter'];
-            
+
             echo '
    <Row>
     <Cell ss:StyleID="Data"><Data ss:Type="Number">' . $no . '</Data></Cell>
@@ -231,72 +227,65 @@ if (isset($_POST['export_excel'])) {
     }
 }
 
-// Enhanced shuffle function - multiple shuffles for better randomization
+// Enhanced shuffle function (UNCHANGED)
 function betterShuffle(&$array) {
-    // Seed random number generator with current time
     mt_srand(microtime(true) * 1000000);
-    
-    // Shuffle multiple times for better randomization
     for ($i = 0; $i < 5; $i++) {
         shuffle($array);
-        // Add small delay to change seed
-        usleep(1000); // 1ms delay
+        usleep(1000);
         mt_srand(microtime(true) * 1000000);
     }
 }
 
-// Fetch data from database
+// Fetch data from database (UNCHANGED LOGIC)
 $pesertaData = [];
 $categoriesData = [];
 $kegiatanData = [];
 
 try {
-    // Get peserta data
     $query = "SELECT * FROM peserta WHERE category_id IS NOT NULL AND kegiatan_id IS NOT NULL";
     $result = mysqli_query($db, $query);
-    
+
     if (!$result) {
         throw new Exception("Error fetching peserta data: " . mysqli_error($db));
     }
-    
+
     while ($row = mysqli_fetch_assoc($result)) {
         $pesertaData[] = $row;
     }
 
-    // Get categories data
     $query = "SELECT * FROM categories";
     $result = mysqli_query($db, $query);
-    
+
     if (!$result) {
         throw new Exception("Error fetching categories data: " . mysqli_error($db));
     }
-    
+
     while ($row = mysqli_fetch_assoc($result)) {
         $categoriesData[$row['id']] = $row['nama_kategori'] ?? $row['name'] ?? "Kategori {$row['id']}";
     }
 
-    // Get kegiatan data
     $query = "SELECT * FROM kegiatan";
     $result = mysqli_query($db, $query);
-    
+
     if (!$result) {
         throw new Exception("Error fetching kegiatan data: " . mysqli_error($db));
     }
-    
+
     while ($row = mysqli_fetch_assoc($result)) {
         $kegiatanData[$row['id']] = $row['nama_kegiatan'] ?? $row['name'] ?? "Kegiatan {$row['id']}";
     }
-    
+
 } catch(Exception $e) {
     die("Database Error: " . $e->getMessage());
 }
 
-// Filter logic
+// Filter logic (UNCHANGED - same GET parameter names)
 $selectedKegiatan = $_GET['kegiatan'] ?? 'all';
 $selectedCategory = $_GET['kategori'] ?? 'all';
 $isShuffled = isset($_GET['shuffle']) && $_GET['shuffle'] == '1';
 
-// Filter participants
+// Filter participants (UNCHANGED LOGIC)
 $filteredParticipants = $pesertaData;
 
 if ($selectedKegiatan !== 'all') {
@@ -311,249 +300,457 @@ if ($selectedCategory !== 'all') {
     });
 }
 
-// Reset array keys
 $filteredParticipants = array_values($filteredParticipants);
 
-// Enhanced shuffle if requested
 if ($isShuffled) {
     betterShuffle($filteredParticipants);
 }
 
-// Assign bantalan (A, B, C pattern)
+// Assign bantalan (UNCHANGED)
 $letters = ['A', 'B', 'C'];
 foreach ($filteredParticipants as $index => &$participant) {
     $participant['randomNumber'] = floor($index / 3) + 1;
     $participant['randomLetter'] = $letters[$index % 3];
 }
 
-// Get unique kegiatan and categories for filters
 $availableKegiatan = array_unique(array_column($pesertaData, 'kegiatan_id'));
 $availableCategories = array_unique(array_column(
     array_filter($pesertaData, function($p) use ($selectedKegiatan) {
         return $selectedKegiatan === 'all' || $p['kegiatan_id'] == $selectedKegiatan;
-    }), 
+    }),
     'category_id'
 ));
-?>
 
+$username = $_SESSION['username'] ?? 'User';
+$name = $_SESSION['name'] ?? $username;
+$role = $_SESSION['role'] ?? 'user';
+?>
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turnamen Panahan</title>
+    <title>Pertandingan & Bantalan - Turnamen Panahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'archery': {
+                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
+                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
+                            800: '#166534', 900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-    <div class="p-6">
-        <div class="max-w-7xl mx-auto">
-            <!-- Header -->
-            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center space-x-3">
-                        <i class="fas fa-bullseye text-indigo-600 text-3xl"></i>
-                        <h1 class="text-3xl font-bold text-gray-800">Turnamen Panahan</h1>
+<body class="h-full bg-slate-50">
+    <div class="flex h-full">
+        <!-- Sidebar (consistent with Dashboard) -->
+        <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white">
+            <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+                <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                    <i class="fas fa-bullseye text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+                    <p class="text-xs text-zinc-400">Management System</p>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 py-6 space-y-1">
+                <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-home w-5"></i>
+                    <span class="text-sm">Dashboard</span>
+                </a>
+
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
+                    <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-users w-5"></i>
+                        <span class="text-sm">Users</span>
+                    </a>
+                    <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-tags w-5"></i>
+                        <span class="text-sm">Kategori</span>
+                    </a>
+                </div>
+
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
+                    <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-calendar w-5"></i>
+                        <span class="text-sm">Kegiatan</span>
+                    </a>
+                    <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-user-friends w-5"></i>
+                        <span class="text-sm">Peserta</span>
+                    </a>
+                    <a href="pertandingan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
+                        <i class="fas fa-random w-5"></i>
+                        <span class="text-sm font-medium">Pertandingan</span>
+                    </a>
+                    <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-chart-bar w-5"></i>
+                        <span class="text-sm">Statistik</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="px-4 py-4 border-t border-zinc-800">
+                <div class="flex items-center gap-3 px-2">
+                    <div class="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center">
+                        <i class="fas fa-user text-zinc-400 text-sm"></i>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <!-- Export to Excel Button -->
-                        <?php if (count($filteredParticipants) > 0): ?>
-                        <form method="POST" style="display: inline;">
-                            <input type="hidden" name="participants" value="<?php echo htmlspecialchars(json_encode($filteredParticipants)); ?>">
-                            <input type="hidden" name="categories" value="<?php echo htmlspecialchars(json_encode($categoriesData)); ?>">
-                            <input type="hidden" name="kegiatan" value="<?php echo htmlspecialchars(json_encode($kegiatanData)); ?>">
-                            <input type="hidden" name="selected_kegiatan" value="<?php echo htmlspecialchars($selectedKegiatan); ?>">
-                            <input type="hidden" name="selected_category" value="<?php echo htmlspecialchars($selectedCategory); ?>">
-                            <input type="hidden" name="is_shuffled" value="<?php echo $isShuffled ? '1' : '0'; ?>">
-                            <button type="submit" name="export_excel" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg">
-                                <i class="fas fa-file-excel"></i>
-                                <span>Export Excel</span>
-                            </button>
-                        </form>
-                        <?php endif; ?>
-                        <!-- Back to Dashboard Button -->
-                        <a href="dashboard.php" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg">
-                            <i class="fas fa-arrow-left"></i>
-                            <span>Kembali ke Dashboard</span>
-                        </a>
-                        <!-- Participant Count -->
-                        <div class="flex items-center space-x-2 text-sm text-gray-600">
-                            <i class="fas fa-users"></i>
-                            <span><?php echo count($filteredParticipants); ?> Peserta</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
+                        <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
+                    </div>
+                </div>
+                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                   class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Mobile Menu Button -->
+        <button id="mobile-menu-btn" class="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-900 text-white shadow-lg">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200">
+                <div class="px-6 lg:px-8 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="pl-12 lg:pl-0">
+                            <h1 class="text-xl font-semibold text-slate-900">Pertandingan & Bantalan</h1>
+                            <p class="text-sm text-slate-500">Pengaturan bantalan dan pengundian posisi peserta</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <!-- Export Excel Button -->
+                            <?php if (count($filteredParticipants) > 0): ?>
+                            <!-- FORM: method=POST (UNCHANGED) -->
+                            <form method="POST" class="inline">
+                                <!-- INPUT: name="participants" (UNCHANGED) -->
+                                <input type="hidden" name="participants" value="<?php echo htmlspecialchars(json_encode($filteredParticipants)); ?>">
+                                <!-- INPUT: name="categories" (UNCHANGED) -->
+                                <input type="hidden" name="categories" value="<?php echo htmlspecialchars(json_encode($categoriesData)); ?>">
+                                <!-- INPUT: name="kegiatan" (UNCHANGED) -->
+                                <input type="hidden" name="kegiatan" value="<?php echo htmlspecialchars(json_encode($kegiatanData)); ?>">
+                                <!-- INPUT: name="selected_kegiatan" (UNCHANGED) -->
+                                <input type="hidden" name="selected_kegiatan" value="<?php echo htmlspecialchars($selectedKegiatan); ?>">
+                                <!-- INPUT: name="selected_category" (UNCHANGED) -->
+                                <input type="hidden" name="selected_category" value="<?php echo htmlspecialchars($selectedCategory); ?>">
+                                <!-- INPUT: name="is_shuffled" (UNCHANGED) -->
+                                <input type="hidden" name="is_shuffled" value="<?php echo $isShuffled ? '1' : '0'; ?>">
+                                <!-- BUTTON: name="export_excel" (UNCHANGED) -->
+                                <button type="submit" name="export_excel"
+                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors">
+                                    <i class="fas fa-file-excel"></i>
+                                    <span class="hidden sm:inline">Export Excel</span>
+                                </button>
+                            </form>
+                            <?php endif; ?>
+                            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-archery-50 text-archery-700">
+                                <i class="fas fa-users text-sm"></i>
+                                <span class="text-sm font-medium"><?php echo count($filteredParticipants); ?> Peserta</span>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </header>
 
-                <!-- Filters -->
-                <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Kegiatan</label>
-                        <select name="kegiatan" onchange="this.form.submit()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="all" <?php echo $selectedKegiatan === 'all' ? 'selected' : ''; ?>>Semua Kegiatan</option>
-                            <?php foreach ($availableKegiatan as $kegiatanId): ?>
-                                <option value="<?php echo $kegiatanId; ?>" <?php echo $selectedKegiatan == $kegiatanId ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($kegiatanData[$kegiatanId] ?? "Kegiatan $kegiatanId"); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+            <div class="px-6 lg:px-8 py-6">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-xl border-l-4 border-archery-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-archery-600"><?php echo count($filteredParticipants); ?></p>
+                        <p class="text-xs text-slate-500 mt-1">Total Peserta</p>
                     </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Kategori</label>
-                        <select name="kategori" onchange="this.form.submit()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="all" <?php echo $selectedCategory === 'all' ? 'selected' : ''; ?>>Semua Kategori</option>
-                            <?php foreach ($availableCategories as $categoryId): ?>
-                                <option value="<?php echo $categoryId; ?>" <?php echo $selectedCategory == $categoryId ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($categoriesData[$categoryId] ?? "Kategori $categoryId"); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div class="bg-white rounded-xl border-l-4 border-blue-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-blue-600">
+                            <?php echo count(array_unique(array_column($filteredParticipants, 'category_id'))); ?>
+                        </p>
+                        <p class="text-xs text-slate-500 mt-1">Kategori Aktif</p>
                     </div>
-
-                    <div class="flex items-end">
-                        <button type="submit" name="shuffle" value="<?php echo $isShuffled ? '0' : '1'; ?>" 
-                                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2">
-                            <i class="fas fa-random"></i>
-                            <span><?php echo $isShuffled ? 'Reset Urutan' : 'Acak Bantalan'; ?></span>
-                        </button>
+                    <div class="bg-white rounded-xl border-l-4 border-purple-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-purple-600">
+                            <?php echo count(array_unique(array_column($filteredParticipants, 'asal_kota'))); ?>
+                        </p>
+                        <p class="text-xs text-slate-500 mt-1">Kota Asal</p>
                     </div>
-
-                    <div class="flex items-end">
-                        <button type="button" onclick="window.location.href='<?php echo $_SERVER['PHP_SELF']; ?>'" 
-                                class="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2">
-                            <i class="fas fa-sync-alt"></i>
-                            <span>Refresh</span>
-                        </button>
+                    <div class="bg-white rounded-xl border-l-4 border-amber-500 p-4 shadow-sm">
+                        <p class="text-2xl font-bold text-amber-600">
+                            <?php echo ceil(count($filteredParticipants) / 3); ?>
+                        </p>
+                        <p class="text-xs text-slate-500 mt-1">Total Bantalan</p>
                     </div>
+                </div>
 
-                    <!-- Hidden inputs to maintain other filters -->
-                    <?php if ($selectedKegiatan !== 'all'): ?>
-                        <input type="hidden" name="kegiatan" value="<?php echo htmlspecialchars($selectedKegiatan); ?>">
-                    <?php endif; ?>
-                    <?php if ($selectedCategory !== 'all'): ?>
-                        <input type="hidden" name="kategori" value="<?php echo htmlspecialchars($selectedCategory); ?>">
-                    <?php endif; ?>
-                </form>
-            </div>
+                <!-- Filter Form -->
+                <div class="bg-white rounded-xl border border-slate-200 p-5 mb-6">
+                    <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fas fa-filter text-slate-400"></i>
+                        Filter & Pengaturan
+                    </h3>
+                    <!-- FORM: method=GET (UNCHANGED) -->
+                    <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Kegiatan</label>
+                            <!-- SELECT: name="kegiatan" (UNCHANGED) -->
+                            <select name="kegiatan" onchange="this.form.submit()"
+                                    class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500">
+                                <option value="all" <?php echo $selectedKegiatan === 'all' ? 'selected' : ''; ?>>Semua Kegiatan</option>
+                                <?php foreach ($availableKegiatan as $kegiatanId): ?>
+                                    <option value="<?php echo $kegiatanId; ?>" <?php echo $selectedKegiatan == $kegiatanId ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($kegiatanData[$kegiatanId] ?? "Kegiatan $kegiatanId"); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
 
-            <!-- Table -->
-            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-sm font-semibold">No.</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold">Nama Peserta</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold">Nama Club</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold">Asal Kota</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold">Kategori</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold">Kegiatan</th>
-                                <th class="px-4 py-3 text-center text-sm font-semibold">Bantalan</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            <?php if (count($filteredParticipants) > 0): ?>
-                                <?php foreach ($filteredParticipants as $index => $participant): ?>
-                                    <tr class="<?php echo $index % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100'; ?>">
-                                        <td class="px-4 py-3 text-sm text-gray-900"><?php echo $index + 1; ?></td>
-                                        <td class="px-4 py-3">
-                                            <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($participant['nama_peserta'] ?? ''); ?></div>
-                                            <div class="text-xs text-gray-500"><?php echo htmlspecialchars($participant['jenis_kelamin'] ?? ''); ?></div>
-                                        </td>
-                                        <td class="px-4 py-3 text-sm text-gray-900"><?php echo htmlspecialchars($participant['nama_club'] ?? ''); ?></td>
-                                        <td class="px-4 py-3 text-sm text-gray-900"><?php echo htmlspecialchars($participant['asal_kota'] ?? ''); ?></td>
-                                        <td class="px-4 py-3">
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                <?php echo htmlspecialchars($categoriesData[$participant['category_id']] ?? "Kategori {$participant['category_id']}"); ?>
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-3 text-sm text-gray-900">
-                                            <?php echo htmlspecialchars($kegiatanData[$participant['kegiatan_id']] ?? "Kegiatan {$participant['kegiatan_id']}"); ?>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center justify-center space-x-1">
-                                                <span class="bg-indigo-600 text-white text-sm font-bold px-3 py-2 rounded-lg shadow-md min-w-[40px] text-center">
-                                                    <?php echo $participant['randomNumber']; ?>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+                            <!-- SELECT: name="kategori" (UNCHANGED) -->
+                            <select name="kategori" onchange="this.form.submit()"
+                                    class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500">
+                                <option value="all" <?php echo $selectedCategory === 'all' ? 'selected' : ''; ?>>Semua Kategori</option>
+                                <?php foreach ($availableCategories as $categoryId): ?>
+                                    <option value="<?php echo $categoryId; ?>" <?php echo $selectedCategory == $categoryId ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($categoriesData[$categoryId] ?? "Kategori $categoryId"); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="flex items-end">
+                            <!-- BUTTON: name="shuffle" (UNCHANGED) -->
+                            <button type="submit" name="shuffle" value="<?php echo $isShuffled ? '0' : '1'; ?>"
+                                    class="w-full px-4 py-2 rounded-lg <?php echo $isShuffled ? 'bg-amber-600 hover:bg-amber-700' : 'bg-archery-600 hover:bg-archery-700'; ?> text-white text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                                <i class="fas fa-random"></i>
+                                <span><?php echo $isShuffled ? 'Reset Urutan' : 'Acak Bantalan'; ?></span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-end">
+                            <a href="<?php echo $_SERVER['PHP_SELF']; ?>"
+                               class="w-full px-4 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
+                                <i class="fas fa-sync-alt"></i>
+                                <span>Refresh</span>
+                            </a>
+                        </div>
+
+                        <!-- Hidden inputs to maintain filters (UNCHANGED) -->
+                        <?php if ($selectedKegiatan !== 'all'): ?>
+                            <input type="hidden" name="kegiatan" value="<?php echo htmlspecialchars($selectedKegiatan); ?>">
+                        <?php endif; ?>
+                        <?php if ($selectedCategory !== 'all'): ?>
+                            <input type="hidden" name="kategori" value="<?php echo htmlspecialchars($selectedCategory); ?>">
+                        <?php endif; ?>
+                    </form>
+                </div>
+
+                <!-- Shuffle Status -->
+                <?php if ($isShuffled): ?>
+                    <div class="mb-6 flex items-center gap-3 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
+                        <i class="fas fa-random text-amber-500"></i>
+                        <p class="text-sm font-medium">Urutan peserta telah diacak (5x shuffle untuk randomisasi maksimal)</p>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Data Table -->
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto custom-scrollbar" style="max-height: 60vh;">
+                        <table class="w-full">
+                            <thead class="bg-zinc-800 text-white sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-12">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama Peserta</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Club</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Asal Kota</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kategori</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kegiatan</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Bantalan</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <?php if (count($filteredParticipants) > 0): ?>
+                                    <?php foreach ($filteredParticipants as $index => $participant): ?>
+                                        <tr class="hover:bg-slate-50 transition-colors">
+                                            <td class="px-4 py-3 text-sm text-slate-500"><?php echo $index + 1; ?></td>
+                                            <td class="px-4 py-3">
+                                                <p class="font-medium text-slate-900"><?php echo htmlspecialchars($participant['nama_peserta'] ?? ''); ?></p>
+                                                <p class="text-xs text-slate-500">
+                                                    <i class="fas <?php echo ($participant['jenis_kelamin'] ?? '') == 'Laki-laki' ? 'fa-mars text-blue-500' : 'fa-venus text-pink-500'; ?> mr-1"></i>
+                                                    <?php echo htmlspecialchars($participant['jenis_kelamin'] ?? ''); ?>
+                                                </p>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-600"><?php echo htmlspecialchars($participant['nama_club'] ?? '-'); ?></td>
+                                            <td class="px-4 py-3 text-sm text-slate-600"><?php echo htmlspecialchars($participant['asal_kota'] ?? '-'); ?></td>
+                                            <td class="px-4 py-3">
+                                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    <?php echo htmlspecialchars($categoriesData[$participant['category_id']] ?? "Kategori {$participant['category_id']}"); ?>
                                                 </span>
-                                                <span class="bg-green-600 text-white text-sm font-bold px-3 py-2 rounded-lg shadow-md min-w-[40px] text-center">
-                                                    <?php echo $participant['randomLetter']; ?>
-                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-600">
+                                                <?php echo htmlspecialchars($kegiatanData[$participant['kegiatan_id']] ?? "Kegiatan {$participant['kegiatan_id']}"); ?>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div class="flex items-center justify-center gap-1">
+                                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-archery-600 text-white text-sm font-bold shadow-sm">
+                                                        <?php echo $participant['randomNumber']; ?>
+                                                    </span>
+                                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-600 text-white text-sm font-bold shadow-sm">
+                                                        <?php echo $participant['randomLetter']; ?>
+                                                    </span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="7" class="px-4 py-12 text-center">
+                                            <div class="flex flex-col items-center">
+                                                <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                                                    <i class="fas fa-users text-slate-400 text-2xl"></i>
+                                                </div>
+                                                <p class="text-slate-500 font-medium">Tidak ada peserta yang sesuai dengan filter</p>
+                                                <p class="text-slate-400 text-sm">Ubah filter untuk melihat peserta lainnya</p>
                                             </div>
                                         </td>
                                     </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="7" class="px-4 py-8 text-center text-gray-500">
-                                        <div class="flex flex-col items-center space-y-2">
-                                            <i class="fas fa-users text-gray-300 text-5xl"></i>
-                                            <span>Tidak ada peserta yang sesuai dengan filter</span>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if (!empty($filteredParticipants)): ?>
+                        <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                            <p class="text-sm text-slate-500">Menampilkan <?= count($filteredParticipants) ?> peserta</p>
+                            <?php if ($isShuffled): ?>
+                                <span class="px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">Urutan Diacak</span>
                             <?php endif; ?>
-                        </tbody>
-                    </table>
+                        </div>
+                    <?php endif; ?>
                 </div>
-            </div>
 
-            <!-- Summary Card -->
-            <?php if (count($filteredParticipants) > 0): ?>
-                <div class="bg-white rounded-xl shadow-lg p-6 mt-6">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Ringkasan</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="bg-blue-50 rounded-lg p-4">
-                            <div class="text-2xl font-bold text-blue-600"><?php echo count($filteredParticipants); ?></div>
-                            <div class="text-sm text-blue-800">Total Peserta</div>
+                <!-- Instructions -->
+                <div class="bg-white rounded-xl border border-slate-200 p-5 mt-6">
+                    <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-blue-500"></i>
+                        Panduan Sistem Bantalan
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-medium text-slate-800 mb-2">Sistem Bantalan:</h4>
+                            <ul class="space-y-1.5 text-sm text-slate-600">
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-check text-archery-500 mt-0.5"></i>
+                                    <span>Setiap bantalan terdiri dari 3 peserta (A, B, C)</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-check text-archery-500 mt-0.5"></i>
+                                    <span>Bantalan 1: 1A, 1B, 1C</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-check text-archery-500 mt-0.5"></i>
+                                    <span>Bantalan 2: 2A, 2B, 2C</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-check text-archery-500 mt-0.5"></i>
+                                    <span>Dan seterusnya...</span>
+                                </li>
+                            </ul>
                         </div>
-                        <div class="bg-green-50 rounded-lg p-4">
-                            <div class="text-2xl font-bold text-green-600">
-                                <?php echo count(array_unique(array_column($filteredParticipants, 'category_id'))); ?>
-                            </div>
-                            <div class="text-sm text-green-800">Kategori Aktif</div>
+                        <div>
+                            <h4 class="font-medium text-slate-800 mb-2">Fitur:</h4>
+                            <ul class="space-y-1.5 text-sm text-slate-600">
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-filter text-blue-500 mt-0.5"></i>
+                                    <span>Filter berdasarkan kegiatan dan kategori</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-random text-purple-500 mt-0.5"></i>
+                                    <span>Acak bantalan untuk pengundian (5x shuffle)</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-sync-alt text-slate-500 mt-0.5"></i>
+                                    <span>Reset urutan ke posisi awal</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i class="fas fa-file-excel text-emerald-500 mt-0.5"></i>
+                                    <span>Export ke Excel dengan format lengkap</span>
+                                </li>
+                            </ul>
                         </div>
-                        <div class="bg-purple-50 rounded-lg p-4">
-                            <div class="text-2xl font-bold text-purple-600">
-                                <?php echo count(array_unique(array_column($filteredParticipants, 'asal_kota'))); ?>
-                            </div>
-                            <div class="text-sm text-purple-800">Kota Asal</div>
-                        </div>
-                        <div class="bg-orange-50 rounded-lg p-4">
-                            <div class="text-2xl font-bold text-orange-600">
-                                <?php echo ceil(count($filteredParticipants) / 3); ?>
-                            </div>
-                            <div class="text-sm text-orange-800">Total Bantalan</div>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
-
-            <!-- Instructions -->
-            <div class="bg-white rounded-xl shadow-lg p-6 mt-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-3">Cara Penggunaan</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-                    <div>
-                        <h4 class="font-medium text-gray-800 mb-2">Sistem Bantalan:</h4>
-                        <ul class="space-y-1">
-                            <li>• Setiap bantalan terdiri dari 3 peserta (A, B, C)</li>
-                            <li>• Bantalan 1: 1A, 1B, 1C</li>
-                            <li>• Bantalan 2: 2A, 2B, 2C</li>
-                            <li>• Dan seterusnya...</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 class="font-medium text-gray-800 mb-2">Fitur:</h4>
-                        <ul class="space-y-1">
-                            <li>• Filter berdasarkan kegiatan dan kategori</li>
-                            <li>• Acak bantalan untuk pengundian (5x shuffle)</li>
-                            <li>• Reset urutan ke posisi awal</li>
-                            <li>• Export ke Excel dengan format lengkap</li>
-                            <li>• Ringkasan statistik peserta</li>
-                        </ul>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
+
+    <!-- Mobile Sidebar -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden">
+        <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+            <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                <i class="fas fa-bullseye text-white"></i>
+            </div>
+            <div class="flex-1">
+                <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+            </div>
+            <button id="close-mobile-menu" class="p-2 rounded-lg hover:bg-zinc-800">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <nav class="px-4 py-6 space-y-1">
+            <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
+            </a>
+            <a href="pertandingan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
+                <i class="fas fa-random w-5"></i><span class="text-sm font-medium">Pertandingan</span>
+            </a>
+            <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+            </a>
+            <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-calendar w-5"></i><span class="text-sm">Kegiatan</span>
+            </a>
+            <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+            </a>
+        </nav>
+    </div>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileOverlay = document.getElementById('mobile-overlay');
+        const mobileSidebar = document.getElementById('mobile-sidebar');
+        const closeMobileMenu = document.getElementById('close-mobile-menu');
+
+        function toggleMobileMenu() {
+            mobileSidebar.classList.toggle('-translate-x-full');
+            mobileOverlay.classList.toggle('hidden');
+        }
+
+        mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
+        mobileOverlay?.addEventListener('click', toggleMobileMenu);
+        closeMobileMenu?.addEventListener('click', toggleMobileMenu);
+    </script>
 </body>
 </html>
