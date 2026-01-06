@@ -176,43 +176,68 @@ while ($row = $resultClubs->fetch_assoc()) {
 }
 
 // ==========================================
-// OPTIMIZATION: PRE-FETCH ALL RANKINGS
+// SOURCE OF TRUTH: rankings_source table (from databaru.txt)
+// Fallback to score-based calculation if table doesn't exist
 // ==========================================
 $allRankings = [];
-$queryAllRanks = "
-    WITH ScoreStats AS (
-        SELECT 
-            s.score_board_id,
-            s.peserta_id,
-            s.kegiatan_id,
-            s.category_id,
-            SUM(CASE WHEN LOWER(s.score) = 'x' THEN 10 WHEN LOWER(s.score) = 'm' THEN 0 ELSE CAST(s.score AS UNSIGNED) END) as total_score,
-            SUM(CASE WHEN LOWER(s.score) = 'x' THEN 1 ELSE 0 END) as total_x
-        FROM score s
-        GROUP BY s.score_board_id, s.peserta_id, s.kegiatan_id, s.category_id
-    ),
-    RankedScores AS (
-        SELECT 
-            ss.*,
-            RANK() OVER (PARTITION BY ss.score_board_id ORDER BY ss.total_score DESC, ss.total_x DESC) as rank_pos,
-            COUNT(*) OVER (PARTITION BY ss.score_board_id) as total_participants
-        FROM ScoreStats ss
-    )
-    SELECT 
-        rs.peserta_id,
-        p.nama_peserta, 
-        rs.rank_pos,
-        rs.total_participants,
-        k.nama_kegiatan,
-        c.name as category_name,
-        sb.created as tanggal
-    FROM RankedScores rs
-    JOIN kegiatan k ON rs.kegiatan_id = k.id
-    JOIN categories c ON rs.category_id = c.id
-    JOIN score_boards sb ON rs.score_board_id = sb.id
-    JOIN peserta p ON rs.peserta_id = p.id
-    ORDER BY sb.created DESC
-";
+
+$useRankingsSource = false;
+$checkTable = $conn->query("SHOW TABLES LIKE 'rankings_source'");
+if ($checkTable && $checkTable->num_rows > 0) {
+    $useRankingsSource = true;
+}
+
+if ($useRankingsSource) {
+    // Use rankings_source table (databaru.txt data)
+    $queryAllRanks = "
+        SELECT
+            rs.nama_peserta,
+            rs.ranking as rank_pos,
+            rs.total_participants,
+            rs.category as nama_kegiatan,
+            rs.category as category_name,
+            rs.total_score,
+            rs.created_at as tanggal
+        FROM rankings_source rs
+        ORDER BY rs.total_score DESC, rs.nama_peserta ASC
+    ";
+} else {
+    // Fallback: Calculate from score table
+    $queryAllRanks = "
+        WITH ScoreStats AS (
+            SELECT
+                s.score_board_id,
+                s.peserta_id,
+                s.kegiatan_id,
+                s.category_id,
+                SUM(CASE WHEN LOWER(s.score) = 'x' THEN 10 WHEN LOWER(s.score) = 'm' THEN 0 ELSE CAST(s.score AS UNSIGNED) END) as total_score,
+                SUM(CASE WHEN LOWER(s.score) = 'x' THEN 1 ELSE 0 END) as total_x
+            FROM score s
+            GROUP BY s.score_board_id, s.peserta_id, s.kegiatan_id, s.category_id
+        ),
+        RankedScores AS (
+            SELECT
+                ss.*,
+                RANK() OVER (PARTITION BY ss.score_board_id ORDER BY ss.total_score DESC, ss.total_x DESC) as rank_pos,
+                COUNT(*) OVER (PARTITION BY ss.score_board_id) as total_participants
+            FROM ScoreStats ss
+        )
+        SELECT
+            rs.peserta_id,
+            p.nama_peserta,
+            rs.rank_pos,
+            rs.total_participants,
+            k.nama_kegiatan,
+            c.name as category_name,
+            COALESCE(sb.created, NOW()) as tanggal
+        FROM RankedScores rs
+        JOIN kegiatan k ON rs.kegiatan_id = k.id
+        JOIN categories c ON rs.category_id = c.id
+        LEFT JOIN score_boards sb ON rs.score_board_id = sb.id
+        JOIN peserta p ON rs.peserta_id = p.id
+        ORDER BY tanggal DESC
+    ";
+}
 
 $resultAllRanks = $conn->query($queryAllRanks);
 if ($resultAllRanks) {
@@ -330,40 +355,82 @@ $club = $_GET['club'] ?? '';
 $kategori_filter = $_GET['kategori'] ?? '';
 $sortByKategori = isset($_GET['sortByKategori']) && $_GET['sortByKategori'] == '1';
 
-$query = "SELECT 
-            MIN(p.id) as id,
-            p.nama_peserta,
-            p.jenis_kelamin,
-            p.asal_kota,
-            p.nama_club,
-            p.sekolah,
-            MAX(p.tanggal_lahir) as tanggal_lahir
-          FROM peserta p
-          WHERE 1=1";
+// Build query based on data source
+if ($useRankingsSource) {
+    // Use rankings_source as primary source
+    $query = "SELECT
+                rs.nama_peserta,
+                MAX(p.jenis_kelamin) as jenis_kelamin,
+                MAX(COALESCE(p.asal_kota, rs.asal_kota COLLATE utf8mb4_general_ci)) as asal_kota,
+                MAX(COALESCE(p.nama_club, rs.nama_club COLLATE utf8mb4_general_ci)) as nama_club,
+                MAX(p.sekolah) as sekolah,
+                MAX(p.tanggal_lahir) as tanggal_lahir,
+                MIN(p.id) as id
+              FROM rankings_source rs
+              LEFT JOIN peserta p ON LOWER(rs.nama_peserta COLLATE utf8mb4_general_ci) = LOWER(p.nama_peserta)
+              WHERE 1=1";
 
-$params = [];
-$types = '';
+    $params = [];
+    $types = '';
 
-if (!empty($gender)) {
-    $query .= " AND p.jenis_kelamin = ?";
-    $params[] = $gender;
-    $types .= "s";
+    if (!empty($gender)) {
+        $query .= " AND p.jenis_kelamin = ?";
+        $params[] = $gender;
+        $types .= "s";
+    }
+
+    if (!empty($nama)) {
+        $query .= " AND rs.nama_peserta COLLATE utf8mb4_general_ci LIKE ?";
+        $params[] = "%$nama%";
+        $types .= "s";
+    }
+
+    if (!empty($club)) {
+        $query .= " AND (p.nama_club = ? OR rs.nama_club COLLATE utf8mb4_general_ci = ?)";
+        $params[] = $club;
+        $params[] = $club;
+        $types .= "ss";
+    }
+
+    $query .= " GROUP BY rs.nama_peserta";
+    $query .= " ORDER BY rs.nama_peserta ASC";
+} else {
+    // Fallback to peserta table
+    $query = "SELECT
+                MIN(p.id) as id,
+                p.nama_peserta,
+                p.jenis_kelamin,
+                p.asal_kota,
+                p.nama_club,
+                p.sekolah,
+                MAX(p.tanggal_lahir) as tanggal_lahir
+              FROM peserta p
+              WHERE 1=1";
+
+    $params = [];
+    $types = '';
+
+    if (!empty($gender)) {
+        $query .= " AND p.jenis_kelamin = ?";
+        $params[] = $gender;
+        $types .= "s";
+    }
+
+    if (!empty($nama)) {
+        $query .= " AND p.nama_peserta LIKE ?";
+        $params[] = "%$nama%";
+        $types .= "s";
+    }
+
+    if (!empty($club)) {
+        $query .= " AND p.nama_club = ?";
+        $params[] = $club;
+        $types .= "s";
+    }
+
+    $query .= " GROUP BY p.nama_peserta, p.jenis_kelamin, p.asal_kota, p.nama_club, p.sekolah";
+    $query .= " ORDER BY p.nama_peserta ASC";
 }
-
-if (!empty($nama)) {
-    $query .= " AND p.nama_peserta LIKE ?";
-    $params[] = "%$nama%";
-    $types .= "s";
-}
-
-if (!empty($club)) {
-    $query .= " AND p.nama_club = ?";
-    $params[] = $club;
-    $types .= "s";
-}
-
-$query .= " GROUP BY p.nama_peserta, p.jenis_kelamin, p.asal_kota, p.nama_club, p.sekolah";
-$query .= " ORDER BY p.nama_peserta ASC";
 
 if (!empty($params)) {
     $stmt = $conn->prepare($query);
@@ -483,7 +550,25 @@ if ($sortByKategori) {
         return $b['total_turnamen'] - $a['total_turnamen'];
     });
 } else {
+    // Default: Sort by juara1 (highest to lowest), then A-Z by name
     usort($pesertaData, function ($a, $b) {
+        // First: by juara1 count (descending - highest first)
+        if ($b['juara1'] != $a['juara1']) {
+            return $b['juara1'] - $a['juara1'];
+        }
+        // Second: by juara2 count (descending)
+        if ($b['juara2'] != $a['juara2']) {
+            return $b['juara2'] - $a['juara2'];
+        }
+        // Third: by juara3 count (descending)
+        if ($b['juara3'] != $a['juara3']) {
+            return $b['juara3'] - $a['juara3'];
+        }
+        // Fourth: by avg ranking (ascending - lower is better)
+        if ($a['avg_ranking'] != $b['avg_ranking']) {
+            return $a['avg_ranking'] - $b['avg_ranking'];
+        }
+        // Finally: alphabetically A-Z
         return strcmp($a['nama'], $b['nama']);
     });
 }

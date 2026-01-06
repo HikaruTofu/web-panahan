@@ -7,7 +7,7 @@ services:
       dockerfile: docker/php/Dockerfile
     container_name: web-panahan
     ports:
-      - "8080:80"
+      - "8000:80"
     volumes:
       - ./:/var/www/html
     depends_on:

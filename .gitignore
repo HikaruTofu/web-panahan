@@ -20,3 +20,8 @@ Thumbs.db
 # Uploads (if sensitive)
 uploads/pembayaran/*
 !uploads/pembayaran/.gitkeep
+
+# Antigravity/Claude metadata
+databaru.txt
+.agent/
+.claude/

@@ -87,46 +87,79 @@ while ($row = $resultTotalClub->fetch_assoc()) {
 $totalClub = count($daftarClub);
 
 // 3. AMBIL DATA ATLET BERPRESTASI (Kategori A & B)
-// 3. AMBIL DATA ATLET BERPRESTASI (Kategori A & B)
-// OPTIMIZED QUERY with Window Functions to avoid N+1 problem
-$queryStats = "
-    WITH ScoreStats AS (
-        SELECT 
-            s.score_board_id,
-            s.peserta_id,
-            SUM(
-                CASE 
-                    WHEN LOWER(s.score) = 'x' THEN 10 
-                    WHEN LOWER(s.score) = 'm' THEN 0 
-                    ELSE CAST(s.score AS UNSIGNED) 
-                END
-            ) as total_score,
-            SUM(CASE WHEN LOWER(s.score) = 'x' THEN 1 ELSE 0 END) as total_x
-        FROM score s
-        GROUP BY s.score_board_id, s.peserta_id
-    ),
-    RankedScores AS (
-        SELECT 
-            ss.*,
-            RANK() OVER (PARTITION BY ss.score_board_id ORDER BY ss.total_score DESC, ss.total_x DESC) as rank_pos,
-            COUNT(*) OVER (PARTITION BY ss.score_board_id) as board_participants
-        FROM ScoreStats ss
-    )
-    SELECT 
-        p.nama_peserta,
-        p.jenis_kelamin,
-        p.nama_club,
-        COUNT(rs.score_board_id) as total_turnamen,
-        AVG(rs.rank_pos) as avg_rank,
-        SUM(CASE WHEN rs.rank_pos = 1 THEN 1 ELSE 0 END) as juara1,
-        SUM(CASE WHEN rs.rank_pos = 2 THEN 1 ELSE 0 END) as juara2,
-        SUM(CASE WHEN rs.rank_pos = 3 THEN 1 ELSE 0 END) as juara3,
-        GROUP_CONCAT(rs.rank_pos) as all_ranks,
-        GROUP_CONCAT(rs.board_participants) as all_participants
-    FROM RankedScores rs
-    JOIN peserta p ON rs.peserta_id = p.id
-    GROUP BY p.id, p.nama_peserta, p.jenis_kelamin, p.nama_club
-";
+// SOURCE OF TRUTH: rankings_source table (imported from databaru.txt)
+// Fallback to score-based calculation if rankings_source doesn't exist
+
+$useRankingsSource = false;
+$checkTable = $conn->query("SHOW TABLES LIKE 'rankings_source'");
+if ($checkTable && $checkTable->num_rows > 0) {
+    $useRankingsSource = true;
+}
+
+if ($useRankingsSource) {
+    // Use rankings_source table (databaru.txt data)
+    $queryStats = "
+        SELECT
+            rs.nama_peserta,
+            MAX(p.jenis_kelamin) as jenis_kelamin,
+            MAX(rs.nama_club) as nama_club,
+            COUNT(*) as total_turnamen,
+            AVG(rs.ranking) as avg_rank,
+            SUM(CASE WHEN rs.ranking = 1 THEN 1 ELSE 0 END) as juara1,
+            SUM(CASE WHEN rs.ranking = 2 THEN 1 ELSE 0 END) as juara2,
+            SUM(CASE WHEN rs.ranking = 3 THEN 1 ELSE 0 END) as juara3,
+            GROUP_CONCAT(rs.ranking) as all_ranks,
+            GROUP_CONCAT(rs.total_participants) as all_participants
+        FROM rankings_source rs
+        LEFT JOIN peserta p ON LOWER(rs.nama_peserta) COLLATE utf8mb4_general_ci = LOWER(p.nama_peserta) COLLATE utf8mb4_general_ci
+        GROUP BY rs.nama_peserta
+    ";
+} else {
+    // Fallback: Calculate from score table (may have incorrect data)
+    $queryStats = "
+        WITH ScoreStats AS (
+            SELECT
+                s.score_board_id,
+                s.peserta_id,
+                s.kegiatan_id,
+                s.category_id,
+                SUM(
+                    CASE
+                        WHEN LOWER(s.score) = 'x' THEN 10
+                        WHEN LOWER(s.score) = 'm' THEN 0
+                        ELSE CAST(s.score AS UNSIGNED)
+                    END
+                ) as total_score,
+                SUM(CASE WHEN LOWER(s.score) = 'x' THEN 1 ELSE 0 END) as total_x
+            FROM score s
+            GROUP BY s.score_board_id, s.peserta_id, s.kegiatan_id, s.category_id
+        ),
+        RankedScores AS (
+            SELECT
+                ss.*,
+                RANK() OVER (PARTITION BY ss.score_board_id ORDER BY ss.total_score DESC, ss.total_x DESC) as rank_pos,
+                COUNT(*) OVER (PARTITION BY ss.score_board_id) as board_participants
+            FROM ScoreStats ss
+        )
+        SELECT
+            p.nama_peserta,
+            MAX(p.jenis_kelamin) as jenis_kelamin,
+            MAX(p.nama_club) as nama_club,
+            COUNT(DISTINCT rs.score_board_id) as total_turnamen,
+            AVG(rs.rank_pos) as avg_rank,
+            SUM(CASE WHEN rs.rank_pos = 1 THEN 1 ELSE 0 END) as juara1,
+            SUM(CASE WHEN rs.rank_pos = 2 THEN 1 ELSE 0 END) as juara2,
+            SUM(CASE WHEN rs.rank_pos = 3 THEN 1 ELSE 0 END) as juara3,
+            GROUP_CONCAT(rs.rank_pos) as all_ranks,
+            GROUP_CONCAT(rs.board_participants) as all_participants
+        FROM RankedScores rs
+        JOIN kegiatan k ON rs.kegiatan_id = k.id
+        JOIN categories c ON rs.category_id = c.id
+        LEFT JOIN score_boards sb ON rs.score_board_id = sb.id
+        JOIN peserta p ON rs.peserta_id = p.id
+        GROUP BY p.nama_peserta
+    ";
+}
 
 $resultStats = $conn->query($queryStats);
 $atletBerprestasi = [];
