@@ -10,6 +10,7 @@ set_time_limit(300);
 ini_set('memory_limit', '512M');
 include '../config/panggil.php';
 include '../includes/check_access.php';
+include '../includes/theme.php';
 requireAdmin();
 
 if (!isset($_SESSION['login']) || $_SESSION['login'] !== true) {
@@ -269,28 +270,8 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Turnamen Panahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'archery': {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            200: '#bbf7d0',
-                            300: '#86efac',
-                            400: '#4ade80',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            700: '#15803d',
-                            800: '#166534',
-                            900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script><?= getThemeTailwindConfig() ?></script>
+    <script><?= getThemeInitScript() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Skeleton Animation */
@@ -330,9 +311,27 @@ try {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        /* Dark mode scrollbar */
+        .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: #27272a;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #52525b;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #71717a;
+        }
+
+        /* Dark mode skeleton */
+        .dark .skeleton {
+            background: linear-gradient(90deg, #3f3f46 25%, #52525b 50%, #3f3f46 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
     </style>
 </head>
-<body class="h-full bg-slate-50">
+<body class="h-full bg-slate-50 dark:bg-zinc-950 transition-colors">
     <!-- Toast Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
 
@@ -396,6 +395,8 @@ try {
                         <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
                         <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
                     </div>
+                    <!-- Theme Toggle -->
+                    <?= getThemeToggleButton() ?>
                 </div>
                 <a href="../actions/logout.php"
                    onclick="return confirm('Yakin ingin logout?')"
@@ -415,17 +416,17 @@ try {
         <main class="flex-1 overflow-auto">
             <div class="px-6 lg:px-8 py-6">
                 <!-- Compact Header with Metrics -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
-                    <div class="px-6 py-4 border-b border-slate-100">
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm mb-6 transition-colors">
+                    <div class="px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
-                                <h1 class="text-lg font-semibold text-slate-900">Dashboard</h1>
-                                <p class="text-sm text-slate-500">Ringkasan performa atlet dan statistik turnamen</p>
+                                <h1 class="text-lg font-semibold text-slate-900 dark:text-white">Dashboard</h1>
+                                <p class="text-sm text-slate-500 dark:text-zinc-400">Ringkasan performa atlet dan statistik turnamen</p>
                             </div>
                             <div class="flex items-center gap-3">
                                 <!-- Kegiatan Filter -->
                                 <form method="GET" class="flex items-center gap-2">
-                                    <select name="kegiatan_id" onchange="this.form.submit()" class="bg-slate-100 border-none rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-archery-500">
+                                    <select name="kegiatan_id" onchange="this.form.submit()" class="bg-slate-100 dark:bg-zinc-800 border-none rounded-lg px-3 py-2 text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500">
                                         <option value="all" <?= $kegiatan_id === 'all' ? 'selected' : '' ?>>Semua Kegiatan</option>
                                         <?php foreach ($kegiatanList as $keg): ?>
                                             <option value="<?= $keg['id'] ?>" <?= $kegiatan_id == $keg['id'] ? 'selected' : '' ?>>
@@ -434,7 +435,7 @@ try {
                                         <?php endforeach; ?>
                                     </select>
                                 </form>
-                                <span class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-archery-50 text-archery-700 text-sm font-medium">
+                                <span class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-archery-50 dark:bg-archery-900/30 text-archery-700 dark:text-archery-400 text-sm font-medium">
                                     <span class="w-2 h-2 rounded-full bg-archery-500 animate-pulse"></span>
                                     Live
                                 </span>
@@ -447,36 +448,36 @@ try {
                         <!-- Total Atlet -->
                         <div class="flex items-start gap-4">
                             <div class="flex-1 min-w-0">
-                                <p class="text-3xl font-bold text-slate-900"><?= $totalAtlet ?></p>
-                                <p class="text-sm font-medium text-slate-500 mt-0.5">Total Atlet</p>
-                                <p class="text-xs text-slate-400 mt-1">Terdaftar dalam sistem</p>
+                                <p class="text-3xl font-bold text-slate-900 dark:text-white"><?= $totalAtlet ?></p>
+                                <p class="text-sm font-medium text-slate-500 dark:text-zinc-400 mt-0.5">Total Atlet</p>
+                                <p class="text-xs text-slate-400 dark:text-zinc-500 mt-1">Terdaftar dalam sistem</p>
                             </div>
                         </div>
 
                         <!-- Total Club -->
                         <div class="flex items-start gap-4">
                             <div class="flex-1 min-w-0">
-                                <p class="text-3xl font-bold text-slate-900"><?= $totalClub ?></p>
-                                <p class="text-sm font-medium text-slate-500 mt-0.5">Total Club</p>
-                                <p class="text-xs text-slate-400 mt-1">Club aktif</p>
+                                <p class="text-3xl font-bold text-slate-900 dark:text-white"><?= $totalClub ?></p>
+                                <p class="text-sm font-medium text-slate-500 dark:text-zinc-400 mt-0.5">Total Club</p>
+                                <p class="text-xs text-slate-400 dark:text-zinc-500 mt-1">Club aktif</p>
                             </div>
                         </div>
 
                         <!-- Atlet Berprestasi (A & B) -->
                         <div class="flex items-start gap-4">
                             <div class="flex-1 min-w-0">
-                                <p class="text-3xl font-bold text-emerald-600"><?= count($atletBerprestasi) ?></p>
-                                <p class="text-sm font-medium text-slate-500 mt-0.5">Atlet Berprestasi</p>
-                                <p class="text-xs text-emerald-600 mt-1">Kategori A & B</p>
+                                <p class="text-3xl font-bold text-emerald-600 dark:text-emerald-400"><?= count($atletBerprestasi) ?></p>
+                                <p class="text-sm font-medium text-slate-500 dark:text-zinc-400 mt-0.5">Atlet Berprestasi</p>
+                                <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Kategori A & B</p>
                             </div>
                         </div>
 
                         <!-- Perlu Peningkatan (D & E) -->
                         <div class="flex items-start gap-4">
                             <div class="flex-1 min-w-0">
-                                <p class="text-3xl font-bold text-amber-600"><?= count($atletKurangPrestasi) ?></p>
-                                <p class="text-sm font-medium text-slate-500 mt-0.5">Perlu Peningkatan</p>
-                                <p class="text-xs text-amber-600 mt-1">Kategori D & E</p>
+                                <p class="text-3xl font-bold text-amber-600 dark:text-amber-400"><?= count($atletKurangPrestasi) ?></p>
+                                <p class="text-sm font-medium text-slate-500 dark:text-zinc-400 mt-0.5">Perlu Peningkatan</p>
+                                <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">Kategori D & E</p>
                             </div>
                         </div>
                     </div>
@@ -490,11 +491,11 @@ try {
                 ?>
                 <?php if ($hasTop3): ?>
                 <div class="mb-6">
-                    <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Top 3 Atlet Berprestasi</h3>
+                    <h3 class="text-sm font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-4">Top 3 Atlet Berprestasi</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <!-- 2nd Place (Silver) -->
-                        <div class="bg-white rounded-xl border border-slate-200 p-5 relative overflow-hidden order-2 md:order-1">
-                            <div class="absolute top-0 right-0 w-16 h-16 bg-slate-100 rounded-bl-full flex items-end justify-start pb-2 pl-2">
+                        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 relative overflow-hidden order-2 md:order-1">
+                            <div class="absolute top-0 right-0 w-16 h-16 bg-slate-100 dark:bg-zinc-800 rounded-bl-full flex items-end justify-start pb-2 pl-2">
                                 <span class="text-xl">🥈</span>
                             </div>
                             <div class="flex items-center gap-3 mb-4">
@@ -502,24 +503,24 @@ try {
                                     <?= strtoupper(substr($top3[1]['nama'], 0, 1)) ?>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <p class="font-semibold text-slate-900 truncate"><?= htmlspecialchars($top3[1]['nama']) ?></p>
-                                    <p class="text-xs text-slate-500 truncate"><?= htmlspecialchars($top3[1]['club'] ?: 'No Club') ?></p>
+                                    <p class="font-semibold text-slate-900 dark:text-white truncate"><?= htmlspecialchars($top3[1]['nama']) ?></p>
+                                    <p class="text-xs text-slate-500 dark:text-zinc-400 truncate"><?= htmlspecialchars($top3[1]['club'] ?: 'No Club') ?></p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-4 text-sm">
                                 <?php if ($top3[1]['juara1'] > 0): ?>
-                                    <span class="flex items-center gap-1 text-yellow-600"><i class="fas fa-trophy text-xs"></i> <?= $top3[1]['juara1'] ?></span>
+                                    <span class="flex items-center gap-1 text-yellow-600 dark:text-yellow-400"><i class="fas fa-trophy text-xs"></i> <?= $top3[1]['juara1'] ?></span>
                                 <?php endif; ?>
                                 <?php if ($top3[1]['juara2'] > 0): ?>
-                                    <span class="flex items-center gap-1 text-slate-500"><i class="fas fa-medal text-xs"></i> <?= $top3[1]['juara2'] ?></span>
+                                    <span class="flex items-center gap-1 text-slate-500 dark:text-zinc-400"><i class="fas fa-medal text-xs"></i> <?= $top3[1]['juara2'] ?></span>
                                 <?php endif; ?>
-                                <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">Kat. <?= $top3[1]['kategori'] ?></span>
+                                <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">Kat. <?= $top3[1]['kategori'] ?></span>
                             </div>
                         </div>
 
                         <!-- 1st Place (Gold) - Featured -->
-                        <div class="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl border-2 border-yellow-200 p-5 relative overflow-hidden order-1 md:order-2 ring-2 ring-yellow-100">
-                            <div class="absolute top-0 right-0 w-20 h-20 bg-yellow-100 rounded-bl-full flex items-end justify-start pb-3 pl-3">
+                        <div class="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-xl border-2 border-yellow-200 dark:border-yellow-700/50 p-5 relative overflow-hidden order-1 md:order-2 ring-2 ring-yellow-100 dark:ring-yellow-800/30">
+                            <div class="absolute top-0 right-0 w-20 h-20 bg-yellow-100 dark:bg-yellow-800/30 rounded-bl-full flex items-end justify-start pb-3 pl-3">
                                 <span class="text-2xl">🥇</span>
                             </div>
                             <div class="flex items-center gap-3 mb-4">
@@ -527,24 +528,24 @@ try {
                                     <?= strtoupper(substr($top3[0]['nama'], 0, 1)) ?>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <p class="font-bold text-slate-900 truncate text-lg"><?= htmlspecialchars($top3[0]['nama']) ?></p>
-                                    <p class="text-sm text-slate-600 truncate"><?= htmlspecialchars($top3[0]['club'] ?: 'No Club') ?></p>
+                                    <p class="font-bold text-slate-900 dark:text-white truncate text-lg"><?= htmlspecialchars($top3[0]['nama']) ?></p>
+                                    <p class="text-sm text-slate-600 dark:text-zinc-400 truncate"><?= htmlspecialchars($top3[0]['club'] ?: 'No Club') ?></p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-4 text-sm">
                                 <?php if ($top3[0]['juara1'] > 0): ?>
-                                    <span class="flex items-center gap-1 text-yellow-700 font-semibold"><i class="fas fa-trophy"></i> <?= $top3[0]['juara1'] ?> Emas</span>
+                                    <span class="flex items-center gap-1 text-yellow-700 dark:text-yellow-400 font-semibold"><i class="fas fa-trophy"></i> <?= $top3[0]['juara1'] ?> Emas</span>
                                 <?php endif; ?>
                                 <?php if ($top3[0]['juara2'] > 0): ?>
-                                    <span class="flex items-center gap-1 text-slate-600"><i class="fas fa-medal text-xs"></i> <?= $top3[0]['juara2'] ?></span>
+                                    <span class="flex items-center gap-1 text-slate-600 dark:text-zinc-400"><i class="fas fa-medal text-xs"></i> <?= $top3[0]['juara2'] ?></span>
                                 <?php endif; ?>
-                                <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-200 text-yellow-800">Kat. <?= $top3[0]['kategori'] ?></span>
+                                <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-200 dark:bg-yellow-700/50 text-yellow-800 dark:text-yellow-300">Kat. <?= $top3[0]['kategori'] ?></span>
                             </div>
                         </div>
 
                         <!-- 3rd Place (Bronze) -->
-                        <div class="bg-white rounded-xl border border-slate-200 p-5 relative overflow-hidden order-3">
-                            <div class="absolute top-0 right-0 w-16 h-16 bg-amber-50 rounded-bl-full flex items-end justify-start pb-2 pl-2">
+                        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 relative overflow-hidden order-3">
+                            <div class="absolute top-0 right-0 w-16 h-16 bg-amber-50 dark:bg-amber-900/20 rounded-bl-full flex items-end justify-start pb-2 pl-2">
                                 <span class="text-xl">🥉</span>
                             </div>
                             <div class="flex items-center gap-3 mb-4">
@@ -552,18 +553,18 @@ try {
                                     <?= strtoupper(substr($top3[2]['nama'], 0, 1)) ?>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <p class="font-semibold text-slate-900 truncate"><?= htmlspecialchars($top3[2]['nama']) ?></p>
-                                    <p class="text-xs text-slate-500 truncate"><?= htmlspecialchars($top3[2]['club'] ?: 'No Club') ?></p>
+                                    <p class="font-semibold text-slate-900 dark:text-white truncate"><?= htmlspecialchars($top3[2]['nama']) ?></p>
+                                    <p class="text-xs text-slate-500 dark:text-zinc-400 truncate"><?= htmlspecialchars($top3[2]['club'] ?: 'No Club') ?></p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-4 text-sm">
                                 <?php if ($top3[2]['juara1'] > 0): ?>
-                                    <span class="flex items-center gap-1 text-yellow-600"><i class="fas fa-trophy text-xs"></i> <?= $top3[2]['juara1'] ?></span>
+                                    <span class="flex items-center gap-1 text-yellow-600 dark:text-yellow-400"><i class="fas fa-trophy text-xs"></i> <?= $top3[2]['juara1'] ?></span>
                                 <?php endif; ?>
                                 <?php if ($top3[2]['juara2'] > 0): ?>
-                                    <span class="flex items-center gap-1 text-slate-500"><i class="fas fa-medal text-xs"></i> <?= $top3[2]['juara2'] ?></span>
+                                    <span class="flex items-center gap-1 text-slate-500 dark:text-zinc-400"><i class="fas fa-medal text-xs"></i> <?= $top3[2]['juara2'] ?></span>
                                 <?php endif; ?>
-                                <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Kat. <?= $top3[2]['kategori'] ?></span>
+                                <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Kat. <?= $top3[2]['kategori'] ?></span>
                             </div>
                         </div>
                     </div>
@@ -573,55 +574,55 @@ try {
                 <!-- Two Column Layout for Lists -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- Top Performing Athletes -->
-                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+                        <div class="px-5 py-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-archery-50 flex items-center justify-center">
-                                    <i class="fas fa-trophy text-archery-600 text-sm"></i>
+                                <div class="w-8 h-8 rounded-lg bg-archery-50 dark:bg-archery-900/30 flex items-center justify-center">
+                                    <i class="fas fa-trophy text-archery-600 dark:text-archery-400 text-sm"></i>
                                 </div>
                                 <div>
-                                    <h3 class="font-semibold text-slate-900">Atlet Berprestasi</h3>
-                                    <p class="text-xs text-slate-500">Kategori A & B - Top performers</p>
+                                    <h3 class="font-semibold text-slate-900 dark:text-white">Atlet Berprestasi</h3>
+                                    <p class="text-xs text-slate-500 dark:text-zinc-400">Kategori A & B - Top performers</p>
                                 </div>
                             </div>
-                            <span class="px-2.5 py-1 rounded-full bg-archery-50 text-archery-700 text-xs font-medium">
+                            <span class="px-2.5 py-1 rounded-full bg-archery-50 dark:bg-archery-900/30 text-archery-700 dark:text-archery-400 text-xs font-medium">
                                 <?= count($atletBerprestasi) ?> atlet
                             </span>
                         </div>
                         <div class="max-h-96 overflow-y-auto custom-scrollbar" id="prestasi-list">
                             <?php if (empty($atletBerprestasi)): ?>
                                 <div class="p-8 text-center">
-                                    <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                                        <i class="fas fa-medal text-slate-400 text-2xl"></i>
+                                    <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                                        <i class="fas fa-medal text-slate-400 dark:text-zinc-500 text-2xl"></i>
                                     </div>
-                                    <p class="text-slate-500 text-sm">Belum ada data atlet berprestasi</p>
-                                    <p class="text-slate-400 text-xs mt-1">Data akan muncul setelah turnamen berlangsung</p>
+                                    <p class="text-slate-500 dark:text-zinc-400 text-sm">Belum ada data atlet berprestasi</p>
+                                    <p class="text-slate-400 dark:text-zinc-500 text-xs mt-1">Data akan muncul setelah turnamen berlangsung</p>
                                 </div>
                             <?php else: ?>
-                                <ul class="divide-y divide-slate-100">
+                                <ul class="divide-y divide-slate-100 dark:divide-zinc-800">
                                     <?php foreach (array_slice($atletBerprestasi, 0, 200) as $index => $atlet): ?>
-                                        <li class="px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer group"
+                                        <li class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer group"
                                             onclick="showAthleteDetail('<?= htmlspecialchars($atlet['nama'], ENT_QUOTES) ?>')">
                                             <div class="flex items-center gap-3">
                                                 <div class="w-8 h-8 rounded-full bg-gradient-to-br from-archery-500 to-archery-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                                                     <?= $index + 1 ?>
                                                 </div>
                                                 <div class="flex-1 min-w-0">
-                                                    <p class="font-medium text-slate-900 truncate group-hover:text-archery-600 transition-colors">
+                                                    <p class="font-medium text-slate-900 dark:text-white truncate group-hover:text-archery-600 dark:group-hover:text-archery-400 transition-colors">
                                                         <?= htmlspecialchars($atlet['nama']) ?>
                                                     </p>
-                                                    <p class="text-xs text-slate-500 truncate">
+                                                    <p class="text-xs text-slate-500 dark:text-zinc-400 truncate">
                                                         <?= htmlspecialchars($atlet['club'] ?: 'No Club') ?>
                                                     </p>
                                                 </div>
                                                 <div class="flex items-center gap-2 flex-shrink-0">
                                                     <?php if ($atlet['juara1'] > 0): ?>
-                                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 text-xs font-medium">
+                                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-medium">
                                                             <i class="fas fa-trophy text-yellow-500"></i>
                                                             <?= $atlet['juara1'] ?>
                                                         </span>
                                                     <?php endif; ?>
-                                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= $atlet['kategori'] === 'A' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700' ?>">
+                                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= $atlet['kategori'] === 'A' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' ?>">
                                                         Kat. <?= $atlet['kategori'] ?>
                                                     </span>
                                                 </div>
@@ -630,8 +631,8 @@ try {
                                     <?php endforeach; ?>
                                 </ul>
                                 <?php if (count($atletBerprestasi) > 20): ?>
-                                    <div class="px-5 py-3 bg-slate-50 text-center">
-                                        <a href="statistik.php?kategori=A" class="text-sm text-archery-600 hover:text-archery-700 font-medium">
+                                    <div class="px-5 py-3 bg-slate-50 dark:bg-zinc-800 text-center">
+                                        <a href="statistik.php?kategori=A" class="text-sm text-archery-600 dark:text-archery-400 hover:text-archery-700 dark:hover:text-archery-300 font-medium">
                                             Lihat semua <?= count($atletBerprestasi) ?> atlet <i class="fas fa-arrow-right ml-1"></i>
                                         </a>
                                     </div>
@@ -641,52 +642,52 @@ try {
                     </div>
 
                     <!-- Athletes Needing Improvement -->
-                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+                        <div class="px-5 py-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                                    <i class="fas fa-chart-line text-amber-600 text-sm"></i>
+                                <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+                                    <i class="fas fa-chart-line text-amber-600 dark:text-amber-400 text-sm"></i>
                                 </div>
                                 <div>
-                                    <h3 class="font-semibold text-slate-900">Perlu Peningkatan</h3>
-                                    <p class="text-xs text-slate-500">Kategori D & E - Butuh latihan</p>
+                                    <h3 class="font-semibold text-slate-900 dark:text-white">Perlu Peningkatan</h3>
+                                    <p class="text-xs text-slate-500 dark:text-zinc-400">Kategori D & E - Butuh latihan</p>
                                 </div>
                             </div>
-                            <span class="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-medium">
+                            <span class="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-medium">
                                 <?= count($atletKurangPrestasi) ?> atlet
                             </span>
                         </div>
                         <div class="max-h-96 overflow-y-auto custom-scrollbar" id="improve-list">
                             <?php if (empty($atletKurangPrestasi)): ?>
                                 <div class="p-8 text-center">
-                                    <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
-                                        <i class="fas fa-check-circle text-emerald-500 text-2xl"></i>
+                                    <div class="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-3">
+                                        <i class="fas fa-check-circle text-emerald-500 dark:text-emerald-400 text-2xl"></i>
                                     </div>
-                                    <p class="text-slate-500 text-sm">Semua atlet berprestasi!</p>
-                                    <p class="text-slate-400 text-xs mt-1">Tidak ada atlet di kategori D atau E</p>
+                                    <p class="text-slate-500 dark:text-zinc-400 text-sm">Semua atlet berprestasi!</p>
+                                    <p class="text-slate-400 dark:text-zinc-500 text-xs mt-1">Tidak ada atlet di kategori D atau E</p>
                                 </div>
                             <?php else: ?>
-                                <ul class="divide-y divide-slate-100">
+                                <ul class="divide-y divide-slate-100 dark:divide-zinc-800">
                                     <?php foreach (array_slice($atletKurangPrestasi, 0, 200) as $index => $atlet): ?>
-                                        <li class="px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer group"
+                                        <li class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer group"
                                             onclick="showAthleteDetail('<?= htmlspecialchars($atlet['nama'], ENT_QUOTES) ?>')">
                                             <div class="flex items-center gap-3">
                                                 <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                                                     <?= $index + 1 ?>
                                                 </div>
                                                 <div class="flex-1 min-w-0">
-                                                    <p class="font-medium text-slate-900 truncate group-hover:text-amber-600 transition-colors">
+                                                    <p class="font-medium text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                                                         <?= htmlspecialchars($atlet['nama']) ?>
                                                     </p>
-                                                    <p class="text-xs text-slate-500 truncate">
+                                                    <p class="text-xs text-slate-500 dark:text-zinc-400 truncate">
                                                         <?= htmlspecialchars($atlet['club'] ?: 'No Club') ?>
                                                     </p>
                                                 </div>
                                                 <div class="flex items-center gap-2 flex-shrink-0">
-                                                    <span class="text-xs text-slate-500">
+                                                    <span class="text-xs text-slate-500 dark:text-zinc-400">
                                                         Avg #<?= $atlet['avg_ranking'] ?>
                                                     </span>
-                                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= $atlet['kategori'] === 'D' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600' ?>">
+                                                    <span class="px-2 py-1 rounded-full text-xs font-medium <?= $atlet['kategori'] === 'D' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400' ?>">
                                                         Kat. <?= $atlet['kategori'] ?>
                                                     </span>
                                                 </div>
@@ -695,8 +696,8 @@ try {
                                     <?php endforeach; ?>
                                 </ul>
                                 <?php if (count($atletKurangPrestasi) > 20): ?>
-                                    <div class="px-5 py-3 bg-slate-50 text-center">
-                                        <a href="statistik.php?kategori=D" class="text-sm text-amber-600 hover:text-amber-700 font-medium">
+                                    <div class="px-5 py-3 bg-slate-50 dark:bg-zinc-800 text-center">
+                                        <a href="statistik.php?kategori=D" class="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium">
                                             Lihat semua <?= count($atletKurangPrestasi) ?> atlet <i class="fas fa-arrow-right ml-1"></i>
                                         </a>
                                     </div>
@@ -709,33 +710,33 @@ try {
                 <!-- Bottom Row: Clubs & Athletes Full List -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                     <!-- All Athletes -->
-                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+                        <div class="px-5 py-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                                    <i class="fas fa-users text-blue-600 text-sm"></i>
+                                <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                                    <i class="fas fa-users text-blue-600 dark:text-blue-400 text-sm"></i>
                                 </div>
-                                <h3 class="font-semibold text-slate-900">Daftar Atlet</h3>
+                                <h3 class="font-semibold text-slate-900 dark:text-white">Daftar Atlet</h3>
                             </div>
-                            <a href="peserta.view.php" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                            <a href="peserta.view.php" class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
                                 Lihat Semua <i class="fas fa-arrow-right ml-1"></i>
                             </a>
                         </div>
                         <div class="max-h-64 overflow-y-auto custom-scrollbar">
                             <?php if (empty($daftarAtlet)): ?>
-                                <div class="p-6 text-center text-slate-500 text-sm">
+                                <div class="p-6 text-center text-slate-500 dark:text-zinc-400 text-sm">
                                     Belum ada atlet terdaftar
                                 </div>
                             <?php else: ?>
-                                <ul class="divide-y divide-slate-100">
+                                <ul class="divide-y divide-slate-100 dark:divide-zinc-800">
                                     <?php foreach (array_slice($daftarAtlet, 0, 8) as $index => $namaAtlet): ?>
-                                        <li class="px-5 py-2.5 hover:bg-slate-50 transition-colors cursor-pointer"
+                                        <li class="px-5 py-2.5 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                             onclick="showAthleteDetail('<?= htmlspecialchars($namaAtlet, ENT_QUOTES) ?>')">
                                             <div class="flex items-center gap-3">
-                                                <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs text-slate-600 font-medium">
+                                                <span class="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-xs text-slate-600 dark:text-zinc-400 font-medium">
                                                     <?= $index + 1 ?>
                                                 </span>
-                                                <span class="text-sm text-slate-700"><?= htmlspecialchars($namaAtlet) ?></span>
+                                                <span class="text-sm text-slate-700 dark:text-zinc-300"><?= htmlspecialchars($namaAtlet) ?></span>
                                             </div>
                                         </li>
                                     <?php endforeach; ?>
@@ -745,33 +746,33 @@ try {
                     </div>
 
                     <!-- All Clubs -->
-                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+                        <div class="px-5 py-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                                    <i class="fas fa-building text-emerald-600 text-sm"></i>
+                                <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+                                    <i class="fas fa-building text-emerald-600 dark:text-emerald-400 text-sm"></i>
                                 </div>
-                                <h3 class="font-semibold text-slate-900">Daftar Club</h3>
+                                <h3 class="font-semibold text-slate-900 dark:text-white">Daftar Club</h3>
                             </div>
-                            <span class="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">
+                            <span class="px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
                                 <?= $totalClub ?> club
                             </span>
                         </div>
                         <div class="max-h-64 overflow-y-auto custom-scrollbar">
                             <?php if (empty($daftarClub)): ?>
-                                <div class="p-6 text-center text-slate-500 text-sm">
+                                <div class="p-6 text-center text-slate-500 dark:text-zinc-400 text-sm">
                                     Belum ada club terdaftar
                                 </div>
                             <?php else: ?>
-                                <ul class="divide-y divide-slate-100">
+                                <ul class="divide-y divide-slate-100 dark:divide-zinc-800">
                                     <?php foreach (array_slice($daftarClub, 0, 8) as $index => $namaClub): ?>
-                                        <li class="px-5 py-2.5 hover:bg-slate-50 transition-colors cursor-pointer"
+                                        <li class="px-5 py-2.5 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                                             onclick="showClubDetail('<?= htmlspecialchars($namaClub, ENT_QUOTES) ?>')">
                                             <div class="flex items-center gap-3">
-                                                <span class="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-xs text-emerald-700 font-medium">
+                                                <span class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-xs text-emerald-700 dark:text-emerald-400 font-medium">
                                                     <?= $index + 1 ?>
                                                 </span>
-                                                <span class="text-sm text-slate-700"><?= htmlspecialchars($namaClub) ?></span>
+                                                <span class="text-sm text-slate-700 dark:text-zinc-300"><?= htmlspecialchars($namaClub) ?></span>
                                             </div>
                                         </li>
                                     <?php endforeach; ?>
@@ -840,7 +841,7 @@ try {
     <!-- Athlete Detail Modal -->
     <div id="athlete-modal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/50" onclick="closeAthleteModal()"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden">
             <div class="bg-gradient-to-br from-archery-600 to-archery-800 text-white px-6 py-4 flex items-center justify-between">
                 <h3 class="font-semibold text-lg" id="modal-title">Detail Atlet</h3>
                 <button onclick="closeAthleteModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
@@ -980,45 +981,45 @@ try {
                             ${name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <h4 class="font-semibold text-lg text-slate-900">${name}</h4>
-                            <p class="text-sm text-slate-500">${data.club || 'No Club'}</p>
+                            <h4 class="font-semibold text-lg text-slate-900 dark:text-white">${name}</h4>
+                            <p class="text-sm text-slate-500 dark:text-zinc-400">${data.club || 'No Club'}</p>
                         </div>
                     </div>
 
                     <!-- Stats Grid -->
                     <div class="grid grid-cols-4 gap-3">
-                        <div class="bg-slate-50 rounded-lg p-3 text-center">
-                            <p class="text-2xl font-bold text-slate-900">${data.total_turnamen || 0}</p>
-                            <p class="text-xs text-slate-500">Turnamen</p>
+                        <div class="bg-slate-50 dark:bg-zinc-800 rounded-lg p-3 text-center">
+                            <p class="text-2xl font-bold text-slate-900 dark:text-white">${data.total_turnamen || 0}</p>
+                            <p class="text-xs text-slate-500 dark:text-zinc-400">Turnamen</p>
                         </div>
-                        <div class="bg-yellow-50 rounded-lg p-3 text-center">
-                            <p class="text-2xl font-bold text-yellow-600">${data.juara1 || 0}</p>
-                            <p class="text-xs text-slate-500">Juara 1</p>
+                        <div class="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-3 text-center">
+                            <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${data.juara1 || 0}</p>
+                            <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 1</p>
                         </div>
-                        <div class="bg-slate-100 rounded-lg p-3 text-center">
-                            <p class="text-2xl font-bold text-slate-600">${data.juara2 || 0}</p>
-                            <p class="text-xs text-slate-500">Juara 2</p>
+                        <div class="bg-slate-100 dark:bg-zinc-700 rounded-lg p-3 text-center">
+                            <p class="text-2xl font-bold text-slate-600 dark:text-zinc-300">${data.juara2 || 0}</p>
+                            <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 2</p>
                         </div>
-                        <div class="bg-amber-50 rounded-lg p-3 text-center">
-                            <p class="text-2xl font-bold text-amber-600">${data.juara3 || 0}</p>
-                            <p class="text-xs text-slate-500">Juara 3</p>
+                        <div class="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-3 text-center">
+                            <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">${data.juara3 || 0}</p>
+                            <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 3</p>
                         </div>
                     </div>
 
                     <!-- Tournament History -->
                     ${data.tournaments && data.tournaments.length > 0 ? `
                         <div>
-                            <h5 class="font-semibold text-slate-900 mb-3">Riwayat Turnamen</h5>
+                            <h5 class="font-semibold text-slate-900 dark:text-white mb-3">Riwayat Turnamen</h5>
                             <div class="space-y-2 max-h-48 overflow-y-auto">
                                 ${data.tournaments.map((t, i) => `
-                                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                    <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-zinc-800 rounded-lg">
                                         <div class="flex items-center gap-3">
-                                            <span class="w-8 h-8 rounded-full ${t.ranking <= 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-200 text-slate-600'} flex items-center justify-center text-sm font-bold">
+                                            <span class="w-8 h-8 rounded-full ${t.ranking <= 3 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400'} flex items-center justify-center text-sm font-bold">
                                                 #${t.ranking}
                                             </span>
                                             <div>
-                                                <p class="text-sm font-medium text-slate-900">${t.nama_kegiatan || 'Turnamen'}</p>
-                                                <p class="text-xs text-slate-500">${t.category || ''} - ${t.total_peserta || 0} peserta</p>
+                                                <p class="text-sm font-medium text-slate-900 dark:text-white">${t.nama_kegiatan || 'Turnamen'}</p>
+                                                <p class="text-xs text-slate-500 dark:text-zinc-400">${t.category || ''} - ${t.total_peserta || 0} peserta</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1026,7 +1027,7 @@ try {
                             </div>
                         </div>
                     ` : `
-                        <div class="text-center py-4 text-slate-500 text-sm">
+                        <div class="text-center py-4 text-slate-500 dark:text-zinc-400 text-sm">
                             Belum ada riwayat turnamen
                         </div>
                     `}
@@ -1054,6 +1055,9 @@ try {
                 closeAthleteModal();
             }
         });
+
+        // Theme Toggle Functionality
+        <?= getThemeToggleScript() ?>
     </script>
 </body>
 </html>

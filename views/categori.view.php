@@ -1,6 +1,7 @@
 <?php
 include '../config/panggil.php';
 include '../includes/check_access.php';
+include '../includes/theme.php';
 requireAdmin();
 
 // Toast message handling
@@ -106,27 +107,17 @@ $role = $_SESSION['role'] ?? 'user';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Categories - Turnamen Panahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'archery': {
-                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
-                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
-                            800: '#166534', 900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script><?= getThemeTailwindConfig() ?></script>
+    <script><?= getThemeInitScript() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: #27272a; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #52525b; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #71717a; }
         /* Modal backdrop */
         .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 40; }
         .modal-backdrop.active { display: flex; align-items: center; justify-content: center; }
@@ -137,7 +128,7 @@ $role = $_SESSION['role'] ?? 'user';
         @keyframes slideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
     </style>
 </head>
-<body class="h-full bg-slate-50">
+<body class="h-full bg-slate-50 dark:bg-zinc-950 transition-colors">
     <div class="flex h-full">
         <!-- Sidebar -->
         <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white">
@@ -195,6 +186,7 @@ $role = $_SESSION['role'] ?? 'user';
                         <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
                         <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
                     </div>
+                    <?= getThemeToggleButton() ?>
                 </div>
                 <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
@@ -226,16 +218,16 @@ $role = $_SESSION['role'] ?? 'user';
 
             <div class="px-6 lg:px-8 py-6">
                 <!-- Compact Header with Metrics -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
-                    <div class="px-6 py-4 border-b border-slate-100">
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm mb-6">
+                    <div class="px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div class="flex items-center gap-3">
-                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
                                     <i class="fas fa-arrow-left"></i>
                                 </a>
                                 <div>
-                                    <h1 class="text-lg font-semibold text-slate-900">Data Kategori</h1>
-                                    <p class="text-sm text-slate-500">Kelola kategori umur & kuota peserta</p>
+                                    <h1 class="text-lg font-semibold text-slate-900 dark:text-white">Data Kategori</h1>
+                                    <p class="text-sm text-slate-500 dark:text-zinc-400">Kelola kategori umur & kuota peserta</p>
                                 </div>
                             </div>
                             <button onclick="openModal('addModal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
@@ -246,38 +238,38 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
 
                     <!-- Metrics Bar -->
-                    <div class="px-6 py-3 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                    <div class="px-6 py-3 bg-slate-50 dark:bg-zinc-800/50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         <div class="flex items-center gap-2">
-                            <span class="text-2xl font-bold text-slate-900"><?= $stats['total_categories'] ?? 0 ?></span>
-                            <span class="text-slate-500">Kategori</span>
+                            <span class="text-2xl font-bold text-slate-900 dark:text-white"><?= $stats['total_categories'] ?? 0 ?></span>
+                            <span class="text-slate-500 dark:text-zinc-400">Kategori</span>
                         </div>
-                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-mars text-blue-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $stats['male_categories'] ?? 0 ?></span>
-                            <span class="text-slate-400">Putra</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $stats['male_categories'] ?? 0 ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Putra</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-venus text-pink-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $stats['female_categories'] ?? 0 ?></span>
-                            <span class="text-slate-400">Putri</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $stats['female_categories'] ?? 0 ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Putri</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-venus-mars text-purple-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $stats['mixed_categories'] ?? 0 ?></span>
-                            <span class="text-slate-400">Campuran</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $stats['mixed_categories'] ?? 0 ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Campuran</span>
                         </div>
-                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-users text-archery-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $stats['total_registered'] ?? 0 ?></span>
-                            <span class="text-slate-400">Terdaftar</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $stats['total_registered'] ?? 0 ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Terdaftar</span>
                         </div>
                         <?php if (($stats['total_quota'] ?? 0) > 0): ?>
                         <div class="flex items-center gap-1.5">
-                            <span class="text-slate-400">/</span>
-                            <span class="font-medium text-slate-700"><?= $stats['total_quota'] ?></span>
-                            <span class="text-slate-400">Kuota</span>
+                            <span class="text-slate-400 dark:text-zinc-500">/</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $stats['total_quota'] ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Kuota</span>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -287,9 +279,9 @@ $role = $_SESSION['role'] ?? 'user';
                 <div class="flex flex-col sm:flex-row gap-4 mb-6">
                     <form method="get" class="flex-1 flex gap-2">
                         <div class="relative flex-1">
-                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 text-xs"></i>
                             <input type="search" name="q" value="<?= htmlspecialchars($search) ?>"
-                                   class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50"
+                                   class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white"
                                    placeholder="Cari kategori...">
                         </div>
                         <button type="submit" class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
@@ -297,7 +289,7 @@ $role = $_SESSION['role'] ?? 'user';
                             <span class="hidden sm:inline">Cari</span>
                         </button>
                         <?php if (!empty($search)): ?>
-                        <a href="?" class="px-3 py-2 rounded-lg border border-slate-200 text-slate-500 text-sm hover:bg-slate-50 transition-colors">
+                        <a href="?" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 text-sm hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
                             <i class="fas fa-times"></i>
                         </a>
                         <?php endif; ?>
@@ -305,20 +297,20 @@ $role = $_SESSION['role'] ?? 'user';
                 </div>
 
                 <!-- Data Table -->
-                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar">
                         <table class="w-full">
-                            <thead class="bg-slate-100 sticky top-0 z-10">
+                            <thead class="bg-slate-100 dark:bg-zinc-800 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">Rentang Umur</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">Gender</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-48">Kuota & Kapasitas</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">Aksi</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-12">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-28">Rentang Umur</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-24">Gender</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-48">Kuota & Kapasitas</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-24">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
                                 <?php
                                 if ($result->num_rows > 0):
                                     $no = 1;
@@ -329,28 +321,28 @@ $role = $_SESSION['role'] ?? 'user';
                                         $isOverCapacity = $quota > 0 && $registered > $quota;
                                         $gender = $row['gender'] ?? 'Campuran';
                                 ?>
-                                <tr class="hover:bg-slate-50 transition-colors">
-                                    <td class="px-4 py-3 text-sm text-slate-500"><?= $no++; ?></td>
+                                <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+                                    <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++; ?></td>
                                     <td class="px-4 py-3">
-                                        <p class="font-medium text-slate-900"><?= htmlspecialchars($row['name']); ?></p>
-                                        <p class="text-xs text-slate-400">Lahir <?= date("Y") - $row['max_age']; ?> – <?= date("Y") - $row['min_age']; ?></p>
+                                        <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($row['name']); ?></p>
+                                        <p class="text-xs text-slate-400 dark:text-zinc-500">Lahir <?= date("Y") - $row['max_age']; ?> – <?= date("Y") - $row['min_age']; ?></p>
                                     </td>
                                     <td class="px-4 py-3 text-center">
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300">
                                             <?= $row['min_age']; ?> – <?= $row['max_age']; ?> th
                                         </span>
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <?php if ($gender === 'Laki-laki'): ?>
-                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
                                                 <i class="fas fa-mars"></i> Putra
                                             </span>
                                         <?php elseif ($gender === 'Perempuan'): ?>
-                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-pink-50 text-pink-700">
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400">
                                                 <i class="fas fa-venus"></i> Putri
                                             </span>
                                         <?php else: ?>
-                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
                                                 <i class="fas fa-venus-mars"></i> Campuran
                                             </span>
                                         <?php endif; ?>
@@ -360,16 +352,16 @@ $role = $_SESSION['role'] ?? 'user';
                                             <!-- Usage Bar -->
                                             <div class="flex items-center gap-3">
                                                 <div class="flex-1">
-                                                    <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
+                                                    <div class="h-2 bg-slate-200 dark:bg-zinc-700 rounded-full overflow-hidden">
                                                         <div class="h-full rounded-full transition-all duration-300 <?= $isOverCapacity ? 'bg-red-500' : ($percentage >= 80 ? 'bg-amber-500' : 'bg-archery-500') ?>"
                                                              style="width: <?= min(100, $percentage) ?>%"></div>
                                                     </div>
                                                 </div>
-                                                <span class="text-xs font-medium <?= $isOverCapacity ? 'text-red-600' : 'text-slate-600' ?> whitespace-nowrap">
+                                                <span class="text-xs font-medium <?= $isOverCapacity ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-zinc-400' ?> whitespace-nowrap">
                                                     <?= $registered ?>/<?= $quota ?>
                                                 </span>
                                             </div>
-                                            <p class="text-xs <?= $isOverCapacity ? 'text-red-500' : ($percentage >= 80 ? 'text-amber-500' : 'text-slate-400') ?> mt-1">
+                                            <p class="text-xs <?= $isOverCapacity ? 'text-red-500 dark:text-red-400' : ($percentage >= 80 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-zinc-500') ?> mt-1">
                                                 <?php if ($isOverCapacity): ?>
                                                     <i class="fas fa-exclamation-triangle"></i> Melebihi kuota!
                                                 <?php elseif ($percentage >= 80): ?>
@@ -380,19 +372,19 @@ $role = $_SESSION['role'] ?? 'user';
                                             </p>
                                         <?php else: ?>
                                             <div class="flex items-center gap-2">
-                                                <span class="text-sm text-slate-600"><?= $registered ?> terdaftar</span>
-                                                <span class="text-xs text-slate-400">(tanpa batas)</span>
+                                                <span class="text-sm text-slate-600 dark:text-zinc-400"><?= $registered ?> terdaftar</span>
+                                                <span class="text-xs text-slate-400 dark:text-zinc-500">(tanpa batas)</span>
                                             </div>
                                         <?php endif; ?>
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-center gap-1">
                                             <button onclick="editData(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>', <?= $row['min_age'] ?>, <?= $row['max_age'] ?>, '<?= addslashes($gender) ?>', <?= $quota ?>)"
-                                                    class="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Edit">
+                                                    class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                 <i class="fas fa-edit text-sm"></i>
                                             </button>
                                             <button onclick="deleteData(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>')"
-                                                    class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
+                                                    class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                 <i class="fas fa-trash text-sm"></i>
                                             </button>
                                         </div>
@@ -405,11 +397,11 @@ $role = $_SESSION['role'] ?? 'user';
                                 <tr>
                                     <td colspan="6" class="px-4 py-12">
                                         <div class="flex flex-col items-center text-center">
-                                            <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                                                <i class="fas fa-inbox text-slate-400 text-2xl"></i>
+                                            <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+                                                <i class="fas fa-inbox text-slate-400 dark:text-zinc-500 text-2xl"></i>
                                             </div>
-                                            <p class="text-slate-500 font-medium">Tidak ada data kategori</p>
-                                            <p class="text-slate-400 text-sm mb-4">Silakan tambahkan kategori baru</p>
+                                            <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada data kategori</p>
+                                            <p class="text-slate-400 dark:text-zinc-500 text-sm mb-4">Silakan tambahkan kategori baru</p>
                                             <button onclick="openModal('addModal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                                 <i class="fas fa-plus"></i> Tambah Kategori
                                             </button>
@@ -421,8 +413,8 @@ $role = $_SESSION['role'] ?? 'user';
                         </table>
                     </div>
                     <?php if ($result->num_rows > 0): ?>
-                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 text-sm text-slate-500">
-                        Menampilkan <?= $result->num_rows ?> kategori<?php if (!empty($search)): ?> <span class="text-slate-400">• filtered</span><?php endif; ?>
+                    <div class="px-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-100 dark:border-zinc-800 text-sm text-slate-500 dark:text-zinc-400">
+                        Menampilkan <?= $result->num_rows ?> kategori<?php if (!empty($search)): ?> <span class="text-slate-400 dark:text-zinc-500">• filtered</span><?php endif; ?>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -432,7 +424,7 @@ $role = $_SESSION['role'] ?? 'user';
 
     <!-- Add Modal -->
     <div id="addModal" class="modal-backdrop">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div class="bg-gradient-to-br from-archery-600 to-archery-800 text-white px-6 py-4 flex items-center justify-between">
                 <h3 class="font-semibold text-lg flex items-center gap-2">
                     <i class="fas fa-plus-circle"></i> Tambah Kategori
@@ -445,35 +437,35 @@ $role = $_SESSION['role'] ?? 'user';
                 <div class="p-6 space-y-4">
                     <input type="hidden" name="action" value="create">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Nama Kategori <span class="text-red-500">*</span></label>
-                        <input type="text" name="name" class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" placeholder="Contoh: Junior A" required>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Kategori <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" placeholder="Contoh: Junior A" required>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Min Age <span class="text-red-500">*</span></label>
-                            <input type="number" name="min_age" class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500" placeholder="0" required>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Min Age <span class="text-red-500">*</span></label>
+                            <input type="number" name="min_age" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500" placeholder="0" required>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Max Age <span class="text-red-500">*</span></label>
-                            <input type="number" name="max_age" class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500" placeholder="99" required>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Max Age <span class="text-red-500">*</span></label>
+                            <input type="number" name="max_age" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500" placeholder="99" required>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Gender</label>
-                        <select name="gender" class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Gender</label>
+                        <select name="gender" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500">
                             <option value="Campuran">Campuran (Putra & Putri)</option>
                             <option value="Laki-laki">Putra</option>
                             <option value="Perempuan">Putri</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Kuota Peserta</label>
-                        <input type="number" name="quota" min="0" class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500" placeholder="0 = Tanpa Batas">
-                        <p class="text-xs text-slate-400 mt-1">Kosongkan atau isi 0 untuk tanpa batas kuota</p>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kuota Peserta</label>
+                        <input type="number" name="quota" min="0" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500" placeholder="0 = Tanpa Batas">
+                        <p class="text-xs text-slate-400 dark:text-zinc-500 mt-1">Kosongkan atau isi 0 untuk tanpa batas kuota</p>
                     </div>
                 </div>
-                <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
-                    <button type="button" onclick="closeModal('addModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition-colors">
+                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
+                    <button type="button" onclick="closeModal('addModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
                         Batal
                     </button>
                     <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
@@ -486,7 +478,7 @@ $role = $_SESSION['role'] ?? 'user';
 
     <!-- Edit Modal -->
     <div id="editModal" class="modal-backdrop">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div class="bg-gradient-to-br from-blue-600 to-blue-800 text-white px-6 py-4 flex items-center justify-between">
                 <h3 class="font-semibold text-lg flex items-center gap-2">
                     <i class="fas fa-edit"></i> Edit Kategori
@@ -500,34 +492,34 @@ $role = $_SESSION['role'] ?? 'user';
                     <input type="hidden" name="action" value="update">
                     <input type="hidden" name="id" id="edit_id">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Nama Kategori <span class="text-red-500">*</span></label>
-                        <input type="text" name="name" id="edit_name" class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Kategori <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" id="edit_name" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Min Age <span class="text-red-500">*</span></label>
-                            <input type="number" name="min_age" id="edit_min_age" class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500" required>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Min Age <span class="text-red-500">*</span></label>
+                            <input type="number" name="min_age" id="edit_min_age" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500" required>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Max Age <span class="text-red-500">*</span></label>
-                            <input type="number" name="max_age" id="edit_max_age" class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500" required>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Max Age <span class="text-red-500">*</span></label>
+                            <input type="number" name="max_age" id="edit_max_age" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500" required>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Gender</label>
-                        <select name="gender" id="edit_gender" class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Gender</label>
+                        <select name="gender" id="edit_gender" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500">
                             <option value="Campuran">Campuran (Putra & Putri)</option>
                             <option value="Laki-laki">Putra</option>
                             <option value="Perempuan">Putri</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Kuota Peserta</label>
-                        <input type="number" name="quota" id="edit_quota" min="0" class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500" placeholder="0 = Tanpa Batas">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kuota Peserta</label>
+                        <input type="number" name="quota" id="edit_quota" min="0" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500" placeholder="0 = Tanpa Batas">
                     </div>
                 </div>
-                <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
-                    <button type="button" onclick="closeModal('editModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition-colors">
+                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
+                    <button type="button" onclick="closeModal('editModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
                         Batal
                     </button>
                     <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
@@ -540,7 +532,7 @@ $role = $_SESSION['role'] ?? 'user';
 
     <!-- Delete Modal -->
     <div id="deleteModal" class="modal-backdrop">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div class="bg-gradient-to-br from-red-600 to-red-800 text-white px-6 py-4 flex items-center justify-between">
                 <h3 class="font-semibold text-lg flex items-center gap-2">
                     <i class="fas fa-exclamation-triangle"></i> Hapus Kategori
@@ -550,16 +542,16 @@ $role = $_SESSION['role'] ?? 'user';
                 </button>
             </div>
             <div class="p-6">
-                <p class="text-slate-700">Apakah Anda yakin ingin menghapus kategori <strong id="delete_name" class="text-red-600"></strong>?</p>
-                <p class="text-sm text-slate-500 mt-2">
+                <p class="text-slate-700 dark:text-zinc-300">Apakah Anda yakin ingin menghapus kategori <strong id="delete_name" class="text-red-600 dark:text-red-400"></strong>?</p>
+                <p class="text-sm text-slate-500 dark:text-zinc-400 mt-2">
                     <i class="fas fa-info-circle mr-1"></i> Tindakan ini tidak dapat dibatalkan!
                 </p>
             </div>
             <form method="POST">
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" id="delete_id">
-                <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
-                    <button type="button" onclick="closeModal('deleteModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition-colors">
+                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
+                    <button type="button" onclick="closeModal('deleteModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
                         Batal
                     </button>
                     <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">
@@ -700,6 +692,9 @@ $role = $_SESSION['role'] ?? 'user';
                 }
             });
         });
+
+        // Theme Toggle
+        <?= getThemeToggleScript() ?>
     </script>
 </body>
 </html>

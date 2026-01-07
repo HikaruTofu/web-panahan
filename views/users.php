@@ -5,6 +5,7 @@
  */
 include '../config/panggil.php';
 include '../includes/check_access.php';
+include '../includes/theme.php';
 requireAdmin();
 
 // Filter by search query (UNCHANGED - same GET parameter name)
@@ -50,30 +51,20 @@ $role = $_SESSION['role'] ?? 'user';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manajemen User - Turnamen Panahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'archery': {
-                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
-                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
-                            800: '#166534', 900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script><?= getThemeTailwindConfig() ?></script>
+    <script><?= getThemeInitScript() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: #27272a; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #52525b; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #71717a; }
     </style>
 </head>
-<body class="h-full bg-slate-50">
+<body class="h-full bg-slate-50 dark:bg-zinc-950 transition-colors">
     <div class="flex h-full">
         <!-- Sidebar (consistent with Dashboard) -->
         <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white">
@@ -131,6 +122,7 @@ $role = $_SESSION['role'] ?? 'user';
                         <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
                         <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
                     </div>
+                    <?= getThemeToggleButton() ?>
                 </div>
                 <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
@@ -149,16 +141,16 @@ $role = $_SESSION['role'] ?? 'user';
         <main class="flex-1 overflow-auto">
             <div class="px-6 lg:px-8 py-6">
                 <!-- Compact Header with Metrics -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
-                    <div class="px-6 py-4 border-b border-slate-100">
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm mb-6">
+                    <div class="px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div class="flex items-center gap-3">
-                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
                                     <i class="fas fa-arrow-left"></i>
                                 </a>
                                 <div>
-                                    <h1 class="text-lg font-semibold text-slate-900">Manajemen User</h1>
-                                    <p class="text-sm text-slate-500">Kelola akun pengguna sistem</p>
+                                    <h1 class="text-lg font-semibold text-slate-900 dark:text-white">Manajemen User</h1>
+                                    <p class="text-sm text-slate-500 dark:text-zinc-400">Kelola akun pengguna sistem</p>
                                 </div>
                             </div>
                             <a href="tambah-user.php" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
@@ -169,33 +161,33 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
 
                     <!-- Metrics Bar -->
-                    <div class="px-6 py-3 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                    <div class="px-6 py-3 bg-slate-50 dark:bg-zinc-800/50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         <div class="flex items-center gap-2">
-                            <span class="text-2xl font-bold text-slate-900"><?= count($users) ?></span>
-                            <span class="text-slate-500">Total User</span>
+                            <span class="text-2xl font-bold text-slate-900 dark:text-white"><?= count($users) ?></span>
+                            <span class="text-slate-500 dark:text-zinc-400">Total User</span>
                         </div>
-                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-shield-alt text-purple-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $adminCount ?></span>
-                            <span class="text-slate-400">Admin</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $adminCount ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Admin</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-user text-blue-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $userCount ?></span>
-                            <span class="text-slate-400">User</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $userCount ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">User</span>
                         </div>
-                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-check-circle text-emerald-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $activeCount ?></span>
-                            <span class="text-slate-400">Aktif</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $activeCount ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Aktif</span>
                         </div>
                         <?php if ($inactiveCount > 0): ?>
                         <div class="flex items-center gap-1.5">
-                            <i class="fas fa-pause-circle text-slate-400 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $inactiveCount ?></span>
-                            <span class="text-slate-400">Nonaktif</span>
+                            <i class="fas fa-pause-circle text-slate-400 dark:text-zinc-500 text-xs"></i>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $inactiveCount ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Nonaktif</span>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -206,10 +198,10 @@ $role = $_SESSION['role'] ?? 'user';
                     <!-- FORM: method=get (UNCHANGED) -->
                     <form method="get" class="flex-1 flex gap-2">
                         <div class="relative flex-1">
-                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 text-xs"></i>
                             <!-- INPUT: name="q" (UNCHANGED) -->
                             <input type="search" name="q" value="<?= htmlspecialchars($searchQuery) ?>"
-                                   class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50"
+                                   class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white"
                                    placeholder="Cari berdasarkan nama atau email...">
                         </div>
                         <button type="submit" class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
@@ -217,7 +209,7 @@ $role = $_SESSION['role'] ?? 'user';
                             <span class="hidden sm:inline">Cari</span>
                         </button>
                         <?php if (!empty($searchQuery)): ?>
-                        <a href="?" class="px-3 py-2 rounded-lg border border-slate-200 text-slate-500 text-sm hover:bg-slate-50 transition-colors">
+                        <a href="?" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 text-sm hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
                             <i class="fas fa-times"></i>
                         </a>
                         <?php endif; ?>
@@ -225,53 +217,53 @@ $role = $_SESSION['role'] ?? 'user';
                 </div>
 
                 <!-- Data Table -->
-                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden shadow-sm">
                     <div class="overflow-x-auto custom-scrollbar">
                         <table class="w-full">
-                            <thead class="bg-slate-100 sticky top-0 z-10">
+                            <thead class="bg-slate-100 dark:bg-zinc-800 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">User</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Email</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">Role</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">Status</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">Aksi</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-12">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">User</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Email</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-28">Role</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-28">Status</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-24">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
                                 <?php if (count($users) > 0): ?>
                                     <?php $no = 1; foreach ($users as $row): ?>
-                                        <tr class="hover:bg-slate-50 transition-colors">
-                                            <td class="px-4 py-3 text-sm text-slate-500"><?= $no++ ?></td>
+                                        <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+                                            <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++ ?></td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center gap-3">
                                                     <div class="w-9 h-9 rounded-full bg-gradient-to-br from-archery-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                                                         <?= strtoupper(substr($row['name'], 0, 1)) ?>
                                                     </div>
-                                                    <p class="font-medium text-slate-900"><?= htmlspecialchars($row['name']) ?></p>
+                                                    <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($row['name']) ?></p>
                                                 </div>
                                             </td>
                                             <td class="px-4 py-3">
-                                                <span class="text-sm text-slate-600"><?= htmlspecialchars($row['email']) ?></span>
+                                                <span class="text-sm text-slate-600 dark:text-zinc-400"><?= htmlspecialchars($row['email']) ?></span>
                                             </td>
                                             <td class="px-4 py-3 text-center">
                                                 <?php if (strtolower($row['role']) === 'admin'): ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
                                                         <i class="fas fa-shield-alt"></i> Admin
                                                     </span>
                                                 <?php else: ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400">
                                                         <i class="fas fa-user"></i> User
                                                     </span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
                                                 <?php if (strtolower($row['status'] ?? 'active') === 'active'): ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
                                                         <i class="fas fa-check-circle"></i> Aktif
                                                     </span>
                                                 <?php else: ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-500 dark:text-zinc-400">
                                                         <i class="fas fa-pause-circle"></i> Nonaktif
                                                     </span>
                                                 <?php endif; ?>
@@ -280,13 +272,13 @@ $role = $_SESSION['role'] ?? 'user';
                                                 <div class="flex items-center justify-center gap-1">
                                                     <!-- LINK: edit-user.php?id=... (UNCHANGED) -->
                                                     <a href="edit-user.php?id=<?= $row['id'] ?>"
-                                                       class="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Edit">
+                                                       class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit text-sm"></i>
                                                     </a>
                                                     <!-- LINK: hapus-user.php?id=... (UNCHANGED) -->
                                                     <a href="hapus-user.php?id=<?= $row['id'] ?>"
                                                        onclick="return confirm('Yakin ingin menghapus user <?= htmlspecialchars($row['name']) ?>?')"
-                                                       class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
+                                                       class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                         <i class="fas fa-trash text-sm"></i>
                                                     </a>
                                                 </div>
@@ -297,14 +289,14 @@ $role = $_SESSION['role'] ?? 'user';
                                     <tr>
                                         <td colspan="6" class="px-4 py-12">
                                             <div class="flex flex-col items-center text-center">
-                                                <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                                                    <i class="fas fa-users text-slate-400 text-2xl"></i>
+                                                <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+                                                    <i class="fas fa-users text-slate-400 dark:text-zinc-500 text-2xl"></i>
                                                 </div>
-                                                <p class="text-slate-500 font-medium">Tidak ada user ditemukan</p>
+                                                <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada user ditemukan</p>
                                                 <?php if (!empty($searchQuery)): ?>
-                                                    <p class="text-slate-400 text-sm mb-4">Ubah kata kunci pencarian</p>
+                                                    <p class="text-slate-400 dark:text-zinc-500 text-sm mb-4">Ubah kata kunci pencarian</p>
                                                 <?php else: ?>
-                                                    <p class="text-slate-400 text-sm mb-4">Tambahkan user baru untuk memulai</p>
+                                                    <p class="text-slate-400 dark:text-zinc-500 text-sm mb-4">Tambahkan user baru untuk memulai</p>
                                                     <a href="tambah-user.php" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                                         <i class="fas fa-plus"></i> Tambah User
                                                     </a>
@@ -317,8 +309,8 @@ $role = $_SESSION['role'] ?? 'user';
                         </table>
                     </div>
                     <?php if (count($users) > 0): ?>
-                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 text-sm text-slate-500">
-                        Menampilkan <?= count($users) ?> user<?php if (!empty($searchQuery)): ?> <span class="text-slate-400">• filtered</span><?php endif; ?>
+                    <div class="px-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-100 dark:border-zinc-800 text-sm text-slate-500 dark:text-zinc-400">
+                        Menampilkan <?= count($users) ?> user<?php if (!empty($searchQuery)): ?> <span class="text-slate-400 dark:text-zinc-500">• filtered</span><?php endif; ?>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -384,6 +376,9 @@ $role = $_SESSION['role'] ?? 'user';
         mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
         mobileOverlay?.addEventListener('click', toggleMobileMenu);
         closeMobileMenu?.addEventListener('click', toggleMobileMenu);
+
+        // Theme Toggle
+        <?= getThemeToggleScript() ?>
     </script>
 </body>
 </html>

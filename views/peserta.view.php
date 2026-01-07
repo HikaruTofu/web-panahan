@@ -5,6 +5,7 @@
  */
 include '../config/panggil.php';
 include '../includes/check_access.php';
+include '../includes/theme.php';
 requireAdmin();
 
 // Handle update request (UNCHANGED)
@@ -343,30 +344,22 @@ $role = $_SESSION['role'] ?? 'user';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Peserta - Turnamen Panahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'archery': {
-                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
-                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
-                            800: '#166534', 900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script><?= getThemeTailwindConfig() ?></script>
+    <script><?= getThemeInitScript() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Dark mode scrollbar */
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: #27272a; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #52525b; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #71717a; }
     </style>
 </head>
-<body class="h-full bg-slate-50">
+<body class="h-full bg-slate-50 dark:bg-zinc-950 transition-colors">
     <div class="flex h-full">
         <!-- Sidebar -->
         <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white">
@@ -424,6 +417,8 @@ $role = $_SESSION['role'] ?? 'user';
                         <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
                         <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
                     </div>
+                    <!-- Theme Toggle -->
+                    <?= getThemeToggleButton() ?>
                 </div>
                 <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
@@ -463,16 +458,16 @@ $role = $_SESSION['role'] ?? 'user';
                 <?php endif; ?>
 
                 <!-- Compact Header with Metrics -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
-                    <div class="px-6 py-4 border-b border-slate-100">
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm mb-6 transition-colors">
+                    <div class="px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div class="flex items-center gap-3">
-                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
                                     <i class="fas fa-arrow-left"></i>
                                 </a>
                                 <div>
-                                    <h1 class="text-lg font-semibold text-slate-900">Data Peserta</h1>
-                                    <p class="text-sm text-slate-500">Kelola data peserta turnamen panahan</p>
+                                    <h1 class="text-lg font-semibold text-slate-900 dark:text-white">Data Peserta</h1>
+                                    <p class="text-sm text-slate-500 dark:text-zinc-400">Kelola data peserta turnamen panahan</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
@@ -502,49 +497,49 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
 
                     <!-- Metrics Bar -->
-                    <div class="px-6 py-3 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                    <div class="px-6 py-3 bg-slate-50 dark:bg-zinc-800 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         <div class="flex items-center gap-2">
-                            <span class="text-2xl font-bold text-slate-900"><?= $uniqueCount ?></span>
-                            <span class="text-slate-500">Peserta Unik</span>
+                            <span class="text-2xl font-bold text-slate-900 dark:text-white"><?= $uniqueCount ?></span>
+                            <span class="text-slate-500 dark:text-zinc-400">Peserta Unik</span>
                         </div>
-                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
-                            <span class="text-slate-400 text-xs">Total Entri:</span>
-                            <span class="font-medium text-slate-700"><?= $totalPeserta ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500 text-xs">Total Entri:</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalPeserta ?></span>
                         </div>
-                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-mars text-blue-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $totalLaki ?></span>
-                            <span class="text-slate-400">Laki-laki</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalLaki ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Laki-laki</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-venus text-pink-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $totalPerempuan ?></span>
-                            <span class="text-slate-400">Perempuan</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalPerempuan ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Perempuan</span>
                         </div>
-                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-check-circle text-emerald-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $totalBayar ?></span>
-                            <span class="text-slate-400">Sudah Bayar</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalBayar ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Sudah Bayar</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Filter Form -->
-                <div class="bg-white rounded-xl border border-slate-200 p-5 mb-6">
-                    <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                        <i class="fas fa-filter text-slate-400"></i>
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 mb-6 transition-colors">
+                    <h3 class="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                        <i class="fas fa-filter text-slate-400 dark:text-zinc-500"></i>
                         Filter Pencarian
                     </h3>
                     <!-- FORM: method=get, no action (UNCHANGED) -->
                     <form method="get" id="filterForm">
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kategori</label>
                                 <!-- SELECT: name="category_id" (UNCHANGED) -->
-                                <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="category_id">
+                                <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="category_id">
                                     <option value="">Semua Kategori</option>
                                     <?php foreach ($kategoriList as $kat): ?>
                                         <option value="<?= $kat['id'] ?>" <?= $category_id==$kat['id']?'selected':'' ?>>
@@ -554,9 +549,9 @@ $role = $_SESSION['role'] ?? 'user';
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Kegiatan</label>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kegiatan</label>
                                 <!-- SELECT: name="kegiatan_id" (UNCHANGED) -->
-                                <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="kegiatan_id">
+                                <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="kegiatan_id">
                                     <option value="">Semua Kegiatan</option>
                                     <?php foreach ($kegiatanList as $keg): ?>
                                         <option value="<?= $keg['id'] ?>" <?= $kegiatan_id==$keg['id']?'selected':'' ?>>
@@ -566,29 +561,29 @@ $role = $_SESSION['role'] ?? 'user';
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Gender</label>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Gender</label>
                                 <!-- SELECT: name="gender" (UNCHANGED) -->
-                                <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="gender">
+                                <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="gender">
                                     <option value="">Semua</option>
                                     <option value="Laki-laki" <?= $gender=="Laki-laki"?'selected':'' ?>>Laki-laki</option>
                                     <option value="Perempuan" <?= $gender=="Perempuan"?'selected':'' ?>>Perempuan</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Nama</label>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama</label>
                                 <!-- INPUT: name="nama" (UNCHANGED) -->
-                                <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="nama" value="<?= htmlspecialchars($nama) ?>" placeholder="Cari nama...">
+                                <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="nama" value="<?= htmlspecialchars($nama) ?>" placeholder="Cari nama...">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Club</label>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Club</label>
                                 <!-- INPUT: name="club" (UNCHANGED) -->
-                                <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="club" value="<?= htmlspecialchars($club) ?>" placeholder="Nama club...">
+                                <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="club" value="<?= htmlspecialchars($club) ?>" placeholder="Nama club...">
                             </div>
                             <div class="flex items-end gap-2">
                                 <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                     <i class="fas fa-search mr-1"></i> Cari
                                 </button>
-                                <a href="?" class="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50 transition-colors">
+                                <a href="?" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 text-sm hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
                                     <i class="fas fa-redo"></i>
                                 </a>
                             </div>
@@ -598,40 +593,40 @@ $role = $_SESSION['role'] ?? 'user';
 
                 <!-- Info Alert for Duplicates -->
                 <?php if ($totalPeserta > $uniqueCount): ?>
-                <div class="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
+                <div class="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">
                     <i class="fas fa-info-circle text-blue-500"></i>
                     <span class="text-sm">Ditemukan <?= $totalPeserta - $uniqueCount ?> peserta dengan nama yang sama. Data telah digabungkan.</span>
                 </div>
                 <?php endif; ?>
 
                 <!-- Data Table -->
-                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden transition-colors">
                     <div class="overflow-x-auto custom-scrollbar" style="max-height: 65vh;">
                         <table class="w-full">
-                            <thead class="bg-slate-100 sticky top-0 z-10">
+                            <thead class="bg-slate-100 dark:bg-zinc-800 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kegiatan</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Umur</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Gender</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Club</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Sekolah</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Aksi</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-12">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Nama</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kegiatan</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Umur</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Gender</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Club</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Sekolah</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
                                 <?php if (empty($pesertaGrouped)): ?>
                                     <tr>
                                         <td colspan="10" class="px-4 py-12 text-center">
                                             <div class="flex flex-col items-center">
-                                                <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                                                    <i class="fas fa-inbox text-slate-400 text-2xl"></i>
+                                                <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+                                                    <i class="fas fa-inbox text-slate-400 dark:text-zinc-500 text-2xl"></i>
                                                 </div>
-                                                <p class="text-slate-500 font-medium">Tidak ada data peserta</p>
-                                                <p class="text-slate-400 text-sm">Ubah filter pencarian atau tambah peserta baru</p>
+                                                <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada data peserta</p>
+                                                <p class="text-slate-400 dark:text-zinc-500 text-sm">Ubah filter pencarian atau tambah peserta baru</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -652,64 +647,64 @@ $role = $_SESSION['role'] ?? 'user';
 
                                         $hasBayar = !empty($p['bukti_pembayaran']);
                                     ?>
-                                        <tr class="hover:bg-slate-50 transition-colors">
-                                            <td class="px-4 py-3 text-sm text-slate-500"><?= $no++ ?></td>
+                                        <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+                                            <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++ ?></td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center gap-2">
-                                                    <p class="font-medium text-slate-900"><?= htmlspecialchars($nama) ?></p>
+                                                    <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($nama) ?></p>
                                                     <?php if ($recordCount > 1): ?>
-                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
                                                             x<?= $recordCount ?>
                                                         </span>
                                                     <?php endif; ?>
                                                 </div>
-                                                <p class="text-xs text-slate-400">ID: <?= implode(', ', $group['ids']) ?></p>
+                                                <p class="text-xs text-slate-400 dark:text-zinc-500">ID: <?= implode(', ', $group['ids']) ?></p>
                                             </td>
                                             <td class="px-4 py-3">
                                                 <?php if (!empty($group['categories'])): ?>
                                                     <div class="flex flex-wrap gap-1">
                                                         <?php foreach ($group['categories'] as $cat): ?>
-                                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-700"><?= htmlspecialchars($cat) ?></span>
+                                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400"><?= htmlspecialchars($cat) ?></span>
                                                         <?php endforeach; ?>
                                                     </div>
                                                 <?php else: ?>
-                                                    <span class="text-slate-400 text-xs">-</span>
+                                                    <span class="text-slate-400 dark:text-zinc-500 text-xs">-</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3">
                                                 <?php if (!empty($group['kegiatan'])): ?>
                                                     <div class="flex flex-wrap gap-1">
                                                         <?php foreach ($group['kegiatan'] as $keg): ?>
-                                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"><?= htmlspecialchars($keg) ?></span>
+                                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"><?= htmlspecialchars($keg) ?></span>
                                                         <?php endforeach; ?>
                                                     </div>
                                                 <?php else: ?>
-                                                    <span class="text-slate-400 text-xs">-</span>
+                                                    <span class="text-slate-400 dark:text-zinc-500 text-xs">-</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="px-4 py-3 text-center text-sm text-slate-600"><?= $umur ?></td>
+                                            <td class="px-4 py-3 text-center text-sm text-slate-600 dark:text-zinc-400"><?= $umur ?></td>
                                             <td class="px-4 py-3 text-center">
-                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700' ?>">
+                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400' ?>">
                                                     <i class="fas <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?> text-xs"></i>
                                                     <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'L' : 'P' ?>
                                                 </span>
                                             </td>
-                                            <td class="px-4 py-3 text-sm text-slate-600 max-w-32 truncate" title="<?= htmlspecialchars($p['nama_club'] ?? '') ?>">
+                                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-zinc-400 max-w-32 truncate" title="<?= htmlspecialchars($p['nama_club'] ?? '') ?>">
                                                 <?= htmlspecialchars($p['nama_club'] ?? '-') ?>
                                             </td>
-                                            <td class="px-4 py-3 text-sm text-slate-600 max-w-32 truncate" title="<?= htmlspecialchars($p['sekolah'] ?? '') ?>">
+                                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-zinc-400 max-w-32 truncate" title="<?= htmlspecialchars($p['sekolah'] ?? '') ?>">
                                                 <?= htmlspecialchars($p['sekolah'] ?? '-') ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
                                                 <?php if ($hasBayar): ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
                                                         <i class="fas fa-check-circle"></i> Lunas
                                                     </span>
-                                                    <button onclick="showImage('<?= htmlspecialchars($p['bukti_pembayaran']) ?>', '<?= htmlspecialchars($nama) ?>')" class="block mx-auto mt-1 text-xs text-blue-600 hover:underline">
+                                                    <button onclick="showImage('<?= htmlspecialchars($p['bukti_pembayaran']) ?>', '<?= htmlspecialchars($nama) ?>')" class="block mx-auto mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
                                                         Lihat Bukti
                                                     </button>
                                                 <?php else: ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
                                                         <i class="fas fa-clock"></i> Pending
                                                     </span>
                                                 <?php endif; ?>
@@ -718,16 +713,16 @@ $role = $_SESSION['role'] ?? 'user';
                                                 <div class="flex items-center justify-center gap-1">
                                                     <?php if ($recordCount > 1): ?>
                                                         <button type="button" onclick="showDetails(<?= htmlspecialchars(json_encode($group['all_records'])) ?>)"
-                                                                class="p-1.5 rounded-lg text-cyan-600 hover:bg-cyan-50 transition-colors" title="Lihat Detail">
+                                                                class="p-1.5 rounded-lg text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 transition-colors" title="Lihat Detail">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
                                                     <?php endif; ?>
                                                     <button type="button" onclick="editPeserta(<?= htmlspecialchars(json_encode($p)) ?>)"
-                                                            class="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors" title="Edit">
+                                                            class="p-1.5 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
                                                     <button type="button" onclick="confirmDelete(<?= $p['id'] ?>, '<?= htmlspecialchars($nama, ENT_QUOTES) ?>')"
-                                                            class="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
+                                                            class="p-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                         <i class="fas fa-trash-alt"></i>
                                                     </button>
                                                 </div>
@@ -740,23 +735,23 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
                     <?php if (!empty($pesertaGroupedPaginated)): ?>
                         <!-- Pagination Footer -->
-                        <div class="px-4 py-3 bg-white border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <p class="text-sm text-slate-500">
-                                Menampilkan <span class="font-medium text-slate-900"><?= $offset + 1 ?></span> - <span class="font-medium text-slate-900"><?= min($offset + $limit, $total_rows) ?></span> dari <span class="font-medium text-slate-900"><?= $total_rows ?></span> peserta unik (<span class="text-slate-400"><?= $totalPeserta ?> total entri</span>)
+                        <div class="px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <p class="text-sm text-slate-500 dark:text-zinc-400">
+                                Menampilkan <span class="font-medium text-slate-900 dark:text-white"><?= $offset + 1 ?></span> - <span class="font-medium text-slate-900 dark:text-white"><?= min($offset + $limit, $total_rows) ?></span> dari <span class="font-medium text-slate-900 dark:text-white"><?= $total_rows ?></span> peserta unik (<span class="text-slate-400 dark:text-zinc-500"><?= $totalPeserta ?> total entri</span>)
                             </p>
                             <?php if ($total_pages > 1): ?>
                             <nav class="flex items-center gap-1">
                                 <!-- First & Prev -->
                                 <?php if ($page > 1): ?>
-                                <a href="<?= buildPaginationUrl(1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="First">
+                                <a href="<?= buildPaginationUrl(1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="First">
                                     <i class="fas fa-angles-left text-xs"></i>
                                 </a>
-                                <a href="<?= buildPaginationUrl($page - 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Previous">
+                                <a href="<?= buildPaginationUrl($page - 1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Previous">
                                     <i class="fas fa-angle-left text-xs"></i>
                                 </a>
                                 <?php else: ?>
-                                <span class="p-2 text-slate-300"><i class="fas fa-angles-left text-xs"></i></span>
-                                <span class="p-2 text-slate-300"><i class="fas fa-angle-left text-xs"></i></span>
+                                <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angles-left text-xs"></i></span>
+                                <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angle-left text-xs"></i></span>
                                 <?php endif; ?>
 
                                 <!-- Page Numbers -->
@@ -765,30 +760,30 @@ $role = $_SESSION['role'] ?? 'user';
                                 $end_page = min($total_pages, $page + 2);
 
                                 if ($start_page > 1): ?>
-                                <a href="<?= buildPaginationUrl(1) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors">1</a>
-                                <?php if ($start_page > 2): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
+                                <a href="<?= buildPaginationUrl(1) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">1</a>
+                                <?php if ($start_page > 2): ?><span class="px-1 text-slate-400 dark:text-zinc-500">...</span><?php endif; ?>
                                 <?php endif;
 
                                 for ($i = $start_page; $i <= $end_page; $i++): ?>
-                                <a href="<?= buildPaginationUrl($i) ?>" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors <?= $i === $page ? 'bg-archery-600 text-white' : 'text-slate-600 hover:bg-slate-100' ?>"><?= $i ?></a>
+                                <a href="<?= buildPaginationUrl($i) ?>" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors <?= $i === $page ? 'bg-archery-600 text-white' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800' ?>"><?= $i ?></a>
                                 <?php endfor;
 
                                 if ($end_page < $total_pages): ?>
-                                <?php if ($end_page < $total_pages - 1): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
-                                <a href="<?= buildPaginationUrl($total_pages) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors"><?= $total_pages ?></a>
+                                <?php if ($end_page < $total_pages - 1): ?><span class="px-1 text-slate-400 dark:text-zinc-500">...</span><?php endif; ?>
+                                <a href="<?= buildPaginationUrl($total_pages) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"><?= $total_pages ?></a>
                                 <?php endif; ?>
 
                                 <!-- Next & Last -->
                                 <?php if ($page < $total_pages): ?>
-                                <a href="<?= buildPaginationUrl($page + 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Next">
+                                <a href="<?= buildPaginationUrl($page + 1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Next">
                                     <i class="fas fa-angle-right text-xs"></i>
                                 </a>
-                                <a href="<?= buildPaginationUrl($total_pages) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Last">
+                                <a href="<?= buildPaginationUrl($total_pages) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Last">
                                     <i class="fas fa-angles-right text-xs"></i>
                                 </a>
                                 <?php else: ?>
-                                <span class="p-2 text-slate-300"><i class="fas fa-angle-right text-xs"></i></span>
-                                <span class="p-2 text-slate-300"><i class="fas fa-angles-right text-xs"></i></span>
+                                <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angle-right text-xs"></i></span>
+                                <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angles-right text-xs"></i></span>
                                 <?php endif; ?>
                             </nav>
                             <?php endif; ?>
@@ -802,7 +797,7 @@ $role = $_SESSION['role'] ?? 'user';
     <!-- Detail Modal -->
     <div id="detailModal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/50" onclick="closeDetailModal()"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-5xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
             <div class="bg-gradient-to-br from-cyan-600 to-cyan-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
                 <h3 class="font-semibold text-lg">
                     <i class="fas fa-info-circle mr-2"></i>Detail Pendaftaran Peserta
@@ -820,7 +815,7 @@ $role = $_SESSION['role'] ?? 'user';
     <!-- Edit Modal -->
     <div id="editModal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/50" onclick="closeEditModal()"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
             <div class="bg-gradient-to-br from-amber-500 to-amber-700 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
                 <h3 class="font-semibold text-lg">
                     <i class="fas fa-edit mr-2"></i>Edit Data Peserta
@@ -1207,6 +1202,9 @@ $role = $_SESSION['role'] ?? 'user';
                 setTimeout(() => toast.remove(), 300);
             });
         }, 5000);
+
+        // Theme Toggle Functionality
+        <?= getThemeToggleScript() ?>
     </script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 <?php
 include '../config/panggil.php';
 include '../includes/check_access.php';
+include '../includes/theme.php';
 requireLogin();
 
 // Toast message handling
@@ -134,27 +135,17 @@ $role = $_SESSION['role'] ?? 'user';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Kegiatan - Turnamen Panahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'archery': {
-                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
-                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
-                            800: '#166534', 900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script><?= getThemeTailwindConfig() ?></script>
+    <script><?= getThemeInitScript() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: #27272a; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #52525b; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #71717a; }
         .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; }
         .modal-backdrop.active { display: flex; align-items: center; justify-content: center; }
         /* Toast animation */
@@ -166,7 +157,7 @@ $role = $_SESSION['role'] ?? 'user';
         .date-mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace; }
     </style>
 </head>
-<body class="h-full bg-slate-50">
+<body class="h-full bg-slate-50 dark:bg-zinc-950 transition-colors">
     <div class="flex h-full">
         <!-- Sidebar -->
         <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white">
@@ -224,6 +215,7 @@ $role = $_SESSION['role'] ?? 'user';
                         <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
                         <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
                     </div>
+                    <?= getThemeToggleButton() ?>
                 </div>
                 <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
@@ -255,16 +247,16 @@ $role = $_SESSION['role'] ?? 'user';
 
             <div class="px-6 lg:px-8 py-6">
                 <!-- Compact Header with Metrics -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
-                    <div class="px-6 py-4 border-b border-slate-100">
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm mb-6">
+                    <div class="px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div class="flex items-center gap-3">
-                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
                                     <i class="fas fa-arrow-left"></i>
                                 </a>
                                 <div>
-                                    <h1 class="text-lg font-semibold text-slate-900">Data Kegiatan</h1>
-                                    <p class="text-sm text-slate-500">Kelola turnamen dan event panahan</p>
+                                    <h1 class="text-lg font-semibold text-slate-900 dark:text-white">Data Kegiatan</h1>
+                                    <p class="text-sm text-slate-500 dark:text-zinc-400">Kelola turnamen dan event panahan</p>
                                 </div>
                             </div>
                             <button onclick="openModal()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
@@ -275,22 +267,22 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
 
                     <!-- Metrics Bar -->
-                    <div class="px-6 py-3 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                    <div class="px-6 py-3 bg-slate-50 dark:bg-zinc-800/50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         <div class="flex items-center gap-2">
-                            <span class="text-2xl font-bold text-slate-900"><?= $stats['total_kegiatan'] ?? 0 ?></span>
-                            <span class="text-slate-500">Kegiatan</span>
+                            <span class="text-2xl font-bold text-slate-900 dark:text-white"><?= $stats['total_kegiatan'] ?? 0 ?></span>
+                            <span class="text-slate-500 dark:text-zinc-400">Kegiatan</span>
                         </div>
-                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-users text-archery-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $stats['total_peserta'] ?? 0 ?></span>
-                            <span class="text-slate-400">Total Peserta</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $stats['total_peserta'] ?? 0 ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Total Peserta</span>
                         </div>
-                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-tags text-cyan-500 text-xs"></i>
-                            <span class="font-medium text-slate-700"><?= $stats['total_kategori_used'] ?? 0 ?></span>
-                            <span class="text-slate-400">Kategori Dipakai</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $stats['total_kategori_used'] ?? 0 ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Kategori Dipakai</span>
                         </div>
                     </div>
                 </div>
@@ -298,36 +290,36 @@ $role = $_SESSION['role'] ?? 'user';
                 <!-- Search Bar -->
                 <div class="flex flex-col sm:flex-row gap-4 mb-6">
                     <div class="relative flex-1">
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 text-xs"></i>
                         <input type="text" id="searchInput" onkeyup="searchData()"
-                               class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50"
+                               class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
                                placeholder="Cari kegiatan...">
                     </div>
                 </div>
 
                 <!-- Desktop Table -->
-                <div class="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div class="hidden md:block bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar">
                         <table class="w-full">
-                            <thead class="bg-slate-100 sticky top-0 z-10">
+                            <thead class="bg-slate-100 dark:bg-zinc-800 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama Kegiatan</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">Peserta</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-48">Aksi</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-12">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Nama Kegiatan</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-24">Peserta</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-48">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody id="tableBody" class="divide-y divide-slate-100">
+                            <tbody id="tableBody" class="divide-y divide-slate-100 dark:divide-zinc-800">
                                 <?php if (empty($kegiatanData)): ?>
                                     <tr>
                                         <td colspan="5" class="px-4 py-12">
                                             <div class="flex flex-col items-center text-center">
-                                                <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                                                    <i class="fas fa-calendar-times text-slate-400 text-2xl"></i>
+                                                <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+                                                    <i class="fas fa-calendar-times text-slate-400 dark:text-zinc-500 text-2xl"></i>
                                                 </div>
-                                                <p class="text-slate-500 font-medium">Tidak ada data kegiatan</p>
-                                                <p class="text-slate-400 text-sm mb-4">Silakan tambahkan kegiatan baru</p>
+                                                <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada data kegiatan</p>
+                                                <p class="text-slate-400 dark:text-zinc-500 text-sm mb-4">Silakan tambahkan kegiatan baru</p>
                                                 <button onclick="openModal()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                                     <i class="fas fa-plus"></i> Tambah Kegiatan
                                                 </button>
@@ -336,44 +328,44 @@ $role = $_SESSION['role'] ?? 'user';
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($kegiatanData as $index => $item): ?>
-                                        <tr class="hover:bg-slate-50 transition-colors">
-                                            <td class="px-4 py-3 text-sm text-slate-500"><?= $index + 1 ?></td>
+                                        <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+                                            <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $index + 1 ?></td>
                                             <td class="px-4 py-3">
-                                                <p class="font-medium text-slate-900"><?= htmlspecialchars($item['nama']) ?></p>
+                                                <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($item['nama']) ?></p>
                                             </td>
                                             <td class="px-4 py-3">
                                                 <?php if (empty($item['category_names'])): ?>
-                                                    <span class="text-slate-400 italic text-sm">Belum ada kategori</span>
+                                                    <span class="text-slate-400 dark:text-zinc-500 italic text-sm">Belum ada kategori</span>
                                                 <?php else: ?>
                                                     <div class="flex flex-wrap gap-1">
                                                         <?php foreach ($item['category_names'] as $categoryName): ?>
-                                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700"><?= htmlspecialchars($categoryName) ?></span>
+                                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400"><?= htmlspecialchars($categoryName) ?></span>
                                                         <?php endforeach; ?>
                                                     </div>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
                                                 <?php if ($item['peserta_count'] > 0): ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-archery-50 text-archery-700">
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-archery-50 dark:bg-archery-900/30 text-archery-700 dark:text-archery-400">
                                                         <i class="fas fa-users text-xs"></i>
                                                         <?= $item['peserta_count'] ?>
                                                     </span>
                                                 <?php else: ?>
-                                                    <span class="text-slate-400 text-sm">-</span>
+                                                    <span class="text-slate-400 dark:text-zinc-500 text-sm">-</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center justify-center gap-1">
-                                                    <a href="pendaftaran.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium hover:bg-purple-100 transition-colors">
+                                                    <a href="pendaftaran.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors">
                                                         <i class="fas fa-user-plus text-xs"></i> Daftar
                                                     </a>
-                                                    <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors">
+                                                    <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
                                                         <i class="fas fa-eye text-xs"></i> Detail
                                                     </a>
-                                                    <button onclick="editData(<?= $item['id'] ?>)" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Edit">
+                                                    <button onclick="editData(<?= $item['id'] ?>)" class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit text-sm"></i>
                                                     </button>
-                                                    <button onclick="deleteData(<?= $item['id'] ?>)" class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
+                                                    <button onclick="deleteData(<?= $item['id'] ?>)" class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                         <i class="fas fa-trash text-sm"></i>
                                                     </button>
                                                 </div>
@@ -385,7 +377,7 @@ $role = $_SESSION['role'] ?? 'user';
                         </table>
                     </div>
                     <?php if (!empty($kegiatanData)): ?>
-                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 text-sm text-slate-500">
+                    <div class="px-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-100 dark:border-zinc-800 text-sm text-slate-500 dark:text-zinc-400">
                         Menampilkan <?= count($kegiatanData) ?> kegiatan
                     </div>
                     <?php endif; ?>
@@ -394,9 +386,9 @@ $role = $_SESSION['role'] ?? 'user';
                 <!-- Mobile Cards -->
                 <div id="mobileCards" class="md:hidden space-y-3">
                     <?php if (empty($kegiatanData)): ?>
-                        <div class="bg-white rounded-xl border border-slate-200 p-8 text-center">
-                            <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                                <i class="fas fa-calendar-times text-slate-400 text-2xl"></i>
+                        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-8 text-center">
+                            <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-calendar-times text-slate-400 dark:text-zinc-500 text-2xl"></i>
                             </div>
                             <p class="text-slate-500 font-medium mb-3">Tidak ada data kegiatan</p>
                             <button onclick="openModal()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium">
@@ -405,12 +397,12 @@ $role = $_SESSION['role'] ?? 'user';
                         </div>
                     <?php else: ?>
                         <?php foreach ($kegiatanData as $index => $item): ?>
-                            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4" data-id="<?= $item['id'] ?>">
+                            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm p-4" data-id="<?= $item['id'] ?>">
                                 <div class="flex items-start gap-3 mb-3">
-                                    <span class="text-sm text-slate-400 font-medium w-6"><?= $index + 1 ?></span>
+                                    <span class="text-sm text-slate-400 dark:text-zinc-500 font-medium w-6"><?= $index + 1 ?></span>
                                     <div class="flex-1 min-w-0">
-                                        <p class="font-semibold text-slate-900"><?= htmlspecialchars($item['nama']) ?></p>
-                                        <div class="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                                        <p class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($item['nama']) ?></p>
+                                        <div class="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-zinc-400">
                                             <?php if ($item['peserta_count'] > 0): ?>
                                                 <span class="inline-flex items-center gap-1">
                                                     <i class="fas fa-users text-archery-500"></i>
@@ -422,26 +414,26 @@ $role = $_SESSION['role'] ?? 'user';
                                 </div>
                                 <div class="mb-3">
                                     <?php if (empty($item['category_names'])): ?>
-                                        <span class="text-slate-400 italic text-sm">Belum ada kategori</span>
+                                        <span class="text-slate-400 dark:text-zinc-500 italic text-sm">Belum ada kategori</span>
                                     <?php else: ?>
                                         <div class="flex flex-wrap gap-1">
                                             <?php foreach ($item['category_names'] as $categoryName): ?>
-                                                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700"><?= htmlspecialchars($categoryName) ?></span>
+                                                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400"><?= htmlspecialchars($categoryName) ?></span>
                                             <?php endforeach; ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>
-                                <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100">
-                                    <a href="pendaftaran.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium">
+                                <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
+                                    <a href="pendaftaran.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium">
                                         <i class="fas fa-user-plus"></i> Daftar
                                     </a>
-                                    <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
+                                    <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium">
                                         <i class="fas fa-eye"></i> Detail
                                     </a>
-                                    <button onclick="editData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-medium">
+                                    <button onclick="editData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-medium">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <button onclick="deleteData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 text-red-700 text-xs font-medium">
+                                    <button onclick="deleteData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium">
                                         <i class="fas fa-trash"></i> Hapus
                                     </button>
                                 </div>
@@ -455,7 +447,7 @@ $role = $_SESSION['role'] ?? 'user';
 
     <!-- Add/Edit Modal -->
     <div id="myModal" class="modal-backdrop">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-hidden flex flex-col">
             <div class="bg-gradient-to-br from-archery-600 to-archery-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
                 <h3 id="modalTitle" class="font-semibold text-lg flex items-center gap-2">
                     <i class="fas fa-calendar-plus"></i> Tambah Data Kegiatan
@@ -469,27 +461,27 @@ $role = $_SESSION['role'] ?? 'user';
                     <input type="hidden" id="editId" name="editId" value="">
 
                     <div>
-                        <label for="namaKegiatan" class="block text-sm font-medium text-slate-700 mb-1">
+                        <label for="namaKegiatan" class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">
                             Nama Kegiatan <span class="text-red-500">*</span>
                         </label>
                         <input type="text" id="namaKegiatan" name="namaKegiatan" required
-                               class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
+                               class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
                                placeholder="Masukkan nama kegiatan">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">
                             Pilih Kategori <span class="text-red-500">*</span>
                         </label>
-                        <div class="border border-slate-200 rounded-lg max-h-64 overflow-y-auto custom-scrollbar divide-y divide-slate-100">
+                        <div class="border border-slate-200 dark:border-zinc-700 rounded-lg max-h-64 overflow-y-auto custom-scrollbar divide-y divide-slate-100 dark:divide-zinc-800">
                             <?php foreach ($kategoriList as $kategori): ?>
-                                <div class="p-3 hover:bg-slate-50 transition-colors cursor-pointer" onclick="toggleCheckbox('kategori_<?= $kategori['id']; ?>')">
+                                <div class="p-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer" onclick="toggleCheckbox('kategori_<?= $kategori['id']; ?>')">
                                     <label class="flex items-start gap-3 cursor-pointer">
                                         <input type="checkbox" name="kategori[]" value="<?= $kategori['id']; ?>" id="kategori_<?= $kategori['id']; ?>"
                                                class="mt-1 rounded text-archery-600 focus:ring-archery-500">
                                         <div class="flex-1">
-                                            <p class="font-medium text-slate-900"><?= htmlspecialchars($kategori['name']); ?></p>
-                                            <p class="text-xs text-slate-500">Lahir <?= date("Y") - $kategori['max_age']; ?> – <?= date("Y") - $kategori['min_age']; ?></p>
+                                            <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($kategori['name']); ?></p>
+                                            <p class="text-xs text-slate-500 dark:text-zinc-400">Lahir <?= date("Y") - $kategori['max_age']; ?> – <?= date("Y") - $kategori['min_age']; ?></p>
                                         </div>
                                     </label>
                                 </div>
@@ -497,8 +489,8 @@ $role = $_SESSION['role'] ?? 'user';
                         </div>
                     </div>
                 </div>
-                <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3 flex-shrink-0">
-                    <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition-colors">
+                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3 flex-shrink-0">
+                    <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
                         Batal
                     </button>
                     <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
@@ -764,6 +756,9 @@ function toggleMobileMenu() {
 mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
 mobileOverlay?.addEventListener('click', toggleMobileMenu);
 closeMobileMenu?.addEventListener('click', toggleMobileMenu);
+
+// Theme Toggle
+<?= getThemeToggleScript() ?>
 </script>
 </body>
 </html>

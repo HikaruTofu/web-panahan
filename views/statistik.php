@@ -5,6 +5,7 @@
  */
 include '../config/panggil.php';
 include '../includes/check_access.php';
+include '../includes/theme.php';
 requireAdmin();
 
 // ============================================
@@ -565,30 +566,20 @@ $role = $_SESSION['role'] ?? 'user';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Statistik & Penilaian Peserta - Turnamen Panahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'archery': {
-                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
-                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
-                            800: '#166534', 900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script><?= getThemeTailwindConfig() ?></script>
+    <script><?= getThemeInitScript() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: #27272a; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #52525b; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #71717a; }
     </style>
 </head>
-<body class="h-full bg-slate-50">
+<body class="h-full bg-slate-50 dark:bg-zinc-950 transition-colors">
     <div class="flex h-full">
         <!-- Sidebar (consistent with Dashboard) -->
         <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white">
@@ -646,6 +637,7 @@ $role = $_SESSION['role'] ?? 'user';
                         <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
                         <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
                     </div>
+                    <?= getThemeToggleButton() ?>
                 </div>
                 <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
@@ -664,22 +656,22 @@ $role = $_SESSION['role'] ?? 'user';
         <main class="flex-1 overflow-auto">
             <div class="px-6 lg:px-8 py-6">
                 <!-- Compact Header with Metrics -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
-                    <div class="px-6 py-4 border-b border-slate-100">
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm mb-6">
+                    <div class="px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div class="flex items-center gap-3">
-                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                                <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
                                     <i class="fas fa-arrow-left"></i>
                                 </a>
                                 <div>
-                                    <h1 class="text-lg font-semibold text-slate-900">Statistik & Penilaian</h1>
-                                    <p class="text-sm text-slate-500">Analisis performa peserta turnamen</p>
+                                    <h1 class="text-lg font-semibold text-slate-900 dark:text-white">Statistik & Penilaian</h1>
+                                    <p class="text-sm text-slate-500 dark:text-zinc-400">Analisis performa peserta turnamen</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
                                 <!-- Kegiatan Filter -->
                                 <form method="GET" class="flex items-center gap-2">
-                                    <select name="kegiatan_id" onchange="this.form.submit()" class="bg-slate-100 border-none rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-archery-500">
+                                    <select name="kegiatan_id" onchange="this.form.submit()" class="bg-slate-100 dark:bg-zinc-800 border-none rounded-lg px-3 py-2 text-sm font-medium text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500">
                                         <option value="all" <?= $kegiatan_id === 'all' ? 'selected' : '' ?>>Semua Kegiatan</option>
                                         <?php foreach ($kegiatanList as $keg): ?>
                                             <option value="<?= $keg['id'] ?>" <?= $kegiatan_id == $keg['id'] ? 'selected' : '' ?>>
@@ -699,69 +691,69 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
 
                     <!-- Metrics Bar -->
-                    <div class="px-6 py-3 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                    <div class="px-6 py-3 bg-slate-50 dark:bg-zinc-800/50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         <div class="flex items-center gap-2">
-                            <span class="text-2xl font-bold text-slate-900"><?= count($pesertaData) ?></span>
-                            <span class="text-slate-500">Total Peserta</span>
+                            <span class="text-2xl font-bold text-slate-900 dark:text-white"><?= count($pesertaData) ?></span>
+                            <span class="text-slate-500 dark:text-zinc-400">Total Peserta</span>
                         </div>
-                        <span class="text-slate-300 hidden sm:inline">|</span>
+                        <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            <span class="font-medium text-slate-700"><?= $totalKategoriA ?></span>
-                            <span class="text-slate-400">Kat. A</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalKategoriA ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Kat. A</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                            <span class="font-medium text-slate-700"><?= $totalKategoriB ?></span>
-                            <span class="text-slate-400">Kat. B</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalKategoriB ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Kat. B</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
-                            <span class="font-medium text-slate-700"><?= $totalKategoriC ?></span>
-                            <span class="text-slate-400">Kat. C</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalKategoriC ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Kat. C</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                            <span class="font-medium text-slate-700"><?= $totalKategoriD ?></span>
-                            <span class="text-slate-400">Kat. D</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalKategoriD ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Kat. D</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                            <span class="font-medium text-slate-700"><?= $totalKategoriE ?></span>
-                            <span class="text-slate-400">Kat. E</span>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalKategoriE ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Kat. E</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Category Legend -->
-                <div class="bg-white rounded-xl border border-slate-200 p-5 mb-6">
-                    <h3 class="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 mb-6">
+                    <h3 class="font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
                         <i class="fas fa-info-circle text-blue-500"></i>
                         Sistem Kategorisasi
                     </h3>
                     <div class="flex flex-wrap gap-2">
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-sm font-medium">
                             <i class="fas fa-trophy"></i> A: Top 30% & Rank 1-3
                         </span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-medium">
                             <i class="fas fa-medal"></i> B: Top 40% & Rank 4-10
                         </span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-50 text-cyan-700 text-sm font-medium">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 text-sm font-medium">
                             <i class="fas fa-award"></i> C: Top 41-60%
                         </span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-sm font-medium">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-sm font-medium">
                             <i class="fas fa-chart-line"></i> D: Top 61-80%
                         </span>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm font-medium">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-sm font-medium">
                             <i class="fas fa-user"></i> E: Bottom 20%
                         </span>
                     </div>
                 </div>
 
                 <!-- Filter Form -->
-                <div class="bg-white rounded-xl border border-slate-200 p-5 mb-6">
-                    <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                        <i class="fas fa-filter text-slate-400"></i>
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 mb-6">
+                    <h3 class="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                        <i class="fas fa-filter text-slate-400 dark:text-zinc-500"></i>
                         Filter Pencarian
                     </h3>
                     <!-- FORM: method=get, no action (UNCHANGED) -->
@@ -771,25 +763,25 @@ $role = $_SESSION['role'] ?? 'user';
                         <?php endif; ?>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Nama Peserta</label>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Peserta</label>
                                 <!-- INPUT: name="nama" (UNCHANGED) -->
                                 <input type="text" name="nama" value="<?= htmlspecialchars($nama) ?>"
-                                       class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
+                                       class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
                                        placeholder="Cari nama...">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Gender</label>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Gender</label>
                                 <!-- SELECT: name="gender" (UNCHANGED) -->
-                                <select name="gender" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500">
+                                <select name="gender" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500">
                                     <option value="">Semua</option>
                                     <option value="Laki-laki" <?= $gender == "Laki-laki" ? 'selected' : '' ?>>Laki-laki</option>
                                     <option value="Perempuan" <?= $gender == "Perempuan" ? 'selected' : '' ?>>Perempuan</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Club</label>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Club</label>
                                 <!-- SELECT: name="club" (UNCHANGED) -->
-                                <select name="club" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500">
+                                <select name="club" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500">
                                     <option value="">Semua Club</option>
                                     <?php foreach ($clubs as $clubName): ?>
                                         <option value="<?= htmlspecialchars($clubName) ?>" <?= $club == $clubName ? 'selected' : '' ?>>
@@ -799,9 +791,9 @@ $role = $_SESSION['role'] ?? 'user';
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kategori</label>
                                 <!-- SELECT: name="kategori" (UNCHANGED) -->
-                                <select name="kategori" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500">
+                                <select name="kategori" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500">
                                     <option value="">Semua Kategori</option>
                                     <option value="A" <?= $kategori_filter == "A" ? 'selected' : '' ?>>Kategori A</option>
                                     <option value="B" <?= $kategori_filter == "B" ? 'selected' : '' ?>>Kategori B</option>
@@ -814,17 +806,17 @@ $role = $_SESSION['role'] ?? 'user';
                                 <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                     <i class="fas fa-search mr-1"></i> Cari
                                 </button>
-                                <a href="?" class="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50 transition-colors">
+                                <a href="?" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 text-slate-600 dark:text-zinc-400 text-sm hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
                                     <i class="fas fa-redo"></i>
                                 </a>
                                 <?php if ($sortByKategori): ?>
                                     <a href="?<?= !empty($gender) ? 'gender=' . $gender . '&' : '' ?><?= !empty($nama) ? 'nama=' . $nama . '&' : '' ?><?= !empty($club) ? 'club=' . $club . '&' : '' ?><?= !empty($kategori_filter) ? 'kategori=' . $kategori_filter : '' ?>"
-                                       class="px-3 py-2 rounded-lg bg-amber-100 text-amber-700 text-sm hover:bg-amber-200 transition-colors" title="Urutan Default">
+                                       class="px-3 py-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-sm hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors" title="Urutan Default">
                                         <i class="fas fa-sort-alpha-down"></i>
                                     </a>
                                 <?php else: ?>
                                     <a href="?sortByKategori=1<?= !empty($gender) ? '&gender=' . $gender : '' ?><?= !empty($nama) ? '&nama=' . $nama : '' ?><?= !empty($club) ? '&club=' . $club : '' ?><?= !empty($kategori_filter) ? '&kategori=' . $kategori_filter : '' ?>"
-                                       class="px-3 py-2 rounded-lg bg-blue-100 text-blue-700 text-sm hover:bg-blue-200 transition-colors" title="Urutkan per Kategori">
+                                       class="px-3 py-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors" title="Urutkan per Kategori">
                                         <i class="fas fa-layer-group"></i>
                                     </a>
                                 <?php endif; ?>
@@ -834,99 +826,99 @@ $role = $_SESSION['role'] ?? 'user';
                 </div>
 
                 <!-- Data Table -->
-                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar" style="max-height: 65vh;">
                         <table class="w-full">
-                            <thead class="bg-slate-100 sticky top-0 z-10">
+                            <thead class="bg-slate-100 dark:bg-zinc-800 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Gender</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Umur</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Club</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Turnamen</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Avg Rank</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">J1</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">J2</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">J3</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Top10</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Bracket</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Aksi</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-12">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Nama</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Gender</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Umur</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Club</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Turnamen</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Avg Rank</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">J1</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">J2</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">J3</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Top10</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Bracket</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
                                 <?php if (empty($pesertaData)): ?>
                                     <tr>
                                         <td colspan="14" class="px-4 py-12 text-center">
                                             <div class="flex flex-col items-center">
-                                                <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                                                    <i class="fas fa-inbox text-slate-400 text-2xl"></i>
+                                                <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+                                                    <i class="fas fa-inbox text-slate-400 dark:text-zinc-500 text-2xl"></i>
                                                 </div>
-                                                <p class="text-slate-500 font-medium">Tidak ada data peserta</p>
-                                                <p class="text-slate-400 text-sm">Ubah filter atau pastikan peserta telah mengikuti turnamen</p>
+                                                <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada data peserta</p>
+                                                <p class="text-slate-400 dark:text-zinc-500 text-sm">Ubah filter atau pastikan peserta telah mengikuti turnamen</p>
                                             </div>
                                         </td>
                                     </tr>
                                 <?php else: ?>
                                     <?php $no = $offset + 1; foreach ($pesertaDataPaginated as $p): ?>
-                                        <tr class="hover:bg-slate-50 transition-colors">
-                                            <td class="px-4 py-3 text-sm text-slate-500"><?= $no++ ?></td>
+                                        <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+                                            <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++ ?></td>
                                             <td class="px-4 py-3">
-                                                <p class="font-medium text-slate-900"><?= htmlspecialchars($p['nama']) ?></p>
-                                                <p class="text-xs text-slate-500"><?= htmlspecialchars($p['sekolah'] ?? '-') ?></p>
+                                                <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($p['nama']) ?></p>
+                                                <p class="text-xs text-slate-500 dark:text-zinc-500"><?= htmlspecialchars($p['sekolah'] ?? '-') ?></p>
                                             </td>
                                             <td class="px-4 py-3">
-                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $p['gender'] == 'Laki-laki' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700' ?>">
+                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $p['gender'] == 'Laki-laki' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400' ?>">
                                                     <i class="fas <?= $p['gender'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?> text-xs"></i>
                                                     <?= $p['gender'] == 'Laki-laki' ? 'L' : 'P' ?>
                                                 </span>
                                             </td>
-                                            <td class="px-4 py-3 text-sm text-slate-600"><?= $p['umur'] > 0 ? $p['umur'] . ' th' : '-' ?></td>
-                                            <td class="px-4 py-3 text-sm text-slate-600 max-w-32 truncate"><?= htmlspecialchars($p['club'] ?? '-') ?></td>
+                                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-zinc-400"><?= $p['umur'] > 0 ? $p['umur'] . ' th' : '-' ?></td>
+                                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-zinc-400 max-w-32 truncate"><?= htmlspecialchars($p['club'] ?? '-') ?></td>
                                             <td class="px-4 py-3">
                                                 <?php $c = $colorMap[$p['kategori_dominan']['color']] ?? $colorMap['slate']; ?>
                                                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold <?= $c['bg'] ?> text-white">
                                                     <?= $p['kategori_dominan']['kategori'] ?>
                                                 </span>
-                                                <p class="text-xs text-slate-500 mt-0.5"><?= $p['kategori_dominan']['label'] ?></p>
+                                                <p class="text-xs text-slate-500 dark:text-zinc-500 mt-0.5"><?= $p['kategori_dominan']['label'] ?></p>
                                             </td>
                                             <td class="px-4 py-3 text-center">
-                                                <span class="font-semibold text-archery-600"><?= $p['total_turnamen'] ?></span>
+                                                <span class="font-semibold text-archery-600 dark:text-archery-400"><?= $p['total_turnamen'] ?></span>
                                             </td>
                                             <td class="px-4 py-3 text-center">
                                                 <?php if ($p['avg_ranking'] > 0): ?>
-                                                    <span class="text-sm text-slate-600">#<?= $p['avg_ranking'] ?></span>
+                                                    <span class="text-sm text-slate-600 dark:text-zinc-400">#<?= $p['avg_ranking'] ?></span>
                                                 <?php else: ?>
-                                                    <span class="text-slate-400">-</span>
+                                                    <span class="text-slate-400 dark:text-zinc-600">-</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
                                                 <?php if ($p['juara1'] > 0): ?>
-                                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold"><?= $p['juara1'] ?></span>
+                                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-bold"><?= $p['juara1'] ?></span>
                                                 <?php else: ?>
-                                                    <span class="text-slate-300">-</span>
+                                                    <span class="text-slate-300 dark:text-zinc-600">-</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
                                                 <?php if ($p['juara2'] > 0): ?>
-                                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-700 text-xs font-bold"><?= $p['juara2'] ?></span>
+                                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 text-xs font-bold"><?= $p['juara2'] ?></span>
                                                 <?php else: ?>
-                                                    <span class="text-slate-300">-</span>
+                                                    <span class="text-slate-300 dark:text-zinc-600">-</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
                                                 <?php if ($p['juara3'] > 0): ?>
-                                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-xs font-bold"><?= $p['juara3'] ?></span>
+                                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold"><?= $p['juara3'] ?></span>
                                                 <?php else: ?>
-                                                    <span class="text-slate-300">-</span>
+                                                    <span class="text-slate-300 dark:text-zinc-600">-</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
                                                 <?php if ($p['top10'] > 0): ?>
-                                                    <span class="text-sm text-blue-600 font-medium"><?= $p['top10'] ?>x</span>
+                                                    <span class="text-sm text-blue-600 dark:text-blue-400 font-medium"><?= $p['top10'] ?>x</span>
                                                 <?php else: ?>
-                                                    <span class="text-slate-300">-</span>
+                                                    <span class="text-slate-300 dark:text-zinc-600">-</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
@@ -948,7 +940,7 @@ $role = $_SESSION['role'] ?? 'user';
                                             </td>
                                             <td class="px-4 py-3 text-center">
                                                 <button onclick="showDetail(<?= htmlspecialchars(json_encode($p)) ?>)"
-                                                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-archery-50 text-archery-700 text-xs font-medium hover:bg-archery-100 transition-colors">
+                                                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-archery-50 dark:bg-archery-900/30 text-archery-700 dark:text-archery-400 text-xs font-medium hover:bg-archery-100 dark:hover:bg-archery-900/50 transition-colors">
                                                     <i class="fas fa-eye"></i> Detail
                                                 </button>
                                             </td>
@@ -960,28 +952,28 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
                     <?php if (!empty($pesertaDataPaginated)): ?>
                         <!-- Pagination Footer -->
-                        <div class="px-4 py-3 bg-white border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div class="flex items-center gap-3">
-                                <p class="text-sm text-slate-500">
-                                    Menampilkan <span class="font-medium text-slate-900"><?= $offset + 1 ?></span> - <span class="font-medium text-slate-900"><?= min($offset + $limit, $total_rows) ?></span> dari <span class="font-medium text-slate-900"><?= $total_rows ?></span> peserta
+                                <p class="text-sm text-slate-500 dark:text-zinc-400">
+                                    Menampilkan <span class="font-medium text-slate-900 dark:text-white"><?= $offset + 1 ?></span> - <span class="font-medium text-slate-900 dark:text-white"><?= min($offset + $limit, $total_rows) ?></span> dari <span class="font-medium text-slate-900 dark:text-white"><?= $total_rows ?></span> peserta
                                 </p>
                                 <?php if ($sortByKategori): ?>
-                                    <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Diurutkan per Kategori</span>
+                                    <span class="px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium">Diurutkan per Kategori</span>
                                 <?php endif; ?>
                             </div>
                             <?php if ($total_pages > 1): ?>
                             <nav class="flex items-center gap-1">
                                 <!-- First & Prev -->
                                 <?php if ($page > 1): ?>
-                                <a href="<?= buildPaginationUrl(1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="First">
+                                <a href="<?= buildPaginationUrl(1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="First">
                                     <i class="fas fa-angles-left text-xs"></i>
                                 </a>
-                                <a href="<?= buildPaginationUrl($page - 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Previous">
+                                <a href="<?= buildPaginationUrl($page - 1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Previous">
                                     <i class="fas fa-angle-left text-xs"></i>
                                 </a>
                                 <?php else: ?>
-                                <span class="p-2 text-slate-300"><i class="fas fa-angles-left text-xs"></i></span>
-                                <span class="p-2 text-slate-300"><i class="fas fa-angle-left text-xs"></i></span>
+                                <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angles-left text-xs"></i></span>
+                                <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angle-left text-xs"></i></span>
                                 <?php endif; ?>
 
                                 <!-- Page Numbers -->
@@ -990,30 +982,30 @@ $role = $_SESSION['role'] ?? 'user';
                                 $end_page = min($total_pages, $page + 2);
 
                                 if ($start_page > 1): ?>
-                                <a href="<?= buildPaginationUrl(1) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors">1</a>
-                                <?php if ($start_page > 2): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
+                                <a href="<?= buildPaginationUrl(1) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">1</a>
+                                <?php if ($start_page > 2): ?><span class="px-1 text-slate-400 dark:text-zinc-600">...</span><?php endif; ?>
                                 <?php endif;
 
                                 for ($i = $start_page; $i <= $end_page; $i++): ?>
-                                <a href="<?= buildPaginationUrl($i) ?>" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors <?= $i === $page ? 'bg-archery-600 text-white' : 'text-slate-600 hover:bg-slate-100' ?>"><?= $i ?></a>
+                                <a href="<?= buildPaginationUrl($i) ?>" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors <?= $i === $page ? 'bg-archery-600 text-white' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800' ?>"><?= $i ?></a>
                                 <?php endfor;
 
                                 if ($end_page < $total_pages): ?>
-                                <?php if ($end_page < $total_pages - 1): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
-                                <a href="<?= buildPaginationUrl($total_pages) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors"><?= $total_pages ?></a>
+                                <?php if ($end_page < $total_pages - 1): ?><span class="px-1 text-slate-400 dark:text-zinc-600">...</span><?php endif; ?>
+                                <a href="<?= buildPaginationUrl($total_pages) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"><?= $total_pages ?></a>
                                 <?php endif; ?>
 
                                 <!-- Next & Last -->
                                 <?php if ($page < $total_pages): ?>
-                                <a href="<?= buildPaginationUrl($page + 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Next">
+                                <a href="<?= buildPaginationUrl($page + 1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Next">
                                     <i class="fas fa-angle-right text-xs"></i>
                                 </a>
-                                <a href="<?= buildPaginationUrl($total_pages) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Last">
+                                <a href="<?= buildPaginationUrl($total_pages) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Last">
                                     <i class="fas fa-angles-right text-xs"></i>
                                 </a>
                                 <?php else: ?>
-                                <span class="p-2 text-slate-300"><i class="fas fa-angle-right text-xs"></i></span>
-                                <span class="p-2 text-slate-300"><i class="fas fa-angles-right text-xs"></i></span>
+                                <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angle-right text-xs"></i></span>
+                                <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angles-right text-xs"></i></span>
                                 <?php endif; ?>
                             </nav>
                             <?php endif; ?>
@@ -1027,7 +1019,7 @@ $role = $_SESSION['role'] ?? 'user';
     <!-- Detail Modal -->
     <div id="detailModal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/50" onclick="closeModal()"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-4xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
             <div class="bg-gradient-to-br from-archery-600 to-archery-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
                 <h3 class="font-semibold text-lg" id="modalNama">Detail Peserta</h3>
                 <button onclick="closeModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
@@ -1117,88 +1109,88 @@ $role = $_SESSION['role'] ?? 'user';
             let html = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Profile Info -->
-                    <div class="bg-slate-50 rounded-xl p-4">
-                        <h4 class="font-semibold text-slate-900 mb-3">Informasi Peserta</h4>
+                    <div class="bg-slate-50 dark:bg-zinc-800 rounded-xl p-4">
+                        <h4 class="font-semibold text-slate-900 dark:text-white mb-3">Informasi Peserta</h4>
                         <div class="space-y-2 text-sm">
-                            <div class="flex justify-between"><span class="text-slate-500">Gender</span><span class="font-medium">${data.gender || '-'}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500">Umur</span><span class="font-medium">${data.umur > 0 ? data.umur + ' tahun' : '-'}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500">Kota</span><span class="font-medium">${data.kota || '-'}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500">Club</span><span class="font-medium">${data.club || '-'}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500">Sekolah</span><span class="font-medium">${data.sekolah || '-'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Gender</span><span class="font-medium text-slate-900 dark:text-white">${data.gender || '-'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Umur</span><span class="font-medium text-slate-900 dark:text-white">${data.umur > 0 ? data.umur + ' tahun' : '-'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Kota</span><span class="font-medium text-slate-900 dark:text-white">${data.kota || '-'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Club</span><span class="font-medium text-slate-900 dark:text-white">${data.club || '-'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Sekolah</span><span class="font-medium text-slate-900 dark:text-white">${data.sekolah || '-'}</span></div>
                         </div>
                     </div>
 
                     <!-- Category -->
-                    <div class="bg-slate-50 rounded-xl p-4 text-center">
-                        <h4 class="font-semibold text-slate-900 mb-3">Kategori Dominan</h4>
+                    <div class="bg-slate-50 dark:bg-zinc-800 rounded-xl p-4 text-center">
+                        <h4 class="font-semibold text-slate-900 dark:text-white mb-3">Kategori Dominan</h4>
                         <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full ${katColor} text-white text-lg font-bold">
                             Kategori ${data.kategori_dominan.kategori}
                         </div>
-                        <p class="text-slate-600 mt-2">${data.kategori_dominan.label}</p>
+                        <p class="text-slate-600 dark:text-zinc-400 mt-2">${data.kategori_dominan.label}</p>
                     </div>
                 </div>
 
                 <!-- Stats -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-                    <div class="bg-archery-50 rounded-xl p-4 text-center">
-                        <p class="text-2xl font-bold text-archery-600">${data.total_turnamen}</p>
-                        <p class="text-xs text-slate-500">Total Turnamen</p>
+                    <div class="bg-archery-50 dark:bg-archery-900/30 rounded-xl p-4 text-center">
+                        <p class="text-2xl font-bold text-archery-600 dark:text-archery-400">${data.total_turnamen}</p>
+                        <p class="text-xs text-slate-500 dark:text-zinc-400">Total Turnamen</p>
                     </div>
-                    <div class="bg-yellow-50 rounded-xl p-4 text-center">
-                        <p class="text-2xl font-bold text-yellow-600">${data.juara1}</p>
-                        <p class="text-xs text-slate-500">Juara 1</p>
+                    <div class="bg-yellow-50 dark:bg-yellow-900/30 rounded-xl p-4 text-center">
+                        <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${data.juara1}</p>
+                        <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 1</p>
                     </div>
-                    <div class="bg-slate-100 rounded-xl p-4 text-center">
-                        <p class="text-2xl font-bold text-slate-600">${data.juara2}</p>
-                        <p class="text-xs text-slate-500">Juara 2</p>
+                    <div class="bg-slate-100 dark:bg-zinc-700 rounded-xl p-4 text-center">
+                        <p class="text-2xl font-bold text-slate-600 dark:text-zinc-300">${data.juara2}</p>
+                        <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 2</p>
                     </div>
-                    <div class="bg-amber-50 rounded-xl p-4 text-center">
-                        <p class="text-2xl font-bold text-amber-600">${data.juara3}</p>
-                        <p class="text-xs text-slate-500">Juara 3</p>
+                    <div class="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-4 text-center">
+                        <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">${data.juara3}</p>
+                        <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 3</p>
                     </div>
                 </div>
 
                 <!-- Bracket Stats -->
                 ${data.bracket_stats.total_bracket > 0 ? `
-                    <div class="mt-6 bg-amber-50 rounded-xl p-4">
-                        <h4 class="font-semibold text-slate-900 mb-3">Statistik Bracket</h4>
+                    <div class="mt-6 bg-amber-50 dark:bg-amber-900/30 rounded-xl p-4">
+                        <h4 class="font-semibold text-slate-900 dark:text-white mb-3">Statistik Bracket</h4>
                         <div class="grid grid-cols-3 gap-4 text-center">
-                            <div><p class="text-xl font-bold text-yellow-600">${data.bracket_stats.bracket_champion}</p><p class="text-xs text-slate-500">Champion</p></div>
-                            <div><p class="text-xl font-bold text-slate-600">${data.bracket_stats.bracket_runner_up}</p><p class="text-xs text-slate-500">Runner Up</p></div>
-                            <div><p class="text-xl font-bold text-amber-600">${data.bracket_stats.bracket_third_place}</p><p class="text-xs text-slate-500">3rd Place</p></div>
+                            <div><p class="text-xl font-bold text-yellow-600 dark:text-yellow-400">${data.bracket_stats.bracket_champion}</p><p class="text-xs text-slate-500 dark:text-zinc-400">Champion</p></div>
+                            <div><p class="text-xl font-bold text-slate-600 dark:text-zinc-300">${data.bracket_stats.bracket_runner_up}</p><p class="text-xs text-slate-500 dark:text-zinc-400">Runner Up</p></div>
+                            <div><p class="text-xl font-bold text-amber-600 dark:text-amber-400">${data.bracket_stats.bracket_third_place}</p><p class="text-xs text-slate-500 dark:text-zinc-400">3rd Place</p></div>
                         </div>
                     </div>
                 ` : ''}
 
                 <!-- Tournament History -->
                 <div class="mt-6">
-                    <h4 class="font-semibold text-slate-900 mb-3">Riwayat Turnamen</h4>
+                    <h4 class="font-semibold text-slate-900 dark:text-white mb-3">Riwayat Turnamen</h4>
                     ${data.rankings.length > 0 ? `
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
-                                <thead class="bg-slate-100">
+                                <thead class="bg-slate-100 dark:bg-zinc-800">
                                     <tr>
-                                        <th class="px-3 py-2 text-left text-xs font-semibold text-slate-600">#</th>
-                                        <th class="px-3 py-2 text-left text-xs font-semibold text-slate-600">Turnamen</th>
-                                        <th class="px-3 py-2 text-left text-xs font-semibold text-slate-600">Kategori</th>
-                                        <th class="px-3 py-2 text-center text-xs font-semibold text-slate-600">Rank</th>
-                                        <th class="px-3 py-2 text-center text-xs font-semibold text-slate-600">Peserta</th>
+                                        <th class="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400">#</th>
+                                        <th class="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400">Turnamen</th>
+                                        <th class="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400">Kategori</th>
+                                        <th class="px-3 py-2 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400">Rank</th>
+                                        <th class="px-3 py-2 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400">Peserta</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100">
+                                <tbody class="divide-y divide-slate-100 dark:divide-zinc-700">
                                     ${data.rankings.map((r, i) => `
                                         <tr>
-                                            <td class="px-3 py-2 text-slate-500">${i + 1}</td>
-                                            <td class="px-3 py-2 font-medium text-slate-900">${r.turnamen}</td>
-                                            <td class="px-3 py-2 text-slate-600">${r.kategori}</td>
-                                            <td class="px-3 py-2 text-center"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full ${r.ranking <= 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-600'} text-xs font-bold">${r.ranking}</span></td>
-                                            <td class="px-3 py-2 text-center text-slate-500">${r.total_peserta}</td>
+                                            <td class="px-3 py-2 text-slate-500 dark:text-zinc-400">${i + 1}</td>
+                                            <td class="px-3 py-2 font-medium text-slate-900 dark:text-white">${r.turnamen}</td>
+                                            <td class="px-3 py-2 text-slate-600 dark:text-zinc-400">${r.kategori}</td>
+                                            <td class="px-3 py-2 text-center"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full ${r.ranking <= 3 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : 'bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400'} text-xs font-bold">${r.ranking}</span></td>
+                                            <td class="px-3 py-2 text-center text-slate-500 dark:text-zinc-400">${r.total_peserta}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
                             </table>
                         </div>
-                    ` : '<p class="text-slate-500 text-center py-4">Belum ada riwayat turnamen</p>'}
+                    ` : '<p class="text-slate-500 dark:text-zinc-400 text-center py-4">Belum ada riwayat turnamen</p>'}
                 </div>
             `;
 
@@ -1221,6 +1213,9 @@ $role = $_SESSION['role'] ?? 'user';
                 this.form.submit();
             });
         });
+
+        // Theme Toggle
+        <?= getThemeToggleScript() ?>
     </script>
 </body>
 </html>

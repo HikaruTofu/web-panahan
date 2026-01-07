@@ -4,12 +4,18 @@ session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 include '../includes/check_access.php';
+include '../includes/theme.php';
 requireLogin();
 
 // Mulai session jika belum
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
+
+// Get user info from session
+$username = $_SESSION['username'] ?? 'User';
+$name = $_SESSION['name'] ?? $username;
+$role = $_SESSION['role'] ?? 'user';
 
 // ============================================
 // HANDLER UNTUK BRACKET TOURNAMENT (ADUAN)
@@ -219,21 +225,8 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Bracket <?= htmlspecialchars($kategoriData['name']) ?></title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                theme: {
-                    extend: {
-                        colors: {
-                            'archery': {
-                                50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
-                                400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
-                                800: '#166534', 900: '#14532d',
-                            }
-                        }
-                    }
-                }
-            }
-        </script>
+        <script><?= getThemeTailwindConfig() ?></script>
+        <script><?= getThemeInitScript() ?></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
             .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -242,6 +235,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 
             .player-card { transition: all 0.15s ease; }
             .player-card:hover:not(.empty):not(.winner):not(.eliminated) { background: #e2e8f0 !important; }
+            .dark .player-card:hover:not(.empty):not(.winner):not(.eliminated) { background: #3f3f46 !important; }
             .player-card.winner { background: #dcfce7 !important; border-color: #16a34a !important; color: #15803d !important; }
             .player-card.eliminated { opacity: 0.4; text-decoration: line-through; }
             .player-card.empty { background: #1e293b !important; color: #64748b !important; cursor: default; }
@@ -253,23 +247,99 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
         </style>
     </head>
 
-    <body class="min-h-screen bg-zinc-900 text-white p-4 md:p-6">
-        <div class="max-w-7xl mx-auto">
-            <!-- Header Bar -->
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-4">
-                    <a href="detail.php?id=<?= $kegiatan_id ?>"
-                       class="p-2 rounded-lg text-slate-400 hover:bg-white/10 transition-colors no-print">
-                        <i class="fas fa-arrow-left"></i>
-                    </a>
+    <body class="h-full bg-slate-50 dark:bg-zinc-950 transition-colors">
+        <div class="flex h-full">
+            <!-- Sidebar -->
+            <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white flex-shrink-0">
+                <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+                    <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                        <i class="fas fa-bullseye text-white"></i>
+                    </div>
                     <div>
-                        <h1 class="font-semibold text-white">Bracket Eliminasi</h1>
-                        <p class="text-sm text-slate-400"><?= htmlspecialchars($kategoriData['name']) ?> • <?= count($pesertaList) ?> peserta</p>
+                        <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+                        <p class="text-xs text-zinc-400">Management System</p>
                     </div>
                 </div>
-            </div>
+                <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+                    <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
+                    </a>
+                    <div class="pt-4">
+                        <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
+                        <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                            <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
+                        </a>
+                        <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                            <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
+                        </a>
+                    </div>
+                    <div class="pt-4">
+                        <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
+                        <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
+                            <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
+                        </a>
+                        <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                            <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+                        </a>
+                        <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                            <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+                        </a>
+                    </div>
+                </nav>
+                <div class="px-4 py-4 border-t border-zinc-800">
+                    <div class="flex items-center gap-3 px-2">
+                        <div class="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center">
+                            <i class="fas fa-user text-zinc-400 text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
+                            <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
+                        </div>
+                        <?= getThemeToggleButton() ?>
+                    </div>
+                    <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                       class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                        <i class="fas fa-sign-out-alt w-5"></i><span>Logout</span>
+                    </a>
+                </div>
+            </aside>
 
-            <!-- Setup Container -->
+            <!-- Mobile Menu Button -->
+            <button id="mobile-menu-btn" class="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-900 text-white shadow-lg">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <!-- Main Content -->
+            <main class="flex-1 overflow-auto">
+                <div class="px-6 lg:px-8 py-6">
+                    <!-- Breadcrumb -->
+                    <nav class="flex items-center gap-2 text-sm text-slate-500 dark:text-zinc-400 mb-4 no-print">
+                        <a href="dashboard.php" class="hover:text-archery-600 transition-colors">Dashboard</a>
+                        <i class="fas fa-chevron-right text-xs text-slate-300 dark:text-zinc-600"></i>
+                        <a href="kegiatan.view.php" class="hover:text-archery-600 transition-colors">Kegiatan</a>
+                        <i class="fas fa-chevron-right text-xs text-slate-300 dark:text-zinc-600"></i>
+                        <a href="detail.php?id=<?= $kegiatan_id ?>" class="hover:text-archery-600 transition-colors"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></a>
+                        <i class="fas fa-chevron-right text-xs text-slate-300 dark:text-zinc-600"></i>
+                        <span class="text-slate-900 dark:text-white font-medium">Bracket</span>
+                    </nav>
+
+                    <!-- Bracket Container with Dark Theme -->
+                    <div class="bg-zinc-900 rounded-xl border border-zinc-800 p-4 md:p-6 text-white">
+                        <!-- Header Bar -->
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-4">
+                                <a href="detail.php?id=<?= $kegiatan_id ?>"
+                                   class="p-2 rounded-lg text-slate-400 hover:bg-white/10 transition-colors no-print">
+                                    <i class="fas fa-arrow-left"></i>
+                                </a>
+                                <div>
+                                    <h1 class="font-semibold text-white">Bracket Eliminasi</h1>
+                                    <p class="text-sm text-slate-400"><?= htmlspecialchars($kategoriData['name']) ?> • <?= count($pesertaList) ?> peserta</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Setup Container -->
             <div class="bg-zinc-800 rounded-xl p-8 text-center max-w-md mx-auto border border-zinc-700" id="setupContainer">
                 <p class="text-slate-400 mb-6">Pilih ukuran bracket</p>
 
@@ -312,7 +382,52 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                             <div class="player-card empty px-4 py-3 rounded-lg text-sm font-medium text-center">Menunggu SF</div>
                         </div>
                     </div>
+                        </div>
+                    </div>
                 </div>
+            </main>
+        </div>
+
+        <!-- Mobile Sidebar -->
+        <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+        <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden flex flex-col">
+            <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+                <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                    <i class="fas fa-bullseye text-white"></i>
+                </div>
+                <div class="flex-1">
+                    <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+                </div>
+                <button id="close-mobile-menu" class="p-2 rounded-lg hover:bg-zinc-800">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-1">
+                <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                    <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
+                </a>
+                <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                    <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
+                </a>
+                <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                    <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
+                </a>
+                <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
+                    <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
+                </a>
+                <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                    <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+                </a>
+                <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                    <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+                </a>
+            </nav>
+            <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
+                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                   class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span>Logout</span>
+                </a>
             </div>
         </div>
 
@@ -902,6 +1017,31 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     alert(message);
                 }, 500);
             }
+
+            // Mobile menu functionality
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileOverlay = document.getElementById('mobile-overlay');
+            const mobileSidebar = document.getElementById('mobile-sidebar');
+            const closeMobileMenu = document.getElementById('close-mobile-menu');
+
+            function openMobileMenu() {
+                mobileOverlay.classList.remove('hidden');
+                mobileSidebar.classList.remove('-translate-x-full');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMobileMenuFn() {
+                mobileOverlay.classList.add('hidden');
+                mobileSidebar.classList.add('-translate-x-full');
+                document.body.style.overflow = '';
+            }
+
+            if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openMobileMenu);
+            if (mobileOverlay) mobileOverlay.addEventListener('click', closeMobileMenuFn);
+            if (closeMobileMenu) closeMobileMenu.addEventListener('click', closeMobileMenuFn);
+
+            // Theme Toggle
+            <?= getThemeToggleScript() ?>
         </script>
     </body>
 
@@ -1153,21 +1293,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Setup Scorecard Panahan - <?= htmlspecialchars($kategoriData['name']) ?></title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                theme: {
-                    extend: {
-                        colors: {
-                            'archery': {
-                                50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
-                                400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
-                                800: '#166534', 900: '#14532d',
-                            }
-                        }
-                    }
-                }
-            }
-        </script>
+        <script><?= getThemeTailwindConfig() ?></script>
+        <script><?= getThemeInitScript() ?></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
@@ -1175,8 +1302,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
             .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
             .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+            .dark .custom-scrollbar::-webkit-scrollbar-track { background: #27272a; }
+            .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #52525b; }
+            .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #71717a; }
             .dropdown-menu { display: none; }
-            #dropdownMenu.show { 
+            #dropdownMenu.show {
                 display: block !important;
                 opacity: 1 !important;
                 scale: 100% !important;
@@ -1187,7 +1317,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 transform: translateY(-10px);
                 transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             }
-            .hidden { display: none !important; }
+            /* Removed .hidden override - conflicts with Tailwind responsive classes */
 
             /* Score input styling */
             .arrow-input { transition: all 0.2s ease; }
@@ -1205,8 +1335,82 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             }
         </style>
     </head>
-    <body class="h-full bg-slate-50">
-        <div class="max-w-6xl mx-auto px-4 py-6">
+    <body class="h-full bg-slate-50 dark:bg-zinc-950 transition-colors">
+        <div class="flex h-full">
+            <!-- Sidebar -->
+            <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white">
+                <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+                    <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                        <i class="fas fa-bullseye text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+                        <p class="text-xs text-zinc-400">Management System</p>
+                    </div>
+                </div>
+                <nav class="flex-1 px-4 py-6 space-y-1">
+                    <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
+                    </a>
+                    <div class="pt-4">
+                        <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
+                        <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                            <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
+                        </a>
+                        <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                            <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
+                        </a>
+                    </div>
+                    <div class="pt-4">
+                        <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
+                        <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
+                            <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
+                        </a>
+                        <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                            <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+                        </a>
+                        <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                            <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+                        </a>
+                    </div>
+                </nav>
+                <div class="px-4 py-4 border-t border-zinc-800">
+                    <div class="flex items-center gap-3 px-2">
+                        <div class="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center">
+                            <i class="fas fa-user text-zinc-400 text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
+                            <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
+                        </div>
+                        <?= getThemeToggleButton() ?>
+                    </div>
+                    <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                       class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                        <i class="fas fa-sign-out-alt w-5"></i><span>Logout</span>
+                    </a>
+                </div>
+            </aside>
+
+            <!-- Mobile Menu Button -->
+            <button id="mobile-menu-btn" class="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-900 text-white shadow-lg">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <!-- Main Content -->
+            <main class="flex-1 overflow-auto">
+                <div class="px-6 lg:px-8 py-6">
+                    <!-- Breadcrumb -->
+                    <nav class="flex items-center gap-2 text-sm text-slate-500 dark:text-zinc-400 mb-4 no-print">
+                        <a href="dashboard.php" class="hover:text-archery-600 transition-colors">Dashboard</a>
+                        <i class="fas fa-chevron-right text-xs text-slate-300 dark:text-zinc-600"></i>
+                        <a href="kegiatan.view.php" class="hover:text-archery-600 transition-colors">Kegiatan</a>
+                        <i class="fas fa-chevron-right text-xs text-slate-300 dark:text-zinc-600"></i>
+                        <a href="detail.php?kegiatan_id=<?= $kegiatan_id ?>" class="hover:text-archery-600 transition-colors"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></a>
+                        <i class="fas fa-chevron-right text-xs text-slate-300 dark:text-zinc-600"></i>
+                        <span class="text-slate-900 dark:text-white font-medium">Scorecard</span>
+                    </nav>
+
             <?php if (isset($_GET['resource'])) { ?>
                 <?php if ($_GET['resource'] == 'form') { ?>
                     <!-- Scorecard Setup Form -->
@@ -1215,7 +1419,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         <i class="fas fa-arrow-left"></i> Kembali
                     </a>
 
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
                         <div class="bg-gradient-to-br from-archery-600 to-archery-800 px-6 py-5 text-white text-center">
                             <div class="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center mx-auto mb-3">
                                 <i class="fas fa-bullseye text-2xl"></i>
@@ -1227,14 +1431,14 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         <form action="" method="post" class="p-6">
                             <input type="hidden" id="local_time" name="local_time">
 
-                            <div class="bg-archery-50 border border-archery-200 rounded-xl p-4 mb-6 text-center">
-                                <p class="font-semibold text-archery-700"><?= htmlspecialchars($kategoriData['name']) ?></p>
-                                <p class="text-sm text-slate-600"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
-                                <p class="text-lg font-bold text-amber-600 mt-2"><?= count($pesertaList) ?> Peserta Terdaftar</p>
+                            <div class="bg-archery-50 dark:bg-archery-900/30 border border-archery-200 dark:border-archery-800 rounded-xl p-4 mb-6 text-center">
+                                <p class="font-semibold text-archery-700 dark:text-archery-400"><?= htmlspecialchars($kategoriData['name']) ?></p>
+                                <p class="text-sm text-slate-600 dark:text-zinc-400"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
+                                <p class="text-lg font-bold text-amber-600 dark:text-amber-400 mt-2"><?= count($pesertaList) ?> Peserta Terdaftar</p>
                             </div>
 
                             <?php if (count($pesertaList) == 0): ?>
-                                <div class="bg-amber-50 border border-amber-200 text-amber-700 rounded-lg p-4 mb-6">
+                                <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 rounded-lg p-4 mb-6">
                                     <i class="fas fa-exclamation-triangle mr-2"></i>
                                     <strong>Peringatan:</strong> Tidak ada peserta yang terdaftar dalam kategori ini.
                                 </div>
@@ -1242,15 +1446,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                             <div class="space-y-5">
                                 <div>
-                                    <label for="jumlahSesi" class="block text-sm font-medium text-slate-700 mb-2">Jumlah Sesi</label>
+                                    <label for="jumlahSesi" class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Jumlah Sesi</label>
                                     <input type="number" id="jumlahSesi" name="jumlahSesi" min="1" value="9"
-                                           class="w-full px-4 py-3 rounded-lg border border-slate-300 text-center text-lg font-semibold focus:ring-2 focus:ring-archery-500 focus:border-archery-500">
+                                           class="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-center text-lg font-semibold focus:ring-2 focus:ring-archery-500 focus:border-archery-500">
                                 </div>
 
                                 <div>
-                                    <label for="jumlahPanah" class="block text-sm font-medium text-slate-700 mb-2">Jumlah Anak Panah per Sesi</label>
+                                    <label for="jumlahPanah" class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Jumlah Anak Panah per Sesi</label>
                                     <input type="number" id="jumlahPanah" name="jumlahPanah" min="1" value="3"
-                                           class="w-full px-4 py-3 rounded-lg border border-slate-300 text-center text-lg font-semibold focus:ring-2 focus:ring-archery-500 focus:border-archery-500">
+                                           class="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-center text-lg font-semibold focus:ring-2 focus:ring-archery-500 focus:border-archery-500">
                                 </div>
                             </div>
 
@@ -1266,15 +1470,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 <?php if ($_GET['resource'] == 'index') { ?>
                     <?php if (!isset($_GET['scoreboard'])) { ?>
                         <!-- Scorecard List -->
-                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div class="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                 <div class="flex items-center gap-3">
-                                    <button onclick="goBack()" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors no-print">
+                                    <button onclick="goBack()" class="p-2 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors no-print">
                                         <i class="fas fa-arrow-left"></i>
                                     </button>
                                     <div>
-                                        <h2 class="font-semibold text-slate-900">Daftar Scorecard</h2>
-                                        <p class="text-sm text-slate-500"><?= htmlspecialchars($kategoriData['name']) ?> - <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
+                                        <h2 class="font-semibold text-slate-900 dark:text-white">Daftar Scorecard</h2>
+                                        <p class="text-sm text-slate-500 dark:text-zinc-400"><?= htmlspecialchars($kategoriData['name']) ?> - <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
                                     </div>
                                 </div>
                                 <div class="flex gap-2 no-print">
@@ -1299,30 +1503,30 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                             <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-48 no-print">Aksi</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-slate-100">
+                                    <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
                                         <?php
                                         $loopNumber = 1;
                                         $hasData = false;
                                         while ($a = mysqli_fetch_array($mysql_table_score_board)) {
                                             $hasData = true;
                                         ?>
-                                            <tr class="hover:bg-slate-50 transition-colors">
+                                            <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
                                                 <td class="px-4 py-3">
-                                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-archery-100 text-archery-700 text-sm font-semibold">
+                                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-archery-100 dark:bg-archery-900/30 text-archery-700 dark:text-archery-400 text-sm font-semibold">
                                                         <?= $loopNumber++ ?>
                                                     </span>
                                                 </td>
-                                                <td class="px-4 py-3 text-sm text-slate-600"><?= $a['created'] ?></td>
+                                                <td class="px-4 py-3 text-sm text-slate-600 dark:text-zinc-400"><?= $a['created'] ?></td>
                                                 <td class="px-4 py-3 text-center">
-                                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700"><?= $a['jumlah_sesi'] ?> Sesi</span>
+                                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"><?= $a['jumlah_sesi'] ?> Sesi</span>
                                                 </td>
                                                 <td class="px-4 py-3 text-center">
-                                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700"><?= $a['jumlah_anak_panah'] ?> Panah</span>
+                                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"><?= $a['jumlah_anak_panah'] ?> Panah</span>
                                                 </td>
                                                 <td class="px-4 py-3 no-print">
                                                     <div class="flex items-center justify-center gap-1 flex-wrap">
                                                         <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>&rangking=true"
-                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors">
+                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors">
                                                             <i class="fas fa-trophy text-xs"></i> Ranking
                                                         </a>
                                                         <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>"
@@ -1330,11 +1534,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                                             <i class="fas fa-edit text-xs"></i> Input
                                                         </a>
                                                         <a href="detail.php?aduan=true&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>"
-                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors">
+                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors">
                                                             <i class="fas fa-sitemap text-xs"></i> Aduan
                                                         </a>
                                                         <button onclick="delete_score_board('<?= $kegiatan_id ?>', '<?= $category_id ?>', '<?= $a['id'] ?>')"
-                                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 text-xs font-medium transition-colors">
+                                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 text-xs font-medium transition-colors">
                                                             <i class="fas fa-trash text-xs"></i>
                                                         </button>
                                                     </div>
@@ -1345,11 +1549,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                             <tr>
                                                 <td colspan="5" class="px-4 py-12">
                                                     <div class="flex flex-col items-center text-center">
-                                                        <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                                                            <i class="fas fa-clipboard-list text-slate-400 text-2xl"></i>
+                                                        <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+                                                            <i class="fas fa-clipboard-list text-slate-400 dark:text-zinc-500 text-2xl"></i>
                                                         </div>
-                                                        <p class="text-slate-500 font-medium">Belum ada scorecard</p>
-                                                        <p class="text-slate-400 text-sm mb-4">Klik tombol "Tambah" untuk membuat scorecard baru</p>
+                                                        <p class="text-slate-500 dark:text-zinc-400 font-medium">Belum ada scorecard</p>
+                                                        <p class="text-slate-400 dark:text-zinc-500 text-sm mb-4">Klik tombol "Tambah" untuk membuat scorecard baru</p>
                                                         <a href="detail.php?action=scorecard&resource=form&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
                                                            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                                             <i class="fas fa-plus"></i> Buat Scorecard
@@ -1368,16 +1572,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
             <!-- Scorecard Detail / Input Mode -->
             <?php if (isset($_GET['scoreboard']) && !isset($_GET['rangking'])) { ?>
-                <div id="scorecardContainer" class="bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <div class="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div id="scorecardContainer" class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+                    <div class="px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div class="flex items-center gap-3">
                             <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
-                               class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors no-print">
+                               class="p-2 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors no-print">
                                 <i class="fas fa-arrow-left"></i>
                             </a>
                             <div>
-                                <h2 class="font-semibold text-slate-900">Score Board - Input Skor</h2>
-                                <p class="text-sm text-slate-500"><?= htmlspecialchars($kategoriData['name']) ?></p>
+                                <h2 class="font-semibold text-slate-900 dark:text-white">Score Board - Input Skor</h2>
+                                <p class="text-sm text-slate-500 dark:text-zinc-400"><?= htmlspecialchars($kategoriData['name']) ?></p>
                             </div>
                         </div>
                         <button onclick="exportScorecardToExcel()" id="exportBtn" class="hidden inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors no-print">
@@ -1386,24 +1590,24 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     </div>
 
                     <!-- Stats Header - Minimal -->
-                    <div class="px-6 py-3 bg-slate-50 border-b border-slate-200">
+                    <div class="px-6 py-3 bg-slate-50 dark:bg-zinc-800/50 border-b border-slate-200 dark:border-zinc-800">
                         <div class="flex items-center justify-between text-sm">
                             <div class="flex items-center gap-4">
-                                <span class="text-slate-500"><?= htmlspecialchars($kategoriData['name']) ?></span>
-                                <span class="text-slate-300">•</span>
-                                <span class="text-slate-500"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></span>
+                                <span class="text-slate-500 dark:text-zinc-400"><?= htmlspecialchars($kategoriData['name']) ?></span>
+                                <span class="text-slate-300 dark:text-zinc-600">•</span>
+                                <span class="text-slate-500 dark:text-zinc-400"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></span>
                             </div>
-                            <div class="flex items-center gap-4 text-slate-500">
-                                <span><span class="font-medium text-slate-700" id="pesertaCount"><?= count($pesertaList) ?></span> Peserta</span>
-                                <span><span class="font-medium text-slate-700" id="panahCount">-</span> Panah</span>
+                            <div class="flex items-center gap-4 text-slate-500 dark:text-zinc-400">
+                                <span><span class="font-medium text-slate-700 dark:text-zinc-300" id="pesertaCount"><?= count($pesertaList) ?></span> Peserta</span>
+                                <span><span class="font-medium text-slate-700 dark:text-zinc-300" id="panahCount">-</span> Panah</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Peserta Selector Dropdown -->
                     <div id="pesertaSelectorInline" class="p-6">
-                        <div class="bg-white border border-slate-200 rounded-xl p-8 text-center max-w-md mx-auto">
-                            <p class="text-slate-500 text-sm mb-4">Pilih peserta untuk mulai input skor</p>
+                        <div class="bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-8 text-center max-w-md mx-auto">
+                            <p class="text-slate-500 dark:text-zinc-400 text-sm mb-4">Pilih peserta untuk mulai input skor</p>
 
                             <div class="relative">
                                 <button id="dropdownBtn" onclick="toggleDropdown()"
@@ -1411,7 +1615,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                     <span id="dropdownText">Pilih Peserta</span>
                                     <i class="fas fa-chevron-down dropdown-arrow transition-transform"></i>
                                 </button>
-                                <div id="dropdownMenu" class="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-[100] transition-all origin-top scale-95 opacity-0 pointer-events-none display-none-initial">
+                                <div id="dropdownMenu" class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl shadow-lg max-h-60 overflow-y-auto z-[100] transition-all origin-top scale-95 opacity-0 pointer-events-none display-none-initial">
                                     <!-- Populated by JavaScript -->
                                 </div>
                             </div>
@@ -1420,12 +1624,12 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                     <!-- Selected Peserta Info -->
                     <div id="selectedPesertaInfo" class="hidden px-6 pb-4">
-                        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
+                        <div class="flex items-center justify-between bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-4 py-3">
                             <div class="flex items-center gap-3">
-                                <span class="text-sm text-slate-500">Peserta:</span>
-                                <span class="font-semibold text-slate-900" id="selectedPesertaName"></span>
+                                <span class="text-sm text-slate-500 dark:text-zinc-400">Peserta:</span>
+                                <span class="font-semibold text-slate-900 dark:text-white" id="selectedPesertaName"></span>
                             </div>
-                            <button onclick="changePeserta()" class="px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-200 text-sm font-medium transition-colors no-print">
+                            <button onclick="changePeserta()" class="px-3 py-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700 text-sm font-medium transition-colors no-print">
                                 <i class="fas fa-exchange-alt mr-1"></i> Ganti
                             </button>
                         </div>
@@ -1437,27 +1641,27 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
             <!-- Ranking Mode -->
             <?php if (isset($_GET['scoreboard']) && isset($_GET['rangking'])) { ?>
-                <div id="scorecardContainer" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div id="scorecardContainer" class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div class="flex items-center gap-3">
                             <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
-                               class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors no-print">
+                               class="p-2 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors no-print">
                                 <i class="fas fa-arrow-left"></i>
                             </a>
                             <div>
-                                <h2 class="font-semibold text-slate-900">Ranking</h2>
-                                <p class="text-sm text-slate-500"><?= htmlspecialchars($kategoriData['name']) ?> • <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
+                                <h2 class="font-semibold text-slate-900 dark:text-white">Ranking</h2>
+                                <p class="text-sm text-slate-500 dark:text-zinc-400"><?= htmlspecialchars($kategoriData['name']) ?> • <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 no-print">
                             <!-- View Toggle -->
-                            <div class="flex items-center bg-slate-100 rounded-lg p-1">
+                            <div class="flex items-center bg-slate-100 dark:bg-zinc-800 rounded-lg p-1">
                                 <button onclick="setRankingView('leaderboard')" id="viewLeaderboard"
-                                    class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors bg-white text-slate-900 shadow-sm">
+                                    class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors bg-white dark:bg-zinc-700 text-slate-900 dark:text-white shadow-sm">
                                     <i class="fas fa-trophy mr-1"></i> Ringkas
                                 </button>
                                 <button onclick="setRankingView('detail')" id="viewDetail"
-                                    class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-slate-500 hover:text-slate-700">
+                                    class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-300">
                                     <i class="fas fa-table mr-1"></i> Detail
                                 </button>
                             </div>
@@ -1465,7 +1669,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                 <i class="fas fa-edit"></i> Input Skor
                             </a>
-                            <button onclick="exportScorecardToExcel()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 transition-colors">
+                            <button onclick="exportScorecardToExcel()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors">
                                 <i class="fas fa-file-excel"></i> Export
                             </button>
                         </div>
@@ -1549,12 +1753,12 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     const detailBtn = document.getElementById('viewDetail');
 
                     if (view === 'leaderboard') {
-                        leaderboardBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors bg-white text-slate-900 shadow-sm';
-                        detailBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-slate-500 hover:text-slate-700';
+                        leaderboardBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors bg-white dark:bg-zinc-700 text-slate-900 dark:text-white shadow-sm';
+                        detailBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-300';
                         generatePlayerSections(jumlahSesiRanking, jumlahPanahRanking);
                     } else {
-                        leaderboardBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-slate-500 hover:text-slate-700';
-                        detailBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors bg-white text-slate-900 shadow-sm';
+                        leaderboardBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-300';
+                        detailBtn.className = 'px-3 py-1.5 rounded-md text-xs font-medium transition-colors bg-white dark:bg-zinc-700 text-slate-900 dark:text-white shadow-sm';
                         generateDetailedView(jumlahSesiRanking, jumlahPanahRanking);
                     }
                 }
@@ -1567,10 +1771,10 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     if (pesertaData.length === 0) {
                         playersContainer.innerHTML = `
                             <div class="text-center py-12">
-                                <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                                    <i class="fas fa-users text-slate-400 text-2xl"></i>
+                                <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-users text-slate-400 dark:text-zinc-500 text-2xl"></i>
                                 </div>
-                                <p class="text-slate-500 font-medium">Tidak ada data peserta</p>
+                                <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada data peserta</p>
                             </div>
                         `;
                         return;
@@ -1589,7 +1793,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         const pesertaScores = allScoresData[peserta.id] || [];
 
                         html += `
-                            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                            <div class="border border-slate-200 dark:border-zinc-700 rounded-xl overflow-hidden">
                                 <div class="${headerBg} px-4 py-3 flex items-center justify-between text-white">
                                     <div class="flex items-center gap-3">
                                         <span class="text-xl">${rankDisplay}</span>
@@ -1603,14 +1807,14 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                 <div class="overflow-x-auto">
                                     <table class="w-full min-w-[400px]">
                                         <thead>
-                                            <tr class="bg-slate-100">
-                                                <th class="px-3 py-2 text-xs font-semibold text-slate-600 text-center w-14">Sesi</th>
+                                            <tr class="bg-slate-100 dark:bg-zinc-800">
+                                                <th class="px-3 py-2 text-xs font-semibold text-slate-600 dark:text-zinc-400 text-center w-14">Sesi</th>
                                                 ${generateArrowHeaders(jumlahPanah)}
-                                                <th class="px-3 py-2 text-xs font-semibold text-slate-600 text-center w-14">Sub</th>
-                                                <th class="px-3 py-2 text-xs font-semibold text-slate-600 text-center w-14">Total</th>
+                                                <th class="px-3 py-2 text-xs font-semibold text-slate-600 dark:text-zinc-400 text-center w-14">Sub</th>
+                                                <th class="px-3 py-2 text-xs font-semibold text-slate-600 dark:text-zinc-400 text-center w-14">Total</th>
                                             </tr>
                                         </thead>
-                                        <tbody class="divide-y divide-slate-100">
+                                        <tbody class="divide-y divide-slate-100 dark:divide-zinc-700 bg-white dark:bg-zinc-900">
                                             ${generateDetailRows(peserta.id, jumlahSesi, jumlahPanah, pesertaScores)}
                                         </tbody>
                                     </table>
@@ -1626,7 +1830,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 function generateArrowHeaders(jumlahPanah) {
                     let headers = '';
                     for (let a = 1; a <= jumlahPanah; a++) {
-                        headers += `<th class="px-2 py-2 text-xs font-semibold text-slate-600 text-center w-10">${a}</th>`;
+                        headers += `<th class="px-2 py-2 text-xs font-semibold text-slate-600 dark:text-zinc-400 text-center w-10">${a}</th>`;
                     }
                     return headers;
                 }
@@ -1646,19 +1850,19 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                             // Calculate numeric value
                             let numericScore = 0;
-                            let cellClass = 'text-slate-700';
+                            let cellClass = 'text-slate-700 dark:text-zinc-300';
 
                             if (scoreVal) {
                                 const lowerScore = scoreVal.toLowerCase();
                                 if (lowerScore === 'x') {
                                     numericScore = 10;
-                                    cellClass = 'text-archery-600 font-bold';
+                                    cellClass = 'text-archery-600 dark:text-archery-400 font-bold';
                                 } else if (lowerScore === 'm') {
                                     numericScore = 0;
-                                    cellClass = 'text-red-500';
+                                    cellClass = 'text-red-500 dark:text-red-400';
                                 } else {
                                     numericScore = parseInt(scoreVal) || 0;
-                                    if (numericScore >= 9) cellClass = 'text-amber-600 font-semibold';
+                                    if (numericScore >= 9) cellClass = 'text-amber-600 dark:text-amber-400 font-semibold';
                                 }
                                 sessionTotal += numericScore;
                             }
@@ -1669,11 +1873,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         runningTotal += sessionTotal;
 
                         rows += `
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-3 py-2 text-center text-sm font-medium text-slate-500 bg-slate-50">${s}</td>
+                            <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800">
+                                <td class="px-3 py-2 text-center text-sm font-medium text-slate-500 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800">${s}</td>
                                 ${arrowCells}
-                                <td class="px-2 py-2 text-center text-sm font-semibold text-slate-700 bg-slate-50">${sessionTotal}</td>
-                                <td class="px-2 py-2 text-center text-sm font-bold text-slate-900 bg-slate-100">${runningTotal}</td>
+                                <td class="px-2 py-2 text-center text-sm font-semibold text-slate-700 dark:text-zinc-300 bg-slate-50 dark:bg-zinc-800">${sessionTotal}</td>
+                                <td class="px-2 py-2 text-center text-sm font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-zinc-700">${runningTotal}</td>
                             </tr>
                         `;
                     }
@@ -1731,16 +1935,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                 pesertaData.forEach(peserta => {
                     const item = document.createElement('div');
-                    item.className = 'px-5 py-3 hover:bg-slate-50 cursor-pointer flex items-center gap-4 border-b border-slate-100 last:border-0 transition-colors';
+                    item.className = 'px-5 py-3 hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer flex items-center gap-4 border-b border-slate-100 dark:border-zinc-700 last:border-0 transition-colors';
                     item.onclick = () => selectPeserta(peserta.id);
 
                     item.innerHTML = `
-                        <div class="w-8 h-8 rounded-full ${peserta.jenis_kelamin === 'P' ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'} flex items-center justify-center">
+                        <div class="w-8 h-8 rounded-full ${peserta.jenis_kelamin === 'P' ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} flex items-center justify-center">
                             <i class="fas ${peserta.jenis_kelamin === 'P' ? 'fa-venus' : 'fa-mars'} text-sm"></i>
                         </div>
                         <div>
-                            <p class="font-medium text-slate-900 text-sm">${peserta.nama_peserta}</p>
-                            <p class="text-xs text-slate-500">${peserta.jenis_kelamin === 'P' ? 'Putri' : 'Putra'}</p>
+                            <p class="font-medium text-slate-900 dark:text-white text-sm">${peserta.nama_peserta}</p>
+                            <p class="text-xs text-slate-500 dark:text-zinc-400">${peserta.jenis_kelamin === 'P' ? 'Putri' : 'Putra'}</p>
                         </div>
                     `;
 
@@ -1852,11 +2056,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 if (pesertaData.length === 0) {
                     playersContainer.innerHTML = `
                         <div class="text-center py-12">
-                            <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-users text-slate-400 text-2xl"></i>
+                            <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-users text-slate-400 dark:text-zinc-500 text-2xl"></i>
                             </div>
-                            <p class="text-slate-500 font-medium">Tidak ada data peserta</p>
-                            <p class="text-slate-400 text-sm mt-1">Pastikan peserta sudah terdaftar di kategori ini</p>
+                            <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada data peserta</p>
+                            <p class="text-slate-400 dark:text-zinc-500 text-sm mt-1">Pastikan peserta sudah terdaftar di kategori ini</p>
                         </div>
                     `;
                     return;
@@ -1874,15 +2078,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                     top3.forEach((peserta, index) => {
                         const medals = ['🥇', '🥈', '🥉'];
-                        const bgColors = ['bg-archery-50 border-archery-200', 'bg-slate-50 border-slate-200', 'bg-amber-50 border-amber-200'];
-                        const textColors = ['text-archery-700', 'text-slate-700', 'text-amber-700'];
+                        const bgColors = ['bg-archery-50 dark:bg-archery-900/30 border-archery-200 dark:border-archery-700', 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700', 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700'];
+                        const textColors = ['text-archery-700 dark:text-archery-400', 'text-slate-700 dark:text-zinc-300', 'text-amber-700 dark:text-amber-400'];
 
                         heroHTML += `
-                            <div class="border ${bgColors[index]} rounded-xl p-4 text-center ${index === 0 ? 'ring-2 ring-archery-500 ring-offset-2' : ''}">
+                            <div class="border ${bgColors[index]} rounded-xl p-4 text-center ${index === 0 ? 'ring-2 ring-archery-500 ring-offset-2 dark:ring-offset-zinc-900' : ''}">
                                 <div class="text-3xl mb-2">${medals[index]}</div>
-                                <p class="font-bold text-lg text-slate-900 mb-1">${peserta.nama_peserta}</p>
+                                <p class="font-bold text-lg text-slate-900 dark:text-white mb-1">${peserta.nama_peserta}</p>
                                 <p class="text-3xl font-bold ${textColors[index]}">${peserta.total_score || 0}</p>
-                                <p class="text-xs text-slate-500 mt-1">${peserta.x_score || 0} × X</p>
+                                <p class="text-xs text-slate-500 dark:text-zinc-400 mt-1">${peserta.x_score || 0} × X</p>
                             </div>
                         `;
                     });
@@ -1895,7 +2099,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 // Build compact table for all participants
                 if (pesertaData.length > 0) {
                     const tableSection = document.createElement('div');
-                    tableSection.className = 'border border-slate-200 rounded-xl overflow-hidden';
+                    tableSection.className = 'border border-slate-200 dark:border-zinc-700 rounded-xl overflow-hidden';
 
                     let tableHTML = `
                         <table class="w-full">
@@ -1907,24 +2111,24 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                     <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-24">Total</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody class="divide-y divide-slate-100 dark:divide-zinc-700 bg-white dark:bg-zinc-900">
                     `;
 
                     pesertaData.forEach((peserta, index) => {
                         const isTop3 = index < 3;
-                        const rowClass = index === 0 ? 'bg-archery-50' : (isTop3 ? 'bg-slate-50' : 'bg-white hover:bg-slate-50');
+                        const rowClass = index === 0 ? 'bg-archery-50 dark:bg-archery-900/20' : (isTop3 ? 'bg-slate-50 dark:bg-zinc-800' : 'bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800');
                         const rankDisplay = isTop3 ? ['🥇', '🥈', '🥉'][index] : (index + 1);
                         const nameWeight = isTop3 ? 'font-semibold' : 'font-medium';
                         const scoreWeight = isTop3 ? 'font-bold text-lg' : 'font-semibold';
-                        const scoreColor = index === 0 ? 'text-archery-700' : 'text-slate-900';
+                        const scoreColor = index === 0 ? 'text-archery-700 dark:text-archery-400' : 'text-slate-900 dark:text-white';
 
                         tableHTML += `
                             <tr class="${rowClass} transition-colors">
-                                <td class="px-4 py-3 text-center text-lg">${rankDisplay}</td>
+                                <td class="px-4 py-3 text-center text-lg text-slate-900 dark:text-white">${rankDisplay}</td>
                                 <td class="px-4 py-3">
-                                    <span class="${nameWeight} text-slate-900">${peserta.nama_peserta}</span>
+                                    <span class="${nameWeight} text-slate-900 dark:text-white">${peserta.nama_peserta}</span>
                                 </td>
-                                <td class="px-4 py-3 text-right text-slate-500 text-sm">${peserta.x_score || 0}</td>
+                                <td class="px-4 py-3 text-right text-slate-500 dark:text-zinc-400 text-sm">${peserta.x_score || 0}</td>
                                 <td class="px-4 py-3 text-right ${scoreWeight} ${scoreColor}">${peserta.total_score || 0}</td>
                             </tr>
                         `;
@@ -1933,7 +2137,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     tableHTML += `
                             </tbody>
                         </table>
-                        <div class="bg-slate-50 px-4 py-3 text-sm text-slate-500 border-t border-slate-200">
+                        <div class="bg-slate-50 dark:bg-zinc-800 px-4 py-3 text-sm text-slate-500 dark:text-zinc-400 border-t border-slate-200 dark:border-zinc-700">
                             ${pesertaData.length} peserta • ${jumlahSesi} sesi × ${jumlahPanah} panah
                         </div>
                     `;
@@ -1951,7 +2155,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 if (!playersContainer) return;
 
                 playersContainer.innerHTML = `
-                    <div class="border border-slate-200 rounded-xl overflow-hidden">
+                    <div class="border border-slate-200 dark:border-zinc-700 rounded-xl overflow-hidden">
                         <div class="overflow-x-auto custom-scrollbar">
                             <table class="w-full min-w-[500px]">
                                 <thead>
@@ -1961,11 +2165,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                         <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-14">Sub</th>
                                         <th rowspan="2" class="px-3 py-2 text-xs font-semibold text-center w-14">Total</th>
                                     </tr>
-                                    <tr class="bg-zinc-700 text-white">
-                                        ${Array.from({ length: jumlahPanah }, (_, i) => `<th class="px-2 py-1 text-xs font-medium text-center w-12">${i + 1}</th>`).join('')}
+                                    <tr class="bg-zinc-800 text-white">
+                                        ${Array.from({ length: jumlahPanah }, (_, i) => `<th class="px-2 py-1 text-xs font-medium text-center w-12 border-t border-zinc-700">${i + 1}</th>`).join('')}
                                     </tr>
                                 </thead>
-                                <tbody class="bg-white divide-y divide-slate-100">
+                                <tbody class="bg-white dark:bg-zinc-900 divide-y divide-slate-100 dark:divide-zinc-700">
                                     ${generateTableRows(playerId, jumlahSesi, jumlahPanah)}
                                 </tbody>
                             </table>
@@ -1985,7 +2189,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     const arrowInputs = Array.from({ length: jumlahPanah }, (_, arrow) => `
                         <td class="px-1 py-2 text-center">
                             <input type="text"
-                                   class="arrow-input w-10 h-8 text-center text-sm font-semibold rounded border border-slate-300 focus:border-archery-500"
+                                   class="arrow-input w-10 h-8 text-center text-sm font-semibold rounded border border-slate-300 dark:border-zinc-600 focus:border-archery-500 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white"
                                    <?= (isset($_GET['rangking'])) ? 'disabled' : '' ?>
                                    id="${playerId}_a${arrow + 1}_s${session}"
                                    placeholder=""
@@ -1999,18 +2203,18 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     `).join('');
 
                     rowsHtml += `
-                        <tr class="hover:bg-slate-50">
-                            <td class="px-3 py-2 text-center font-medium text-slate-500 bg-slate-50 text-sm">${session}</td>
+                        <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+                            <td class="px-3 py-2 text-center font-medium text-slate-500 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-900 border-r border-slate-100 dark:border-zinc-800 text-sm">${session}</td>
                             ${arrowInputs}
                             <td class="px-1 py-2 text-center">
                                 <input type="text"
-                                       class="w-10 h-8 text-center text-sm font-semibold rounded bg-slate-100 border border-slate-200 text-slate-700"
+                                       class="w-10 h-8 text-center text-sm font-semibold rounded bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300"
                                        id="${playerId}_total_a${session}"
                                        readonly>
                             </td>
                             <td class="px-1 py-2 text-center">
                                 <input type="text"
-                                       class="w-10 h-8 text-center text-sm font-semibold rounded bg-slate-100 border border-slate-200 text-slate-900"
+                                       class="w-10 h-8 text-center text-sm font-semibold rounded bg-slate-100 dark:bg-zinc-700 border border-slate-200 dark:border-zinc-600 text-slate-900 dark:text-white"
                                        id="${playerId}_end_a${session}"
                                        readonly>
                             </td>
@@ -2363,6 +2567,104 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 a.click();
                 window.URL.revokeObjectURL(url);
             }
+
+            // Mobile menu functionality
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileOverlay = document.getElementById('mobile-overlay');
+            const mobileSidebar = document.getElementById('mobile-sidebar');
+            const closeMobileMenu = document.getElementById('close-mobile-menu');
+
+            function openMobileMenu() {
+                mobileOverlay.classList.remove('hidden');
+                mobileSidebar.classList.remove('-translate-x-full');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMobileMenuFn() {
+                mobileOverlay.classList.add('hidden');
+                mobileSidebar.classList.add('-translate-x-full');
+                document.body.style.overflow = '';
+            }
+
+            if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openMobileMenu);
+            if (mobileOverlay) mobileOverlay.addEventListener('click', closeMobileMenuFn);
+            if (closeMobileMenu) closeMobileMenu.addEventListener('click', closeMobileMenuFn);
+        </script>
+
+                </div>
+            </main>
+        </div>
+
+        <!-- Mobile Sidebar -->
+        <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+        <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden flex flex-col">
+            <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+                <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                    <i class="fas fa-bullseye text-white"></i>
+                </div>
+                <div class="flex-1">
+                    <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+                </div>
+                <button id="close-mobile-menu" class="p-2 rounded-lg hover:bg-zinc-800">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-1">
+                <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                    <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
+                </a>
+                <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                    <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
+                </a>
+                <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                    <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
+                </a>
+                <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
+                    <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
+                </a>
+                <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                    <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+                </a>
+                <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                    <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+                </a>
+            </nav>
+            <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
+                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                   class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+
+        <script>
+            // Mobile menu functionality (after DOM elements exist)
+            (function() {
+                const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+                const mobileOverlay = document.getElementById('mobile-overlay');
+                const mobileSidebar = document.getElementById('mobile-sidebar');
+                const closeMobileMenu = document.getElementById('close-mobile-menu');
+
+                function openMobileMenu() {
+                    if (mobileOverlay) mobileOverlay.classList.remove('hidden');
+                    if (mobileSidebar) mobileSidebar.classList.remove('-translate-x-full');
+                    document.body.style.overflow = 'hidden';
+                }
+
+                function closeMobileMenuFn() {
+                    if (mobileOverlay) mobileOverlay.classList.add('hidden');
+                    if (mobileSidebar) mobileSidebar.classList.add('-translate-x-full');
+                    document.body.style.overflow = '';
+                }
+
+                if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openMobileMenu);
+                if (mobileOverlay) mobileOverlay.addEventListener('click', closeMobileMenuFn);
+                if (closeMobileMenu) closeMobileMenu.addEventListener('click', closeMobileMenuFn);
+            })();
+
+            // Theme Toggle
+            <?= getThemeToggleScript() ?>
         </script>
     </body>
     </html>
@@ -2570,27 +2872,17 @@ function buildPaginationUrl($page, $params = []) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar Peserta - <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'archery': {
-                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
-                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
-                            800: '#166534', 900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script><?= getThemeTailwindConfig() ?></script>
+    <script><?= getThemeInitScript() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: #27272a; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #52525b; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #71717a; }
         .btn-input { display: none; }
         .btn-input.show { display: inline-block; }
         .payment-icon { cursor: pointer; transition: transform 0.2s; }
@@ -2613,77 +2905,161 @@ function buildPaginationUrl($page, $params = []) {
         /* Modal - minimal styles needed */
         .modal { display: none; position: fixed; z-index: 1000; inset: 0; background: rgba(0,0,0,0.8); }
         .modal-content { position: relative; margin: 5% auto; width: 90%; max-width: 700px; background: white; border-radius: 12px; overflow: hidden; }
+        .dark .modal-content { background: #18181b; }
         .modal-close { position: absolute; right: 1rem; top: 0.75rem; color: white; font-size: 1.5rem; cursor: pointer; z-index: 1001; }
         .modal-close:hover { opacity: 0.7; }
     </style>
 </head>
 
-<body class="min-h-screen bg-slate-50">
-    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <!-- Compact Header -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
-            <div class="px-6 py-4 border-b border-slate-100">
+<body class="h-full bg-slate-50 dark:bg-zinc-950 transition-colors">
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white">
+            <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+                <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                    <i class="fas fa-bullseye text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+                    <p class="text-xs text-zinc-400">Management System</p>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 py-6 space-y-1">
+                <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-home w-5"></i>
+                    <span class="text-sm">Dashboard</span>
+                </a>
+
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
+                    <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-users w-5"></i>
+                        <span class="text-sm">Users</span>
+                    </a>
+                    <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-tags w-5"></i>
+                        <span class="text-sm">Kategori</span>
+                    </a>
+                </div>
+
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
+                    <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
+                        <i class="fas fa-calendar w-5"></i>
+                        <span class="text-sm font-medium">Kegiatan</span>
+                    </a>
+                    <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-user-friends w-5"></i>
+                        <span class="text-sm">Peserta</span>
+                    </a>
+                    <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-chart-bar w-5"></i>
+                        <span class="text-sm">Statistik</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="px-4 py-4 border-t border-zinc-800">
+                <div class="flex items-center gap-3 px-2">
+                    <div class="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center">
+                        <i class="fas fa-user text-zinc-400 text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
+                        <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
+                    </div>
+                    <?= getThemeToggleButton() ?>
+                </div>
+                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                   class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Mobile Menu Button -->
+        <button id="mobile-menu-btn" class="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-900 text-white shadow-lg">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-auto">
+            <div class="px-6 lg:px-8 py-6">
+                <!-- Breadcrumb -->
+                <nav class="flex items-center gap-2 text-sm text-slate-500 dark:text-zinc-400 mb-4">
+                    <a href="dashboard.php" class="hover:text-archery-600 transition-colors">Dashboard</a>
+                    <i class="fas fa-chevron-right text-xs text-slate-300 dark:text-zinc-600"></i>
+                    <a href="kegiatan.view.php" class="hover:text-archery-600 transition-colors">Kegiatan</a>
+                    <i class="fas fa-chevron-right text-xs text-slate-300 dark:text-zinc-600"></i>
+                    <span class="text-slate-900 dark:text-white font-medium"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></span>
+                </nav>
+
+                <!-- Compact Header with Metrics -->
+        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm mb-6">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div class="flex items-center gap-3">
-                        <a href="kegiatan.view.php" class="p-2 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
+                        <a href="kegiatan.view.php" class="p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
                             <i class="fas fa-arrow-left"></i>
                         </a>
                         <div>
-                            <h1 class="text-lg font-semibold text-slate-900"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></h1>
-                            <p class="text-sm text-slate-500">Daftar Peserta Terdaftar</p>
+                            <h1 class="text-lg font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></h1>
+                            <p class="text-sm text-slate-500 dark:text-zinc-400">Daftar Peserta Terdaftar</p>
                         </div>
                     </div>
                     <?php if ($totalPeserta > 0): ?>
                     <a href="?export=excel&kegiatan_id=<?= $kegiatan_id ?>&search=<?= urlencode($search) ?>&filter_kategori=<?= $filter_kategori ?>&filter_gender=<?= urlencode($filter_gender) ?>"
-                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors" target="_blank">
-                        <i class="fas fa-file-excel text-emerald-600"></i> Export Excel
+                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors" target="_blank">
+                        <i class="fas fa-file-excel text-emerald-600 dark:text-emerald-400"></i> Export Excel
                     </a>
                     <?php endif; ?>
                 </div>
             </div>
 
             <!-- Metrics Bar -->
-            <div class="px-6 py-3 bg-slate-50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <div class="px-6 py-3 bg-slate-50 dark:bg-zinc-800/50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                 <div class="flex items-center gap-2">
-                    <span class="text-2xl font-bold text-slate-900"><?= $statistik['total'] ?></span>
-                    <span class="text-slate-500">Total</span>
+                    <span class="text-2xl font-bold text-slate-900 dark:text-white"><?= $statistik['total'] ?></span>
+                    <span class="text-slate-500 dark:text-zinc-400">Total</span>
                 </div>
-                <span class="text-slate-300 hidden sm:inline">|</span>
+                <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                 <div class="flex items-center gap-1.5">
                     <i class="fas fa-mars text-blue-500 text-xs"></i>
-                    <span class="font-medium text-slate-700"><?= $statistik['laki_laki'] ?></span>
-                    <span class="text-slate-400">Putra</span>
+                    <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $statistik['laki_laki'] ?></span>
+                    <span class="text-slate-400 dark:text-zinc-500">Putra</span>
                 </div>
                 <div class="flex items-center gap-1.5">
                     <i class="fas fa-venus text-pink-500 text-xs"></i>
-                    <span class="font-medium text-slate-700"><?= $statistik['perempuan'] ?></span>
-                    <span class="text-slate-400">Putri</span>
+                    <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $statistik['perempuan'] ?></span>
+                    <span class="text-slate-400 dark:text-zinc-500">Putri</span>
                 </div>
-                <span class="text-slate-300 hidden sm:inline">|</span>
+                <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                 <div class="flex items-center gap-1.5">
-                    <span class="text-emerald-600">✓</span>
-                    <span class="font-medium text-slate-700"><?= $statistik['sudah_bayar'] ?></span>
-                    <span class="text-slate-400">Paid</span>
+                    <span class="text-emerald-600 dark:text-emerald-400">✓</span>
+                    <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $statistik['sudah_bayar'] ?></span>
+                    <span class="text-slate-400 dark:text-zinc-500">Paid</span>
                 </div>
                 <?php if ($statistik['belum_bayar'] > 0): ?>
                 <div class="flex items-center gap-1.5">
-                    <span class="text-red-500">✗</span>
-                    <span class="font-medium text-red-600"><?= $statistik['belum_bayar'] ?></span>
-                    <span class="text-slate-400">Unpaid</span>
+                    <span class="text-red-500 dark:text-red-400">✗</span>
+                    <span class="font-medium text-red-600 dark:text-red-400"><?= $statistik['belum_bayar'] ?></span>
+                    <span class="text-slate-400 dark:text-zinc-500">Unpaid</span>
                 </div>
                 <?php endif; ?>
-                <span class="text-slate-300 hidden sm:inline">|</span>
+                <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                 <div class="flex items-center gap-1.5">
-                    <span class="font-medium text-slate-700"><?= count($statistik['kategori']) ?></span>
-                    <span class="text-slate-400">Kategori</span>
+                    <span class="font-medium text-slate-700 dark:text-zinc-300"><?= count($statistik['kategori']) ?></span>
+                    <span class="text-slate-400 dark:text-zinc-500">Kategori</span>
                 </div>
             </div>
         </div>
 
         <!-- Main Content -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm">
             <!-- Filter Bar - Compact -->
-            <div class="px-6 py-4 border-b border-slate-100">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
                 <form method="GET" action="">
                     <input type="hidden" name="kegiatan_id" value="<?= $kegiatan_id ?>">
 
@@ -2691,11 +3067,11 @@ function buildPaginationUrl($page, $params = []) {
                         <div class="flex-1 flex flex-col sm:flex-row gap-3">
                             <div class="flex-1 min-w-0">
                                 <input type="text" id="search" name="search"
-                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50"
+                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
                                     placeholder="Cari nama, kota, club, sekolah..."
                                     value="<?= htmlspecialchars($search) ?>">
                             </div>
-                            <select id="filter_kategori" name="filter_kategori" class="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-archery-500 bg-slate-50 min-w-[160px]">
+                            <select id="filter_kategori" name="filter_kategori" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-archery-500 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white min-w-[160px]">
                                 <option value="">Semua Kategori</option>
                                 <?php foreach ($kategoriesList as $kategori): ?>
                                 <option value="<?= $kategori['id'] ?>" <?= $filter_kategori == $kategori['id'] ? 'selected' : '' ?>>
@@ -2703,7 +3079,7 @@ function buildPaginationUrl($page, $params = []) {
                                 </option>
                                 <?php endforeach; ?>
                             </select>
-                            <select id="filter_gender" name="filter_gender" class="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-archery-500 bg-slate-50 min-w-[120px]">
+                            <select id="filter_gender" name="filter_gender" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-archery-500 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white min-w-[120px]">
                                 <option value="">Semua Gender</option>
                                 <option value="Laki-laki" <?= $filter_gender == 'Laki-laki' ? 'selected' : '' ?>>Laki-laki</option>
                                 <option value="Perempuan" <?= $filter_gender == 'Perempuan' ? 'selected' : '' ?>>Perempuan</option>
@@ -2713,7 +3089,7 @@ function buildPaginationUrl($page, $params = []) {
                             <button type="submit" class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                 <i class="fas fa-search mr-1.5"></i> Filter
                             </button>
-                            <a href="#" id="inputBtn" class="btn-input <?= $filter_kategori > 0 ? 'show' : '' ?> px-3 py-2 rounded-lg border border-amber-400 text-amber-600 text-sm font-medium hover:bg-amber-50 transition-colors"
+                            <a href="#" id="inputBtn" class="btn-input <?= $filter_kategori > 0 ? 'show' : '' ?> px-3 py-2 rounded-lg border border-amber-400 dark:border-amber-600 text-amber-600 dark:text-amber-400 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
                                 onclick="goToInput(event)">
                                 <i class="fas fa-edit mr-1"></i> Input
                             </a>
@@ -2727,51 +3103,51 @@ function buildPaginationUrl($page, $params = []) {
                 <?php if ($totalPeserta > 0): ?>
                 <div class="overflow-x-auto custom-scrollbar" style="max-height: 65vh;">
                     <table class="w-full">
-                        <thead class="bg-slate-100 sticky top-0 z-10">
+                        <thead class="bg-slate-100 dark:bg-zinc-800 sticky top-0 z-10">
                             <tr>
-                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">#</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Nama</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-16">Umur</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-16">L/P</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kategori</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kota</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Club</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Sekolah</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-14">Kelas</th>
-                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">No. HP</th>
-                                <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-14">Bayar</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-12">#</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Nama</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-16">Umur</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-16">L/P</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kategori</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kota</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Club</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Sekolah</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-14">Kelas</th>
+                                <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">No. HP</th>
+                                <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-14">Bayar</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100 bg-white">
+                        <tbody class="divide-y divide-slate-100 dark:divide-zinc-800 bg-white dark:bg-zinc-900">
                             <?php foreach ($pesertaListPaginated as $index => $peserta): ?>
-                            <tr class="hover:bg-slate-50 transition-colors">
-                                <td class="px-3 py-2.5 text-sm text-slate-400"><?= $offset + $index + 1 ?></td>
+                            <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+                                <td class="px-3 py-2.5 text-sm text-slate-400 dark:text-zinc-500"><?= $offset + $index + 1 ?></td>
                                 <td class="px-3 py-2.5">
-                                    <p class="font-semibold text-slate-900"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
+                                    <p class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
                                 </td>
-                                <td class="px-3 py-2.5 text-sm text-slate-600"><?= $peserta['umur'] ?></td>
+                                <td class="px-3 py-2.5 text-sm text-slate-600 dark:text-zinc-400"><?= $peserta['umur'] ?></td>
                                 <td class="px-3 py-2.5">
-                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600' ?>">
+                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400' ?>">
                                         <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'L' : 'P' ?>
                                     </span>
                                 </td>
                                 <td class="px-3 py-2.5">
-                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700"><?= htmlspecialchars($peserta['category_name']) ?></span>
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300"><?= htmlspecialchars($peserta['category_name']) ?></span>
                                 </td>
-                                <td class="px-3 py-2.5 text-sm text-slate-600"><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></td>
-                                <td class="px-3 py-2.5 text-sm text-slate-600 max-w-28 truncate"><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></td>
-                                <td class="px-3 py-2.5 text-sm text-slate-600 max-w-28 truncate"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></td>
-                                <td class="px-3 py-2.5 text-sm text-slate-600"><?= htmlspecialchars($peserta['kelas'] ?: '-') ?></td>
+                                <td class="px-3 py-2.5 text-sm text-slate-600 dark:text-zinc-400"><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></td>
+                                <td class="px-3 py-2.5 text-sm text-slate-600 dark:text-zinc-400 max-w-28 truncate"><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></td>
+                                <td class="px-3 py-2.5 text-sm text-slate-600 dark:text-zinc-400 max-w-28 truncate"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></td>
+                                <td class="px-3 py-2.5 text-sm text-slate-600 dark:text-zinc-400"><?= htmlspecialchars($peserta['kelas'] ?: '-') ?></td>
                                 <td class="px-3 py-2.5">
-                                    <a href="tel:<?= htmlspecialchars($peserta['nomor_hp'] ?? '') ?>" class="text-sm text-slate-600 hover:text-archery-600"><?= htmlspecialchars($peserta['nomor_hp'] ?? '-') ?></a>
+                                    <a href="tel:<?= htmlspecialchars($peserta['nomor_hp'] ?? '') ?>" class="text-sm text-slate-600 dark:text-zinc-400 hover:text-archery-600 dark:hover:text-archery-400"><?= htmlspecialchars($peserta['nomor_hp'] ?? '-') ?></a>
                                 </td>
                                 <td class="px-3 py-2.5 text-center">
                                     <?php if (!empty($peserta['bukti_pembayaran'])): ?>
-                                    <button class="payment-icon text-emerald-600 hover:text-emerald-700" onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')" title="Lihat bukti">
+                                    <button class="payment-icon text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300" onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')" title="Lihat bukti">
                                         <i class="fas fa-check-circle"></i>
                                     </button>
                                     <?php else: ?>
-                                    <span class="text-red-400" title="Belum bayar"><i class="fas fa-times-circle"></i></span>
+                                    <span class="text-red-400 dark:text-red-500" title="Belum bayar"><i class="fas fa-times-circle"></i></span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -2780,26 +3156,26 @@ function buildPaginationUrl($page, $params = []) {
                     </table>
                 </div>
                 <!-- Pagination Footer -->
-                <div class="px-4 py-3 bg-white border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div class="text-sm text-slate-500">
-                        Menampilkan <span class="font-medium text-slate-900"><?= $offset + 1 ?></span> - <span class="font-medium text-slate-900"><?= min($offset + $limit, $total_rows) ?></span> dari <span class="font-medium text-slate-900"><?= $total_rows ?></span> peserta
+                <div class="px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div class="text-sm text-slate-500 dark:text-zinc-400">
+                        Menampilkan <span class="font-medium text-slate-900 dark:text-white"><?= $offset + 1 ?></span> - <span class="font-medium text-slate-900 dark:text-white"><?= min($offset + $limit, $total_rows) ?></span> dari <span class="font-medium text-slate-900 dark:text-white"><?= $total_rows ?></span> peserta
                         <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
-                        <span class="text-slate-400">• filtered</span>
+                        <span class="text-slate-400 dark:text-zinc-500">• filtered</span>
                         <?php endif; ?>
                     </div>
                     <?php if ($total_pages > 1): ?>
                     <nav class="flex items-center gap-1">
                         <!-- First & Prev -->
                         <?php if ($page > 1): ?>
-                        <a href="<?= buildPaginationUrl(1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="First">
+                        <a href="<?= buildPaginationUrl(1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="First">
                             <i class="fas fa-angles-left text-xs"></i>
                         </a>
-                        <a href="<?= buildPaginationUrl($page - 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Previous">
+                        <a href="<?= buildPaginationUrl($page - 1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Previous">
                             <i class="fas fa-angle-left text-xs"></i>
                         </a>
                         <?php else: ?>
-                        <span class="p-2 text-slate-300"><i class="fas fa-angles-left text-xs"></i></span>
-                        <span class="p-2 text-slate-300"><i class="fas fa-angle-left text-xs"></i></span>
+                        <span class="p-2 text-slate-300 dark:text-zinc-600"><i class="fas fa-angles-left text-xs"></i></span>
+                        <span class="p-2 text-slate-300 dark:text-zinc-600"><i class="fas fa-angle-left text-xs"></i></span>
                         <?php endif; ?>
 
                         <!-- Page Numbers -->
@@ -2808,46 +3184,46 @@ function buildPaginationUrl($page, $params = []) {
                         $end_page = min($total_pages, $page + 2);
 
                         if ($start_page > 1): ?>
-                        <a href="<?= buildPaginationUrl(1) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors">1</a>
-                        <?php if ($start_page > 2): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
+                        <a href="<?= buildPaginationUrl(1) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">1</a>
+                        <?php if ($start_page > 2): ?><span class="px-1 text-slate-400 dark:text-zinc-500">...</span><?php endif; ?>
                         <?php endif;
 
                         for ($i = $start_page; $i <= $end_page; $i++): ?>
-                        <a href="<?= buildPaginationUrl($i) ?>" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors <?= $i === $page ? 'bg-archery-600 text-white' : 'text-slate-600 hover:bg-slate-100' ?>"><?= $i ?></a>
+                        <a href="<?= buildPaginationUrl($i) ?>" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors <?= $i === $page ? 'bg-archery-600 text-white' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800' ?>"><?= $i ?></a>
                         <?php endfor;
 
                         if ($end_page < $total_pages): ?>
-                        <?php if ($end_page < $total_pages - 1): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
-                        <a href="<?= buildPaginationUrl($total_pages) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors"><?= $total_pages ?></a>
+                        <?php if ($end_page < $total_pages - 1): ?><span class="px-1 text-slate-400 dark:text-zinc-500">...</span><?php endif; ?>
+                        <a href="<?= buildPaginationUrl($total_pages) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"><?= $total_pages ?></a>
                         <?php endif; ?>
 
                         <!-- Next & Last -->
                         <?php if ($page < $total_pages): ?>
-                        <a href="<?= buildPaginationUrl($page + 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Next">
+                        <a href="<?= buildPaginationUrl($page + 1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Next">
                             <i class="fas fa-angle-right text-xs"></i>
                         </a>
-                        <a href="<?= buildPaginationUrl($total_pages) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Last">
+                        <a href="<?= buildPaginationUrl($total_pages) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Last">
                             <i class="fas fa-angles-right text-xs"></i>
                         </a>
                         <?php else: ?>
-                        <span class="p-2 text-slate-300"><i class="fas fa-angle-right text-xs"></i></span>
-                        <span class="p-2 text-slate-300"><i class="fas fa-angles-right text-xs"></i></span>
+                        <span class="p-2 text-slate-300 dark:text-zinc-600"><i class="fas fa-angle-right text-xs"></i></span>
+                        <span class="p-2 text-slate-300 dark:text-zinc-600"><i class="fas fa-angles-right text-xs"></i></span>
                         <?php endif; ?>
                     </nav>
                     <?php endif; ?>
                 </div>
                 <?php else: ?>
                 <div class="py-12 text-center">
-                    <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                        <i class="fas fa-inbox text-slate-400 text-2xl"></i>
+                    <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-inbox text-slate-400 dark:text-zinc-500 text-2xl"></i>
                     </div>
                     <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
-                    <p class="text-slate-500 font-medium">Tidak ada peserta yang sesuai filter</p>
-                    <a href="?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-300 transition-colors">
+                    <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada peserta yang sesuai filter</p>
+                    <a href="?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-300 dark:hover:bg-zinc-600 transition-colors">
                         <i class="fas fa-redo"></i> Reset Filter
                     </a>
                     <?php else: ?>
-                    <p class="text-slate-500 font-medium">Belum ada peserta terdaftar</p>
+                    <p class="text-slate-500 dark:text-zinc-400 font-medium">Belum ada peserta terdaftar</p>
                     <a href="pendaftaran.php?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                         <i class="fas fa-plus"></i> Daftarkan Peserta
                     </a>
@@ -2860,73 +3236,73 @@ function buildPaginationUrl($page, $params = []) {
             <div class="md:hidden space-y-3 p-4">
                 <?php if ($totalPeserta > 0): ?>
                 <?php foreach ($pesertaListPaginated as $index => $peserta): ?>
-                <div class="bg-white rounded-lg border border-slate-200 p-4">
+                <div class="bg-white dark:bg-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-700 p-4">
                     <div class="flex items-start gap-3 mb-3">
-                        <span class="text-sm text-slate-400 font-medium w-6"><?= $offset + $index + 1 ?></span>
+                        <span class="text-sm text-slate-400 dark:text-zinc-500 font-medium w-6"><?= $offset + $index + 1 ?></span>
                         <div class="flex-1 min-w-0">
-                            <p class="font-semibold text-slate-900"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
+                            <p class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
                             <div class="flex items-center gap-2 mt-1">
-                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600' ?>">
+                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400' ?>">
                                     <?= $peserta['jenis_kelamin'] == 'Laki-laki' ? 'L' : 'P' ?>
                                 </span>
-                                <span class="text-sm text-slate-500"><?= $peserta['umur'] ?> th</span>
-                                <span class="text-slate-300">•</span>
-                                <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600"><?= htmlspecialchars($peserta['category_name']) ?></span>
+                                <span class="text-sm text-slate-500 dark:text-zinc-400"><?= $peserta['umur'] ?> th</span>
+                                <span class="text-slate-300 dark:text-zinc-600">•</span>
+                                <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300"><?= htmlspecialchars($peserta['category_name']) ?></span>
                             </div>
                         </div>
                         <div class="flex-shrink-0">
                             <?php if (!empty($peserta['bukti_pembayaran'])): ?>
-                            <button class="text-emerald-600" onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')">
+                            <button class="text-emerald-600 dark:text-emerald-400" onclick="showPaymentModal('<?= htmlspecialchars($peserta['nama_peserta']) ?>', '<?= $peserta['bukti_pembayaran'] ?>')">
                                 <i class="fas fa-check-circle"></i>
                             </button>
                             <?php else: ?>
-                            <span class="text-red-400"><i class="fas fa-times-circle"></i></span>
+                            <span class="text-red-400 dark:text-red-500"><i class="fas fa-times-circle"></i></span>
                             <?php endif; ?>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm border-t border-slate-100 pt-3">
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm border-t border-slate-100 dark:border-zinc-700 pt-3">
                         <div>
-                            <span class="text-slate-400">Kota:</span>
-                            <span class="text-slate-700 ml-1"><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Kota:</span>
+                            <span class="text-slate-700 dark:text-zinc-300 ml-1"><?= htmlspecialchars($peserta['asal_kota'] ?: '-') ?></span>
                         </div>
                         <div>
-                            <span class="text-slate-400">Kelas:</span>
-                            <span class="text-slate-700 ml-1"><?= htmlspecialchars($peserta['kelas'] ?: '-') ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Kelas:</span>
+                            <span class="text-slate-700 dark:text-zinc-300 ml-1"><?= htmlspecialchars($peserta['kelas'] ?: '-') ?></span>
                         </div>
                         <div class="truncate">
-                            <span class="text-slate-400">Club:</span>
-                            <span class="text-slate-700 ml-1"><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Club:</span>
+                            <span class="text-slate-700 dark:text-zinc-300 ml-1"><?= htmlspecialchars($peserta['nama_club'] ?: '-') ?></span>
                         </div>
                         <div class="truncate">
-                            <span class="text-slate-400">Sekolah:</span>
-                            <span class="text-slate-700 ml-1"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Sekolah:</span>
+                            <span class="text-slate-700 dark:text-zinc-300 ml-1"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></span>
                         </div>
                     </div>
-                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-                        <a href="tel:<?= htmlspecialchars($peserta['nomor_hp'] ?? '') ?>" class="inline-flex items-center gap-1.5 text-slate-600 text-sm hover:text-archery-600">
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-zinc-700">
+                        <a href="tel:<?= htmlspecialchars($peserta['nomor_hp'] ?? '') ?>" class="inline-flex items-center gap-1.5 text-slate-600 dark:text-zinc-400 text-sm hover:text-archery-600 dark:hover:text-archery-400">
                             <i class="fas fa-phone text-xs"></i> <?= htmlspecialchars($peserta['nomor_hp'] ?? '-') ?>
                         </a>
-                        <span class="text-xs text-slate-400"><?= date('d/m/Y', strtotime($peserta['tanggal_lahir'])) ?></span>
+                        <span class="text-xs text-slate-400 dark:text-zinc-500"><?= date('d/m/Y', strtotime($peserta['tanggal_lahir'])) ?></span>
                     </div>
                 </div>
                 <?php endforeach; ?>
 
                 <!-- Mobile Pagination -->
                 <?php if ($total_pages > 1): ?>
-                <div class="bg-white rounded-lg border border-slate-200 p-4 mt-4">
+                <div class="bg-white dark:bg-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-700 p-4 mt-4">
                     <div class="flex items-center justify-between">
                         <?php if ($page > 1): ?>
-                        <a href="<?= buildPaginationUrl($page - 1) ?>" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors">
+                        <a href="<?= buildPaginationUrl($page - 1) ?>" class="px-4 py-2 rounded-lg bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 text-sm font-medium hover:bg-slate-200 dark:hover:bg-zinc-600 transition-colors">
                             <i class="fas fa-chevron-left mr-1"></i> Prev
                         </a>
                         <?php else: ?>
-                        <span class="px-4 py-2 rounded-lg bg-slate-50 text-slate-300 text-sm font-medium">
+                        <span class="px-4 py-2 rounded-lg bg-slate-50 dark:bg-zinc-900 text-slate-300 dark:text-zinc-600 text-sm font-medium">
                             <i class="fas fa-chevron-left mr-1"></i> Prev
                         </span>
                         <?php endif; ?>
 
-                        <span class="text-sm text-slate-500">
-                            <span class="font-medium text-slate-900"><?= $page ?></span> / <?= $total_pages ?>
+                        <span class="text-sm text-slate-500 dark:text-zinc-400">
+                            <span class="font-medium text-slate-900 dark:text-white"><?= $page ?></span> / <?= $total_pages ?>
                         </span>
 
                         <?php if ($page < $total_pages): ?>
@@ -2934,7 +3310,7 @@ function buildPaginationUrl($page, $params = []) {
                             Next <i class="fas fa-chevron-right ml-1"></i>
                         </a>
                         <?php else: ?>
-                        <span class="px-4 py-2 rounded-lg bg-slate-50 text-slate-300 text-sm font-medium">
+                        <span class="px-4 py-2 rounded-lg bg-slate-50 dark:bg-zinc-900 text-slate-300 dark:text-zinc-600 text-sm font-medium">
                             Next <i class="fas fa-chevron-right ml-1"></i>
                         </span>
                         <?php endif; ?>
@@ -2942,15 +3318,15 @@ function buildPaginationUrl($page, $params = []) {
                 </div>
                 <?php endif; ?>
                 <?php else: ?>
-                <div class="bg-white rounded-lg border border-slate-200 p-8 text-center">
-                    <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                        <i class="fas fa-inbox text-slate-400 text-2xl"></i>
+                <div class="bg-white dark:bg-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-700 p-8 text-center">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-700 flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-inbox text-slate-400 dark:text-zinc-500 text-2xl"></i>
                     </div>
                     <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
-                    <p class="text-slate-500 font-medium mb-3">Tidak ada peserta yang sesuai filter</p>
-                    <a href="?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 text-slate-700 text-sm font-medium">Reset Filter</a>
+                    <p class="text-slate-500 dark:text-zinc-400 font-medium mb-3">Tidak ada peserta yang sesuai filter</p>
+                    <a href="?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 text-sm font-medium">Reset Filter</a>
                     <?php else: ?>
-                    <p class="text-slate-500 font-medium mb-3">Belum ada peserta terdaftar</p>
+                    <p class="text-slate-500 dark:text-zinc-400 font-medium mb-3">Belum ada peserta terdaftar</p>
                     <a href="pendaftaran.php?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium">Daftarkan Peserta</a>
                     <?php endif; ?>
                 </div>
@@ -2959,21 +3335,75 @@ function buildPaginationUrl($page, $params = []) {
 
             <!-- Category Distribution -->
             <?php if (!empty($statistik['kategori'])): ?>
-            <div class="mt-6 bg-slate-50 rounded-xl border border-slate-200 p-5">
-                <h4 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                    <i class="fas fa-chart-pie text-archery-600"></i> Distribusi per Kategori
+            <div class="mt-6 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-200 dark:border-zinc-800 p-5">
+                <h4 class="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-archery-600 dark:text-archery-400"></i> Distribusi per Kategori
                 </h4>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     <?php foreach ($statistik['kategori'] as $kategori => $jumlah): ?>
-                    <div class="bg-white rounded-lg p-3 text-center shadow-sm">
-                        <p class="font-medium text-slate-700 text-sm"><?= htmlspecialchars($kategori) ?></p>
-                        <p class="text-lg font-bold text-archery-600"><?= $jumlah ?></p>
-                        <p class="text-xs text-slate-400">orang</p>
+                    <div class="bg-white dark:bg-zinc-800 rounded-lg p-3 text-center shadow-sm">
+                        <p class="font-medium text-slate-700 dark:text-zinc-300 text-sm"><?= htmlspecialchars($kategori) ?></p>
+                        <p class="text-lg font-bold text-archery-600 dark:text-archery-400"><?= $jumlah ?></p>
+                        <p class="text-xs text-slate-400 dark:text-zinc-500">orang</p>
                     </div>
                     <?php endforeach; ?>
                 </div>
             </div>
             <?php endif; ?>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Sidebar -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+    <div id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-zinc-900 text-white z-50 transform -translate-x-full transition-transform lg:hidden flex flex-col">
+        <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
+            <div class="w-10 h-10 rounded-lg bg-archery-600 flex items-center justify-center">
+                <i class="fas fa-bullseye text-white"></i>
+            </div>
+            <div class="flex-1">
+                <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+            </div>
+            <button id="close-mobile-menu" class="p-2 rounded-lg hover:bg-zinc-800">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-1">
+            <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
+            </a>
+            <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
+            </a>
+            <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
+            </a>
+            <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
+                <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
+            </a>
+            <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+            </a>
+            <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+                <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+            </a>
+        </nav>
+        <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
+            <div class="flex items-center gap-3 px-2">
+                <div class="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center">
+                    <i class="fas fa-user text-zinc-400 text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
+                    <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
+                </div>
+                <?= getThemeToggleButton() ?>
+            </div>
+            <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+               class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
+                <i class="fas fa-sign-out-alt w-5"></i>
+                <span>Logout</span>
+            </a>
         </div>
     </div>
 
@@ -3107,6 +3537,31 @@ function buildPaginationUrl($page, $params = []) {
                 closePaymentModal();
             }
         });
+
+        // Mobile menu functionality
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileOverlay = document.getElementById('mobile-overlay');
+        const mobileSidebar = document.getElementById('mobile-sidebar');
+        const closeMobileMenu = document.getElementById('close-mobile-menu');
+
+        function openMobileMenu() {
+            mobileOverlay.classList.remove('hidden');
+            mobileSidebar.classList.remove('-translate-x-full');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenuFn() {
+            mobileOverlay.classList.add('hidden');
+            mobileSidebar.classList.add('-translate-x-full');
+            document.body.style.overflow = '';
+        }
+
+        mobileMenuBtn.addEventListener('click', openMobileMenu);
+        mobileOverlay.addEventListener('click', closeMobileMenuFn);
+        closeMobileMenu.addEventListener('click', closeMobileMenuFn);
+
+        // Theme Toggle
+        <?= getThemeToggleScript() ?>
     </script>
 </body>
 
