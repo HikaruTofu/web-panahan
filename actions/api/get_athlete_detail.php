@@ -82,8 +82,51 @@ $stmtPeserta->execute();
 $resultPeserta = $stmtPeserta->get_result();
 
 if ($resultPeserta->num_rows == 0) {
-    echo json_encode(['success' => false, 'message' => 'Peserta tidak ditemukan']);
-    exit;
+    // Fallback: Try SOUNDEX match for minor typos (e.g. Zylvani vs Zyvlani)
+    $queryFallback = "SELECT 
+                        MIN(p.id) as id,
+                        p.nama_peserta,
+                        p.jenis_kelamin,
+                        p.nama_club,
+                        p.sekolah
+                     FROM peserta p
+                     WHERE SOUNDEX(p.nama_peserta) = SOUNDEX(?)
+                     GROUP BY p.nama_peserta, p.jenis_kelamin, p.nama_club, p.sekolah
+                     LIMIT 1";
+    
+    $stmtFallback = $conn->prepare($queryFallback);
+    $stmtFallback->bind_param("s", $nama);
+    $stmtFallback->execute();
+    $resultPeserta = $stmtFallback->get_result();
+    
+    if ($resultPeserta->num_rows == 0) {
+        // Fallback 2: Try LIKE match with first name to catch really bad typos
+        $names = explode(' ', $nama);
+        if (count($names) > 0) {
+            $firstName = $names[0];
+            $queryLike = "SELECT 
+                            MIN(p.id) as id,
+                            p.nama_peserta,
+                            p.jenis_kelamin,
+                            p.nama_club,
+                            p.sekolah
+                         FROM peserta p
+                         WHERE p.nama_peserta LIKE CONCAT(?, '%')
+                         AND LENGTH(p.nama_peserta) > 0
+                         GROUP BY p.nama_peserta, p.jenis_kelamin, p.nama_club, p.sekolah
+                         LIMIT 1";
+            
+            $stmtLike = $conn->prepare($queryLike);
+            $stmtLike->bind_param("s", $firstName);
+            $stmtLike->execute();
+            $resultPeserta = $stmtLike->get_result();
+        }
+    }
+
+    if ($resultPeserta->num_rows == 0) {
+        echo json_encode(['success' => false, 'message' => 'Peserta tidak ditemukan']);
+        exit;
+    }
 }
 
 $peserta = $resultPeserta->fetch_assoc();

@@ -25,3 +25,4 @@ uploads/pembayaran/*
 databaru.txt
 .agent/
 .claude/
+*.sql

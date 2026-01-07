@@ -26,8 +26,37 @@ try {
     $stmtInfo->close();
 
     if (!$athleteInfo) {
-        echo json_encode(['success' => false, 'message' => 'Atlet tidak ditemukan dalam database']);
-        exit;
+        // Fallback: Try SOUNDEX match for minor typos
+        $queryFallback = "SELECT nama_peserta, nama_club, jenis_kelamin, asal_kota, sekolah
+                          FROM peserta WHERE SOUNDEX(nama_peserta) = SOUNDEX(?) LIMIT 1";
+        $stmtFallback = $conn->prepare($queryFallback);
+        $stmtFallback->bind_param("s", $athleteName);
+        $stmtFallback->execute();
+        $resultFallback = $stmtFallback->get_result();
+        $athleteInfo = $resultFallback->fetch_assoc();
+        $stmtFallback->close();
+
+        if (!$athleteInfo) {
+            // Fallback 2: Try LIKE match with first name
+            $names = explode(' ', $athleteName);
+            if (count($names) > 0) {
+                $firstName = $names[0];
+                $queryLike = "SELECT nama_peserta, nama_club, jenis_kelamin, asal_kota, sekolah
+                             FROM peserta WHERE nama_peserta LIKE CONCAT(?, '%') 
+                             AND LENGTH(nama_peserta) > 0 LIMIT 1";
+                $stmtLike = $conn->prepare($queryLike);
+                $stmtLike->bind_param("s", $firstName);
+                $stmtLike->execute();
+                $resultLike = $stmtLike->get_result();
+                $athleteInfo = $resultLike->fetch_assoc();
+                $stmtLike->close();
+            }
+        }
+        
+        if (!$athleteInfo) {
+            echo json_encode(['success' => false, 'message' => 'Atlet tidak ditemukan dalam database']);
+            exit;
+        }
     }
 
     // Dynamic ranking calculation from score table - optimized single query

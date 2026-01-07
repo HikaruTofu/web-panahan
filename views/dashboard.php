@@ -145,11 +145,12 @@ try {
         CalculatedRanks AS (
             SELECT
                 nama_peserta,
+                kegiatan_id,
                 RANK() OVER (PARTITION BY kegiatan_id, score_board_id ORDER BY total_score DESC, total_x DESC) as ranking,
                 COUNT(*) OVER (PARTITION BY kegiatan_id, score_board_id) as board_participants
             FROM ScoreStats
         ),
-        -- 2. Official Rankings from databaru.txt (rankings_source table)
+        -- 2. Official Rankings from databaru.txt (rankings_source table) - Assumed Activity 11
         OfficialRanks AS (
             SELECT 
                 nama_peserta COLLATE utf8mb4_general_ci as nama_peserta, 
@@ -158,13 +159,14 @@ try {
             FROM rankings_source
             $keg_filter_official
         ),
-        -- 3. Unified dataset: Priority to Official, fallback to Calculated for missing people
+        -- 3. Unified dataset: Merge Official (Act 11) + Calculated (Others)
         UnifiedRankings AS (
             SELECT nama_peserta, ranking, board_participants FROM OfficialRanks
             UNION ALL
             SELECT cr.nama_peserta COLLATE utf8mb4_general_ci as nama_peserta, cr.ranking, cr.board_participants 
             FROM CalculatedRanks cr
-            WHERE NOT EXISTS (
+            WHERE cr.kegiatan_id != 11 
+            OR NOT EXISTS (
                 SELECT 1 FROM OfficialRanks orf 
                 WHERE LOWER(TRIM(orf.nama_peserta)) = LOWER(TRIM(cr.nama_peserta COLLATE utf8mb4_general_ci))
             )
@@ -247,12 +249,14 @@ try {
     });
 
     usort($atletKurangPrestasi, function ($a, $b) {
-        $kategoriOrder = ['E' => 1, 'D' => 2];
+        $kategoriOrder = ['D' => 1, 'E' => 2];
         $aOrder = $kategoriOrder[$a['kategori']] ?? 3;
         $bOrder = $kategoriOrder[$b['kategori']] ?? 3;
         if ($aOrder != $bOrder) return $aOrder - $bOrder;
         return $b['avg_ranking'] - $a['avg_ranking'];
     });
+
+
 
 } catch (Exception $e) {
     $dataError = "Error: " . $e->getMessage();
@@ -595,7 +599,7 @@ try {
                                 </div>
                             <?php else: ?>
                                 <ul class="divide-y divide-slate-100">
-                                    <?php foreach (array_slice($atletBerprestasi, 0, 10) as $index => $atlet): ?>
+                                    <?php foreach (array_slice($atletBerprestasi, 0, 200) as $index => $atlet): ?>
                                         <li class="px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer group"
                                             onclick="showAthleteDetail('<?= htmlspecialchars($atlet['nama'], ENT_QUOTES) ?>')">
                                             <div class="flex items-center gap-3">
@@ -625,7 +629,7 @@ try {
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>
-                                <?php if (count($atletBerprestasi) > 10): ?>
+                                <?php if (count($atletBerprestasi) > 20): ?>
                                     <div class="px-5 py-3 bg-slate-50 text-center">
                                         <a href="statistik.php?kategori=A" class="text-sm text-archery-600 hover:text-archery-700 font-medium">
                                             Lihat semua <?= count($atletBerprestasi) ?> atlet <i class="fas fa-arrow-right ml-1"></i>
@@ -663,7 +667,7 @@ try {
                                 </div>
                             <?php else: ?>
                                 <ul class="divide-y divide-slate-100">
-                                    <?php foreach (array_slice($atletKurangPrestasi, 0, 10) as $index => $atlet): ?>
+                                    <?php foreach (array_slice($atletKurangPrestasi, 0, 200) as $index => $atlet): ?>
                                         <li class="px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer group"
                                             onclick="showAthleteDetail('<?= htmlspecialchars($atlet['nama'], ENT_QUOTES) ?>')">
                                             <div class="flex items-center gap-3">
@@ -690,7 +694,7 @@ try {
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>
-                                <?php if (count($atletKurangPrestasi) > 10): ?>
+                                <?php if (count($atletKurangPrestasi) > 20): ?>
                                     <div class="px-5 py-3 bg-slate-50 text-center">
                                         <a href="statistik.php?kategori=D" class="text-sm text-amber-600 hover:text-amber-700 font-medium">
                                             Lihat semua <?= count($atletKurangPrestasi) ?> atlet <i class="fas fa-arrow-right ml-1"></i>

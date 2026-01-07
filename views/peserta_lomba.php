@@ -117,27 +117,53 @@ $available_participants = $conn->query($available_participants_sql);
 // Get available categories
 $categories = $conn->query("SELECT * FROM categories WHERE status = 'active' ORDER BY name");
 
+// ============================================
+// PAGINATION LOGIC
+// ============================================
+$limit = 50;
+$page = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
+$offset = ($page - 1) * $limit;
+
 // Get registered participants
 $search = isset($_GET['q']) ? $_GET['q'] : '';
+
+// Build WHERE clause
+$where_clause = "tp.tournament_id = $tournament_id";
 if ($search) {
-    $participants_sql = "SELECT tp.*, p.name as participant_name, p.birthdate, p.gender, p.phone,
-                        c.name as category_name, YEAR(CURDATE()) - YEAR(p.birthdate) as age
-                        FROM tournament_participants tp
-                        LEFT JOIN participants p ON tp.participant_id = p.id
-                        LEFT JOIN categories c ON tp.category_id = c.id
-                        WHERE tp.tournament_id = $tournament_id
-                        AND (p.name LIKE '%$search%' OR c.name LIKE '%$search%')
-                        ORDER BY tp.registration_date DESC";
-} else {
-    $participants_sql = "SELECT tp.*, p.name as participant_name, p.birthdate, p.gender, p.phone,
-                        c.name as category_name, YEAR(CURDATE()) - YEAR(p.birthdate) as age
-                        FROM tournament_participants tp
-                        LEFT JOIN participants p ON tp.participant_id = p.id
-                        LEFT JOIN categories c ON tp.category_id = c.id
-                        WHERE tp.tournament_id = $tournament_id
-                        ORDER BY tp.registration_date DESC";
+    $search_escaped = $conn->real_escape_string($search);
+    $where_clause .= " AND (p.name LIKE '%$search_escaped%' OR c.name LIKE '%$search_escaped%')";
 }
+
+// Count total for pagination
+$count_sql = "SELECT COUNT(*) as total
+              FROM tournament_participants tp
+              LEFT JOIN participants p ON tp.participant_id = p.id
+              LEFT JOIN categories c ON tp.category_id = c.id
+              WHERE $where_clause";
+$count_result = $conn->query($count_sql);
+$total_rows = $count_result->fetch_assoc()['total'];
+$total_pages = ceil($total_rows / $limit);
+
+// Main query with LIMIT
+$participants_sql = "SELECT tp.*, p.name as participant_name, p.birthdate, p.gender, p.phone,
+                    c.name as category_name, YEAR(CURDATE()) - YEAR(p.birthdate) as age
+                    FROM tournament_participants tp
+                    LEFT JOIN participants p ON tp.participant_id = p.id
+                    LEFT JOIN categories c ON tp.category_id = c.id
+                    WHERE $where_clause
+                    ORDER BY tp.registration_date DESC
+                    LIMIT $limit OFFSET $offset";
 $participants_result = $conn->query($participants_sql);
+
+// Helper function to build pagination URL preserving GET params
+function buildPaginationUrl($page, $params = []) {
+    $current = $_GET;
+    $current['p'] = $page;
+    foreach ($params as $key => $value) {
+        $current[$key] = $value;
+    }
+    return '?' . http_build_query($current);
+}
 
 // Calculate statistics for metrics bar
 $stats_sql = "SELECT
@@ -430,7 +456,7 @@ $role = $_SESSION['role'] ?? 'user';
                                     </tr>
                                 <?php else: ?>
                                     <?php
-                                    $no = 1;
+                                    $no = $offset + 1;
                                     while ($row = $participants_result->fetch_assoc()):
                                     ?>
                                     <tr class="hover:bg-slate-50 transition-colors">
@@ -493,14 +519,61 @@ $role = $_SESSION['role'] ?? 'user';
                             </tbody>
                         </table>
                     </div>
-                    <?php
-                    // Reset result pointer for count
-                    $participants_result->data_seek(0);
-                    $count = $participants_result->num_rows;
-                    if ($count > 0):
-                    ?>
-                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 text-sm text-slate-500">
-                        Menampilkan <?= $count ?> peserta<?php if (!empty($search)): ?> <span class="text-slate-400">• filtered</span><?php endif; ?>
+                    <?php if ($total_rows > 0): ?>
+                    <!-- Pagination Footer -->
+                    <div class="px-4 py-3 bg-white border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="text-sm text-slate-500">
+                            Menampilkan <span class="font-medium text-slate-900"><?= $offset + 1 ?></span> - <span class="font-medium text-slate-900"><?= min($offset + $limit, $total_rows) ?></span> dari <span class="font-medium text-slate-900"><?= $total_rows ?></span> peserta
+                            <?php if (!empty($search)): ?><span class="text-slate-400">• filtered</span><?php endif; ?>
+                        </div>
+                        <?php if ($total_pages > 1): ?>
+                        <nav class="flex items-center gap-1">
+                            <!-- First & Prev -->
+                            <?php if ($page > 1): ?>
+                            <a href="<?= buildPaginationUrl(1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="First">
+                                <i class="fas fa-angles-left text-xs"></i>
+                            </a>
+                            <a href="<?= buildPaginationUrl($page - 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Previous">
+                                <i class="fas fa-angle-left text-xs"></i>
+                            </a>
+                            <?php else: ?>
+                            <span class="p-2 text-slate-300"><i class="fas fa-angles-left text-xs"></i></span>
+                            <span class="p-2 text-slate-300"><i class="fas fa-angle-left text-xs"></i></span>
+                            <?php endif; ?>
+
+                            <!-- Page Numbers -->
+                            <?php
+                            $start_page = max(1, $page - 2);
+                            $end_page = min($total_pages, $page + 2);
+
+                            if ($start_page > 1): ?>
+                            <a href="<?= buildPaginationUrl(1) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors">1</a>
+                            <?php if ($start_page > 2): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
+                            <?php endif;
+
+                            for ($i = $start_page; $i <= $end_page; $i++): ?>
+                            <a href="<?= buildPaginationUrl($i) ?>" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors <?= $i === $page ? 'bg-archery-600 text-white' : 'text-slate-600 hover:bg-slate-100' ?>"><?= $i ?></a>
+                            <?php endfor;
+
+                            if ($end_page < $total_pages): ?>
+                            <?php if ($end_page < $total_pages - 1): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
+                            <a href="<?= buildPaginationUrl($total_pages) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors"><?= $total_pages ?></a>
+                            <?php endif; ?>
+
+                            <!-- Next & Last -->
+                            <?php if ($page < $total_pages): ?>
+                            <a href="<?= buildPaginationUrl($page + 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Next">
+                                <i class="fas fa-angle-right text-xs"></i>
+                            </a>
+                            <a href="<?= buildPaginationUrl($total_pages) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Last">
+                                <i class="fas fa-angles-right text-xs"></i>
+                            </a>
+                            <?php else: ?>
+                            <span class="p-2 text-slate-300"><i class="fas fa-angle-right text-xs"></i></span>
+                            <span class="p-2 text-slate-300"><i class="fas fa-angles-right text-xs"></i></span>
+                            <?php endif; ?>
+                        </nav>
+                        <?php endif; ?>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -523,7 +596,7 @@ $role = $_SESSION['role'] ?? 'user';
                         </div>
                     <?php else: ?>
                         <?php
-                        $no = 1;
+                        $no = $offset + 1;
                         while ($row = $participants_result->fetch_assoc()):
                         ?>
                             <div class="bg-white rounded-lg border border-slate-200 p-4">
@@ -585,6 +658,37 @@ $role = $_SESSION['role'] ?? 'user';
                                 </div>
                             </div>
                         <?php endwhile; ?>
+
+                        <!-- Mobile Pagination -->
+                        <?php if ($total_pages > 1): ?>
+                        <div class="bg-white rounded-lg border border-slate-200 p-4 mt-4">
+                            <div class="flex items-center justify-between">
+                                <?php if ($page > 1): ?>
+                                <a href="<?= buildPaginationUrl($page - 1) ?>" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors">
+                                    <i class="fas fa-chevron-left mr-1"></i> Prev
+                                </a>
+                                <?php else: ?>
+                                <span class="px-4 py-2 rounded-lg bg-slate-50 text-slate-300 text-sm font-medium">
+                                    <i class="fas fa-chevron-left mr-1"></i> Prev
+                                </span>
+                                <?php endif; ?>
+
+                                <span class="text-sm text-slate-500">
+                                    <span class="font-medium text-slate-900"><?= $page ?></span> / <?= $total_pages ?>
+                                </span>
+
+                                <?php if ($page < $total_pages): ?>
+                                <a href="<?= buildPaginationUrl($page + 1) ?>" class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                    Next <i class="fas fa-chevron-right ml-1"></i>
+                                </a>
+                                <?php else: ?>
+                                <span class="px-4 py-2 rounded-lg bg-slate-50 text-slate-300 text-sm font-medium">
+                                    Next <i class="fas fa-chevron-right ml-1"></i>
+                                </span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
             </div>

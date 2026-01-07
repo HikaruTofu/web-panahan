@@ -211,6 +211,7 @@ $queryAllRanks = "
         SELECT
             s.kegiatan_id,
             s.score_board_id,
+            s.category_id,
             s.peserta_id,
             MAX(p.nama_peserta) as nama_peserta,
             SUM(CASE WHEN LOWER(s.score) = 'x' THEN 10 WHEN LOWER(s.score) = 'm' THEN 0 ELSE CAST(s.score AS UNSIGNED) END) as total_score,
@@ -218,32 +219,41 @@ $queryAllRanks = "
         FROM score s
         JOIN peserta p ON s.peserta_id = p.id
         WHERE 1=1 $keg_filter_scores
-        GROUP BY s.kegiatan_id, s.score_board_id, s.peserta_id
+        GROUP BY s.kegiatan_id, s.score_board_id, s.category_id, s.peserta_id
     ),
     CalculatedRanks AS (
         SELECT
-            nama_peserta,
-            RANK() OVER (PARTITION BY kegiatan_id, score_board_id ORDER BY total_score DESC, total_x DESC) as ranking,
-            COUNT(*) OVER (PARTITION BY kegiatan_id, score_board_id) as board_participants
-        FROM ScoreStats
+            ss.nama_peserta,
+            k.nama_kegiatan,
+            COALESCE(c.name, c2.name) as category_name,
+            ss.kegiatan_id,
+            RANK() OVER (PARTITION BY ss.kegiatan_id, ss.score_board_id ORDER BY ss.total_score DESC, ss.total_x DESC) as ranking,
+            COUNT(*) OVER (PARTITION BY ss.kegiatan_id, ss.score_board_id) as board_participants
+        FROM ScoreStats ss
+        JOIN kegiatan k ON ss.kegiatan_id = k.id
+        LEFT JOIN score_boards sb ON ss.score_board_id = sb.id
+        LEFT JOIN categories c ON sb.category_id = c.id
+        LEFT JOIN categories c2 ON ss.category_id = c2.id
     ),
     -- 2. Official Rankings from databaru.txt (rankings_source table)
     OfficialRanks AS (
         SELECT 
             nama_peserta COLLATE utf8mb4_general_ci as nama_peserta, 
+            'Turnamen' as nama_kegiatan,
             category as category_name,
             ranking, 
             total_participants as board_participants
         FROM rankings_source
         $keg_filter_official
     ),
-    -- 3. Unified dataset: Priority to Official, fallback to Calculated for missing people
+    -- 3. Unified dataset: Merge Official (Act 11) + Calculated (Others + Missing Act 11)
     UnifiedRankings AS (
-        SELECT nama_peserta, category_name, ranking as rank_pos, board_participants FROM OfficialRanks
+        SELECT nama_peserta, nama_kegiatan, category_name, ranking as rank_pos, board_participants FROM OfficialRanks
         UNION ALL
-        SELECT cr.nama_peserta COLLATE utf8mb4_general_ci as nama_peserta, 'Calculated' as category_name, cr.ranking as rank_pos, cr.board_participants 
+        SELECT cr.nama_peserta COLLATE utf8mb4_general_ci as nama_peserta, cr.nama_kegiatan, cr.category_name, cr.ranking as rank_pos, cr.board_participants 
         FROM CalculatedRanks cr
-        WHERE NOT EXISTS (
+        WHERE cr.kegiatan_id != 11 
+        OR NOT EXISTS (
             SELECT 1 FROM OfficialRanks orf 
             WHERE LOWER(TRIM(orf.nama_peserta)) = LOWER(TRIM(cr.nama_peserta COLLATE utf8mb4_general_ci))
         )
@@ -252,7 +262,7 @@ $queryAllRanks = "
         ur.nama_peserta,
         ur.rank_pos,
         ur.board_participants as total_participants,
-        'Turnamen' as nama_kegiatan,
+        ur.nama_kegiatan,
         ur.category_name,
         NOW() as tanggal
     FROM UnifiedRankings ur
@@ -511,6 +521,28 @@ if ($sortByKategori) {
         if ($a['avg_ranking'] != $b['avg_ranking']) return $a['avg_ranking'] - $b['avg_ranking'];
         return strcmp($a['nama'], $b['nama']);
     });
+}
+
+// ============================================
+// PAGINATION LOGIC
+// ============================================
+$limit = 50;
+$page = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
+$total_rows = count($pesertaData);
+$total_pages = ceil($total_rows / $limit);
+$offset = ($page - 1) * $limit;
+
+// Slice the array for current page
+$pesertaDataPaginated = array_slice($pesertaData, $offset, $limit);
+
+// Helper function to build pagination URL preserving GET params
+function buildPaginationUrl($page, $params = []) {
+    $current = $_GET;
+    $current['p'] = $page;
+    foreach ($params as $key => $value) {
+        $current[$key] = $value;
+    }
+    return '?' . http_build_query($current);
 }
 
 // Color mapping for Tailwind
@@ -837,7 +869,7 @@ $role = $_SESSION['role'] ?? 'user';
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php $no = 1; foreach ($pesertaData as $p): ?>
+                                    <?php $no = $offset + 1; foreach ($pesertaDataPaginated as $p): ?>
                                         <tr class="hover:bg-slate-50 transition-colors">
                                             <td class="px-4 py-3 text-sm text-slate-500"><?= $no++ ?></td>
                                             <td class="px-4 py-3">
@@ -926,11 +958,64 @@ $role = $_SESSION['role'] ?? 'user';
                             </tbody>
                         </table>
                     </div>
-                    <?php if (!empty($pesertaData)): ?>
-                        <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                            <p class="text-sm text-slate-500">Menampilkan <?= count($pesertaData) ?> peserta</p>
-                            <?php if ($sortByKategori): ?>
-                                <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Diurutkan per Kategori</span>
+                    <?php if (!empty($pesertaDataPaginated)): ?>
+                        <!-- Pagination Footer -->
+                        <div class="px-4 py-3 bg-white border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <p class="text-sm text-slate-500">
+                                    Menampilkan <span class="font-medium text-slate-900"><?= $offset + 1 ?></span> - <span class="font-medium text-slate-900"><?= min($offset + $limit, $total_rows) ?></span> dari <span class="font-medium text-slate-900"><?= $total_rows ?></span> peserta
+                                </p>
+                                <?php if ($sortByKategori): ?>
+                                    <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">Diurutkan per Kategori</span>
+                                <?php endif; ?>
+                            </div>
+                            <?php if ($total_pages > 1): ?>
+                            <nav class="flex items-center gap-1">
+                                <!-- First & Prev -->
+                                <?php if ($page > 1): ?>
+                                <a href="<?= buildPaginationUrl(1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="First">
+                                    <i class="fas fa-angles-left text-xs"></i>
+                                </a>
+                                <a href="<?= buildPaginationUrl($page - 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Previous">
+                                    <i class="fas fa-angle-left text-xs"></i>
+                                </a>
+                                <?php else: ?>
+                                <span class="p-2 text-slate-300"><i class="fas fa-angles-left text-xs"></i></span>
+                                <span class="p-2 text-slate-300"><i class="fas fa-angle-left text-xs"></i></span>
+                                <?php endif; ?>
+
+                                <!-- Page Numbers -->
+                                <?php
+                                $start_page = max(1, $page - 2);
+                                $end_page = min($total_pages, $page + 2);
+
+                                if ($start_page > 1): ?>
+                                <a href="<?= buildPaginationUrl(1) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors">1</a>
+                                <?php if ($start_page > 2): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
+                                <?php endif;
+
+                                for ($i = $start_page; $i <= $end_page; $i++): ?>
+                                <a href="<?= buildPaginationUrl($i) ?>" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors <?= $i === $page ? 'bg-archery-600 text-white' : 'text-slate-600 hover:bg-slate-100' ?>"><?= $i ?></a>
+                                <?php endfor;
+
+                                if ($end_page < $total_pages): ?>
+                                <?php if ($end_page < $total_pages - 1): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
+                                <a href="<?= buildPaginationUrl($total_pages) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors"><?= $total_pages ?></a>
+                                <?php endif; ?>
+
+                                <!-- Next & Last -->
+                                <?php if ($page < $total_pages): ?>
+                                <a href="<?= buildPaginationUrl($page + 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Next">
+                                    <i class="fas fa-angle-right text-xs"></i>
+                                </a>
+                                <a href="<?= buildPaginationUrl($total_pages) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Last">
+                                    <i class="fas fa-angles-right text-xs"></i>
+                                </a>
+                                <?php else: ?>
+                                <span class="p-2 text-slate-300"><i class="fas fa-angle-right text-xs"></i></span>
+                                <span class="p-2 text-slate-300"><i class="fas fa-angles-right text-xs"></i></span>
+                                <?php endif; ?>
+                            </nav>
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>

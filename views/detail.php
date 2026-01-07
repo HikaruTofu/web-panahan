@@ -2539,6 +2539,28 @@ foreach ($pesertaList as $peserta) {
     }
     $statistik['kategori'][$kategori]++;
 }
+
+// ============================================
+// PAGINATION LOGIC
+// ============================================
+$limit = 50;
+$page = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
+$total_rows = $totalPeserta;
+$total_pages = ceil($total_rows / $limit);
+$offset = ($page - 1) * $limit;
+
+// Slice the array for current page
+$pesertaListPaginated = array_slice($pesertaList, $offset, $limit);
+
+// Helper function to build pagination URL preserving GET params
+function buildPaginationUrl($page, $params = []) {
+    $current = $_GET;
+    $current['p'] = $page;
+    foreach ($params as $key => $value) {
+        $current[$key] = $value;
+    }
+    return '?' . http_build_query($current);
+}
 ?>
 <!DOCTYPE html>
 <html lang="id" class="h-full">
@@ -2721,9 +2743,9 @@ foreach ($pesertaList as $peserta) {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 bg-white">
-                            <?php foreach ($pesertaList as $index => $peserta): ?>
+                            <?php foreach ($pesertaListPaginated as $index => $peserta): ?>
                             <tr class="hover:bg-slate-50 transition-colors">
-                                <td class="px-3 py-2.5 text-sm text-slate-400"><?= $index + 1 ?></td>
+                                <td class="px-3 py-2.5 text-sm text-slate-400"><?= $offset + $index + 1 ?></td>
                                 <td class="px-3 py-2.5">
                                     <p class="font-semibold text-slate-900"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
                                 </td>
@@ -2741,7 +2763,7 @@ foreach ($pesertaList as $peserta) {
                                 <td class="px-3 py-2.5 text-sm text-slate-600 max-w-28 truncate"><?= htmlspecialchars($peserta['sekolah'] ?: '-') ?></td>
                                 <td class="px-3 py-2.5 text-sm text-slate-600"><?= htmlspecialchars($peserta['kelas'] ?: '-') ?></td>
                                 <td class="px-3 py-2.5">
-                                    <a href="tel:<?= htmlspecialchars($peserta['nomor_hp']) ?>" class="text-sm text-slate-600 hover:text-archery-600"><?= htmlspecialchars($peserta['nomor_hp']) ?></a>
+                                    <a href="tel:<?= htmlspecialchars($peserta['nomor_hp'] ?? '') ?>" class="text-sm text-slate-600 hover:text-archery-600"><?= htmlspecialchars($peserta['nomor_hp'] ?? '-') ?></a>
                                 </td>
                                 <td class="px-3 py-2.5 text-center">
                                     <?php if (!empty($peserta['bukti_pembayaran'])): ?>
@@ -2757,10 +2779,61 @@ foreach ($pesertaList as $peserta) {
                         </tbody>
                     </table>
                 </div>
-                <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 text-sm text-slate-500">
-                    Menampilkan <?= count($pesertaList) ?> peserta
-                    <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
-                    <span class="text-slate-400">• filtered</span>
+                <!-- Pagination Footer -->
+                <div class="px-4 py-3 bg-white border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div class="text-sm text-slate-500">
+                        Menampilkan <span class="font-medium text-slate-900"><?= $offset + 1 ?></span> - <span class="font-medium text-slate-900"><?= min($offset + $limit, $total_rows) ?></span> dari <span class="font-medium text-slate-900"><?= $total_rows ?></span> peserta
+                        <?php if (!empty($search) || $filter_kategori > 0 || !empty($filter_gender)): ?>
+                        <span class="text-slate-400">• filtered</span>
+                        <?php endif; ?>
+                    </div>
+                    <?php if ($total_pages > 1): ?>
+                    <nav class="flex items-center gap-1">
+                        <!-- First & Prev -->
+                        <?php if ($page > 1): ?>
+                        <a href="<?= buildPaginationUrl(1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="First">
+                            <i class="fas fa-angles-left text-xs"></i>
+                        </a>
+                        <a href="<?= buildPaginationUrl($page - 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Previous">
+                            <i class="fas fa-angle-left text-xs"></i>
+                        </a>
+                        <?php else: ?>
+                        <span class="p-2 text-slate-300"><i class="fas fa-angles-left text-xs"></i></span>
+                        <span class="p-2 text-slate-300"><i class="fas fa-angle-left text-xs"></i></span>
+                        <?php endif; ?>
+
+                        <!-- Page Numbers -->
+                        <?php
+                        $start_page = max(1, $page - 2);
+                        $end_page = min($total_pages, $page + 2);
+
+                        if ($start_page > 1): ?>
+                        <a href="<?= buildPaginationUrl(1) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors">1</a>
+                        <?php if ($start_page > 2): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
+                        <?php endif;
+
+                        for ($i = $start_page; $i <= $end_page; $i++): ?>
+                        <a href="<?= buildPaginationUrl($i) ?>" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors <?= $i === $page ? 'bg-archery-600 text-white' : 'text-slate-600 hover:bg-slate-100' ?>"><?= $i ?></a>
+                        <?php endfor;
+
+                        if ($end_page < $total_pages): ?>
+                        <?php if ($end_page < $total_pages - 1): ?><span class="px-1 text-slate-400">...</span><?php endif; ?>
+                        <a href="<?= buildPaginationUrl($total_pages) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-100 transition-colors"><?= $total_pages ?></a>
+                        <?php endif; ?>
+
+                        <!-- Next & Last -->
+                        <?php if ($page < $total_pages): ?>
+                        <a href="<?= buildPaginationUrl($page + 1) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Next">
+                            <i class="fas fa-angle-right text-xs"></i>
+                        </a>
+                        <a href="<?= buildPaginationUrl($total_pages) ?>" class="p-2 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="Last">
+                            <i class="fas fa-angles-right text-xs"></i>
+                        </a>
+                        <?php else: ?>
+                        <span class="p-2 text-slate-300"><i class="fas fa-angle-right text-xs"></i></span>
+                        <span class="p-2 text-slate-300"><i class="fas fa-angles-right text-xs"></i></span>
+                        <?php endif; ?>
+                    </nav>
                     <?php endif; ?>
                 </div>
                 <?php else: ?>
@@ -2786,10 +2859,10 @@ foreach ($pesertaList as $peserta) {
             <!-- Mobile Card View -->
             <div class="md:hidden space-y-3 p-4">
                 <?php if ($totalPeserta > 0): ?>
-                <?php foreach ($pesertaList as $index => $peserta): ?>
+                <?php foreach ($pesertaListPaginated as $index => $peserta): ?>
                 <div class="bg-white rounded-lg border border-slate-200 p-4">
                     <div class="flex items-start gap-3 mb-3">
-                        <span class="text-sm text-slate-400 font-medium w-6"><?= $index + 1 ?></span>
+                        <span class="text-sm text-slate-400 font-medium w-6"><?= $offset + $index + 1 ?></span>
                         <div class="flex-1 min-w-0">
                             <p class="font-semibold text-slate-900"><?= htmlspecialchars($peserta['nama_peserta']) ?></p>
                             <div class="flex items-center gap-2 mt-1">
@@ -2830,13 +2903,44 @@ foreach ($pesertaList as $peserta) {
                         </div>
                     </div>
                     <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-                        <a href="tel:<?= htmlspecialchars($peserta['nomor_hp']) ?>" class="inline-flex items-center gap-1.5 text-slate-600 text-sm hover:text-archery-600">
-                            <i class="fas fa-phone text-xs"></i> <?= htmlspecialchars($peserta['nomor_hp']) ?>
+                        <a href="tel:<?= htmlspecialchars($peserta['nomor_hp'] ?? '') ?>" class="inline-flex items-center gap-1.5 text-slate-600 text-sm hover:text-archery-600">
+                            <i class="fas fa-phone text-xs"></i> <?= htmlspecialchars($peserta['nomor_hp'] ?? '-') ?>
                         </a>
                         <span class="text-xs text-slate-400"><?= date('d/m/Y', strtotime($peserta['tanggal_lahir'])) ?></span>
                     </div>
                 </div>
                 <?php endforeach; ?>
+
+                <!-- Mobile Pagination -->
+                <?php if ($total_pages > 1): ?>
+                <div class="bg-white rounded-lg border border-slate-200 p-4 mt-4">
+                    <div class="flex items-center justify-between">
+                        <?php if ($page > 1): ?>
+                        <a href="<?= buildPaginationUrl($page - 1) ?>" class="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors">
+                            <i class="fas fa-chevron-left mr-1"></i> Prev
+                        </a>
+                        <?php else: ?>
+                        <span class="px-4 py-2 rounded-lg bg-slate-50 text-slate-300 text-sm font-medium">
+                            <i class="fas fa-chevron-left mr-1"></i> Prev
+                        </span>
+                        <?php endif; ?>
+
+                        <span class="text-sm text-slate-500">
+                            <span class="font-medium text-slate-900"><?= $page ?></span> / <?= $total_pages ?>
+                        </span>
+
+                        <?php if ($page < $total_pages): ?>
+                        <a href="<?= buildPaginationUrl($page + 1) ?>" class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                            Next <i class="fas fa-chevron-right ml-1"></i>
+                        </a>
+                        <?php else: ?>
+                        <span class="px-4 py-2 rounded-lg bg-slate-50 text-slate-300 text-sm font-medium">
+                            Next <i class="fas fa-chevron-right ml-1"></i>
+                        </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
                 <?php else: ?>
                 <div class="bg-white rounded-lg border border-slate-200 p-8 text-center">
                     <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
