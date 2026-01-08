@@ -4,6 +4,7 @@ session_start();
 include '../includes/check_access.php';
 include '../includes/theme.php';
 requireLogin();
+require_once '../includes/security.php';
 
 include '../config/panggil.php';
 

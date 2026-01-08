@@ -4,6 +4,7 @@
  * UI: Intentional Minimalism with Tailwind CSS (consistent with Dashboard)
  */
 include '../includes/check_access.php';
+require_once '../includes/security.php';
 requireAdmin();
 
 if (!checkRateLimit('view_load', 60, 60)) {
@@ -759,3 +760,4 @@ $role = $_SESSION['role'] ?? 'user';
     </script>
 </body>
 </html>
+<?php skip_post: ?>

@@ -5,6 +5,7 @@
  */
 include '../config/panggil.php';
 include '../includes/check_access.php';
+require_once '../includes/security.php';
 requireAdmin();
 
 if (!checkRateLimit('view_load', 60, 60)) {
@@ -1143,3 +1144,4 @@ function bulkDelete() {
 </script>
 </body>
 </html>
+<?php skip_post: ?>

@@ -17,5 +17,5 @@ if ($conn->connect_error) {
 }
 
 // Include Security Helpers
-include __DIR__ . '/../includes/security.php';
+require_once __DIR__ . '/../includes/security.php';
 ?>

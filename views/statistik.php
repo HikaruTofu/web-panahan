@@ -6,6 +6,7 @@
 include '../config/panggil.php';
 include '../includes/check_access.php';
 include '../includes/theme.php';
+require_once '../includes/security.php';
 requireAdmin();
 
 if (!checkRateLimit('view_load', 60, 60)) {

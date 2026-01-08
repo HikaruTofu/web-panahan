@@ -11,6 +11,8 @@ ini_set('memory_limit', '512M');
 include '../config/panggil.php';
 include '../includes/check_access.php';
 include '../includes/theme.php';
+// Ensure security helper is loaded
+require_once '../includes/security.php';
 requireAdmin();
 
 if (!checkRateLimit('view_load', 60, 60)) {
@@ -1069,3 +1071,4 @@ try {
     </script>
 </body>
 </html>
+<?php skip_post: ?>
