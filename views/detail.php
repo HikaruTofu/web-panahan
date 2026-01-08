@@ -4,7 +4,6 @@ session_start();
 include '../includes/check_access.php';
 include '../includes/theme.php';
 requireLogin();
-require_once '../includes/security.php';
 
 include '../config/panggil.php';
 
@@ -1251,10 +1250,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 }
                 $stmtAllScores->close();
             }
-        }
 
         $stmtPeserta->close();
-}
     } catch (Exception $e) {
         die("Error mengambil data peserta: " . $e->getMessage());
     }
