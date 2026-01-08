@@ -6,8 +6,8 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Koneksi database
 $sname    = "db";
-$uname    = "root";
-$pwd      = "root";
+$uname    = "panahan_app";
+$pwd      = "s3cur3_v4ult_P@nahan";
 $database = "panahan_turnament_new";
 
 $conn = new mysqli($sname, $uname, $pwd, $database);
