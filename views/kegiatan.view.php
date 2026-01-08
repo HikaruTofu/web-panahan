@@ -110,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+}
 
 // Ambil data kegiatan dengan kategorinya dan statistik peserta
 $query = "
