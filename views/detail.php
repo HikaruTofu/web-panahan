@@ -3224,7 +3224,7 @@ function buildPaginationUrl($page, $params = []) {
                     </a>
                     <?php else: ?>
                     <p class="text-slate-500 dark:text-zinc-400 font-medium">Belum ada peserta terdaftar</p>
-                    <a href="pendaftaran.php?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                    <a href="peserta.view.php?add_peserta=1&kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                         <i class="fas fa-plus"></i> Daftarkan Peserta
                     </a>
                     <?php endif; ?>
@@ -3327,7 +3327,7 @@ function buildPaginationUrl($page, $params = []) {
                     <a href="?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 text-sm font-medium">Reset Filter</a>
                     <?php else: ?>
                     <p class="text-slate-500 dark:text-zinc-400 font-medium mb-3">Belum ada peserta terdaftar</p>
-                    <a href="pendaftaran.php?kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium">Daftarkan Peserta</a>
+                    <a href="peserta.view.php?add_peserta=1&kegiatan_id=<?= $kegiatan_id ?>" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium">Daftarkan Peserta</a>
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>

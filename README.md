@@ -87,9 +87,6 @@ web-panahan/
 │   │   └── get_club_members.php
 │   ├── login-sistem.php
 │   ├── logout.php
-│   ├── tambah-user.php
-│   ├── edit-user.php
-│   ├── hapus-user.php
 │   ├── excel_score.php       # Excel export
 │   ├── score_akar.php        # Score processing
 │   ├── tamplate_excel_score.php
@@ -98,8 +95,7 @@ web-panahan/
 │
 ├── views/                    # Frontend views
 │   ├── dashboard.php         # Admin dashboard
-│   ├── pendaftaran.php       # Registrasi peserta
-│   ├── peserta.view.php      # Daftar peserta
+│   ├── peserta.view.php      # Manajemen peserta & pendaftaran
 │   ├── peserta_lomba.php     # Peserta per lomba
 │   ├── kegiatan.view.php     # Daftar kegiatan
 │   ├── categori.view.php     # Kategori pertandingan

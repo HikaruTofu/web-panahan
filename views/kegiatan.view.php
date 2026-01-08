@@ -8,8 +8,8 @@ requireLogin();
 $toast_message = '';
 $toast_type = '';
 
-// Ambil semua kategori
-$kategoriResult = $conn->query("SELECT id, name, min_age, max_age FROM categories ORDER BY min_age ASC");
+// Ambil semua kategori aktif
+$kategoriResult = $conn->query("SELECT id, name, min_age, max_age, gender FROM categories WHERE status = 'active' ORDER BY min_age ASC, name ASC");
 $kategoriList = [];
 while ($row = $kategoriResult->fetch_assoc()) {
     $kategoriList[] = $row;
@@ -356,7 +356,7 @@ $role = $_SESSION['role'] ?? 'user';
                                             </td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center justify-center gap-1">
-                                                    <a href="pendaftaran.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors">
+                                                    <a href="peserta.view.php?add_peserta=1&kegiatan_id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors">
                                                         <i class="fas fa-user-plus text-xs"></i> Daftar
                                                     </a>
                                                     <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
@@ -424,7 +424,7 @@ $role = $_SESSION['role'] ?? 'user';
                                     <?php endif; ?>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
-                                    <a href="pendaftaran.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium">
+                                    <a href="peserta.view.php?add_peserta=1&kegiatan_id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium">
                                         <i class="fas fa-user-plus"></i> Daftar
                                     </a>
                                     <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium">
@@ -480,8 +480,11 @@ $role = $_SESSION['role'] ?? 'user';
                                         <input type="checkbox" name="kategori[]" value="<?= $kategori['id']; ?>" id="kategori_<?= $kategori['id']; ?>"
                                                class="mt-1 rounded text-archery-600 focus:ring-archery-500">
                                         <div class="flex-1">
-                                            <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($kategori['name']); ?></p>
-                                            <p class="text-xs text-slate-500 dark:text-zinc-400">Lahir <?= date("Y") - $kategori['max_age']; ?> – <?= date("Y") - $kategori['min_age']; ?></p>
+                                            <p class="font-medium text-slate-900 dark:text-white capitalize"><?= htmlspecialchars($kategori['name']); ?></p>
+                                            <div class="flex items-center gap-2 mt-0.5">
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-700 text-slate-500 dark:text-zinc-400 font-medium">Lahir <?= date("Y") - $kategori['max_age']; ?> – <?= date("Y") - $kategori['min_age']; ?></span>
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium"><?= htmlspecialchars($kategori['gender']); ?></span>
+                                            </div>
                                         </div>
                                     </label>
                                 </div>
@@ -657,7 +660,7 @@ function displayData(data) {
                 <td class="px-4 py-3 text-center">${pesertaBadge}</td>
                 <td class="px-4 py-3">
                     <div class="flex items-center justify-center gap-1">
-                        <a href="pendaftaran.php?id=${item.id}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium hover:bg-purple-100"><i class="fas fa-user-plus text-xs"></i> Daftar</a>
+                        <a href="peserta.view.php?add_peserta=1&kegiatan_id=${item.id}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium hover:bg-purple-100"><i class="fas fa-user-plus text-xs"></i> Daftar</a>
                         <a href="detail.php?id=${item.id}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100"><i class="fas fa-eye text-xs"></i> Detail</a>
                         <button onclick="editData(${item.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50"><i class="fas fa-edit text-sm"></i></button>
                         <button onclick="deleteData(${item.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"><i class="fas fa-trash text-sm"></i></button>
@@ -696,7 +699,7 @@ function displayData(data) {
                     <div class="flex flex-wrap gap-1">${categoryBadges}</div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100">
-                    <a href="pendaftaran.php?id=${item.id}" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium"><i class="fas fa-user-plus"></i> Daftar</a>
+                    <a href="peserta.view.php?add_peserta=1&kegiatan_id=${item.id}" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium"><i class="fas fa-user-plus"></i> Daftar</a>
                     <a href="detail.php?id=${item.id}" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium"><i class="fas fa-eye"></i> Detail</a>
                     <button onclick="editData(${item.id})" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-medium"><i class="fas fa-edit"></i> Edit</button>
                     <button onclick="deleteData(${item.id})" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 text-red-700 text-xs font-medium"><i class="fas fa-trash"></i> Hapus</button>

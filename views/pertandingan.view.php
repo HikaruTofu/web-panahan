@@ -530,9 +530,9 @@ $role = $_SESSION['role'] ?? 'user';
                             <select name="kategori" onchange="this.form.submit()"
                                     class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500">
                                 <option value="all" <?php echo $selectedCategory === 'all' ? 'selected' : ''; ?>>Semua Kategori</option>
-                                <?php foreach ($availableCategories as $categoryId): ?>
+                                <?php foreach ($categoriesData as $categoryId => $categoryName): ?>
                                     <option value="<?php echo $categoryId; ?>" <?php echo $selectedCategory == $categoryId ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($categoriesData[$categoryId] ?? "Kategori $categoryId"); ?>
+                                        <?php echo htmlspecialchars($categoryName); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>

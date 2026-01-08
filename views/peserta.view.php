@@ -8,58 +8,195 @@ include '../includes/check_access.php';
 include '../includes/theme.php';
 requireAdmin();
 
-// Handle update request (UNCHANGED)
-if (isset($_POST['update_id'])) {
-    $update_id = intval($_POST['update_id']);
-    $nama_peserta = $_POST['nama_peserta'];
-    $category_id = intval($_POST['category_id']);
-    $kegiatan_id = intval($_POST['kegiatan_id']);
-    $tanggal_lahir = $_POST['tanggal_lahir'];
-    $jenis_kelamin = $_POST['jenis_kelamin'];
-    $asal_kota = $_POST['asal_kota'];
-    $nama_club = $_POST['nama_club'];
-    $sekolah = $_POST['sekolah'];
-    $kelas = $_POST['kelas'];
-    $nomor_hp = $_POST['nomor_hp'];
+// Toast message handling
+$toast_message = '';
+$toast_type = '';
 
-    $stmt = $conn->prepare("UPDATE peserta SET nama_peserta=?, category_id=?, kegiatan_id=?, tanggal_lahir=?, jenis_kelamin=?, asal_kota=?, nama_club=?, sekolah=?, kelas=?, nomor_hp=? WHERE id=?");
-    $stmt->bind_param("siisssssssi", $nama_peserta, $category_id, $kegiatan_id, $tanggal_lahir, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp, $update_id);
-
-    if ($stmt->execute()) {
-        $success_message = "Data peserta berhasil diperbarui!";
-    } else {
-        $error_message = "Gagal memperbarui data peserta!";
+// Handle AJAX request for getting peserta by club (from pendaftaran.php)
+if (isset($_GET['action']) && $_GET['action'] === 'get_peserta') {
+    header('Content-Type: application/json');
+    $club = isset($_GET['club']) ? trim($_GET['club']) : '';
+    if (empty($club)) {
+        echo json_encode([]);
+        exit;
+    }
+    try {
+        $query = "
+            SELECT p.id, p.nama_peserta, p.tanggal_lahir, p.jenis_kelamin, p.nomor_hp, p.asal_kota, p.sekolah, p.kelas
+            FROM peserta p
+            INNER JOIN (
+                SELECT nama_peserta, MAX(id) as max_id
+                FROM peserta
+                WHERE nama_club = ?
+                GROUP BY nama_peserta
+            ) latest ON p.id = latest.max_id
+            ORDER BY p.nama_peserta ASC
+        ";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("s", $club);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $pesertaList = [];
+        while ($row = $result->fetch_assoc()) {
+            $pesertaList[] = $row;
+        }
+        $stmt->close();
+        echo json_encode($pesertaList);
+        exit;
+    } catch (Exception $e) {
+        echo json_encode(['error' => $e->getMessage()]);
+        exit;
     }
 }
 
-// Handle delete request (UNCHANGED)
-if (isset($_POST['delete_id'])) {
-    $delete_id = intval($_POST['delete_id']);
+// Handle AJAX request for getting categories by kegiatan (for add modal)
+if (isset($_GET['action']) && $_GET['action'] === 'get_categories') {
+    header('Content-Type: application/json');
+    $kegiatan_id = isset($_GET['kegiatan_id']) ? intval($_GET['kegiatan_id']) : 0;
+    if (!$kegiatan_id) {
+        echo json_encode([]);
+        exit;
+    }
+    try {
+        $query = "
+            SELECT c.id, c.name, c.min_age, c.max_age, c.gender 
+            FROM categories c 
+            JOIN kegiatan_kategori kk ON c.id = kk.category_id 
+            WHERE kk.kegiatan_id = ? AND c.status = 'active'
+            ORDER BY c.name ASC
+        ";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $kegiatan_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $categories = [];
+        while ($row = $result->fetch_assoc()) {
+            $categories[] = $row;
+        }
+        $stmt->close();
+        echo json_encode($categories);
+        exit;
+    } catch (Exception $e) {
+        echo json_encode(['error' => $e->getMessage()]);
+        exit;
+    }
+}
 
-    $stmt = $conn->prepare("SELECT bukti_pembayaran FROM peserta WHERE id = ?");
-    $stmt->bind_param("i", $delete_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $peserta_data = $result->fetch_assoc();
-
-    if ($peserta_data) {
-        if (!empty($peserta_data['bukti_pembayaran'])) {
-            $file_path = '../assets/uploads/' . $peserta_data['bukti_pembayaran'];
-            if (file_exists($file_path)) {
-                unlink($file_path);
+// Handle CRUD Operations
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    $action = $_POST['action'];
+    
+    switch ($action) {
+        case 'create':
+            $nama_peserta = trim($_POST['nama_peserta']);
+            $tanggal_lahir = $_POST['tanggal_lahir'];
+            $jenis_kelamin = $_POST['jenis_kelamin'];
+            $asal_kota = trim($_POST['asal_kota']);
+            $nama_club = trim($_POST['nama_club']);
+            if ($nama_club === 'CLUB_BARU' && !empty($_POST['club_baru'])) {
+                $nama_club = trim($_POST['club_baru']);
             }
-        }
+            $sekolah = trim($_POST['sekolah']);
+            $kelas = trim($_POST['kelas']);
+            $nomor_hp = trim($_POST['nomor_hp']);
+            $category_ids = isset($_POST['category_ids']) ? $_POST['category_ids'] : [];
+            $kegiatan_id = intval($_POST['kegiatan_id']);
 
-        $stmt = $conn->prepare("DELETE FROM peserta WHERE id = ?");
-        $stmt->bind_param("i", $delete_id);
+            // Handle file upload
+            $bukti_pembayaran = '';
+            if (isset($_FILES['bukti_pembayaran']) && $_FILES['bukti_pembayaran']['error'] === UPLOAD_ERR_OK) {
+                $upload_dir = '../assets/uploads/pembayaran/';
+                if (!file_exists($upload_dir)) mkdir($upload_dir, 0755, true);
+                
+                $file_name = $_FILES['bukti_pembayaran']['name'];
+                $file_extension = pathinfo($file_name, PATHINFO_EXTENSION);
+                $unique_name = date('YmdHis') . '_' . uniqid() . '.' . $file_extension;
+                
+                if (move_uploaded_file($_FILES['bukti_pembayaran']['tmp_name'], $upload_dir . $unique_name)) {
+                    $bukti_pembayaran = 'pembayaran/' . $unique_name;
+                }
+            }
 
-        if ($stmt->execute()) {
-            $success_message = "Data peserta berhasil dihapus!";
-        } else {
-            $error_message = "Gagal menghapus data peserta!";
-        }
-    } else {
-        $error_message = "Data peserta tidak ditemukan!";
+            if (empty($category_ids)) {
+                $toast_message = "Minimal pilih satu kategori!";
+                $toast_type = 'error';
+                break;
+            }
+
+            $successCount = 0;
+            foreach ($category_ids as $category_id) {
+                // Check duplicate
+                $check = $conn->prepare("SELECT id FROM peserta WHERE nama_peserta = ? AND category_id = ? AND kegiatan_id = ?");
+                $check->bind_param("sii", $nama_peserta, $category_id, $kegiatan_id);
+                $check->execute();
+                if ($check->get_result()->num_rows > 0) { $check->close(); continue; }
+                $check->close();
+
+                $stmt = $conn->prepare("INSERT INTO peserta (nama_peserta, tanggal_lahir, jenis_kelamin, asal_kota, nama_club, sekolah, kelas, nomor_hp, bukti_pembayaran, category_id, kegiatan_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                $stmt->bind_param("sssssssssii", $nama_peserta, $tanggal_lahir, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp, $bukti_pembayaran, $category_id, $kegiatan_id);
+                if ($stmt->execute()) $successCount++;
+                $stmt->close();
+            }
+
+            if ($successCount > 0) {
+                $toast_message = "$successCount pendaftaran berhasil ditambahkan!";
+                $toast_type = 'success';
+            } else {
+                $toast_message = "Kategori yang dipilih sudah terdaftar!";
+                $toast_type = 'error';
+            }
+            break;
+
+        case 'update':
+            $id = intval($_POST['id']);
+            $nama_peserta = $_POST['nama_peserta'];
+            $category_id = intval($_POST['category_id']);
+            $kegiatan_id = intval($_POST['kegiatan_id']);
+            $tanggal_lahir = $_POST['tanggal_lahir'];
+            $jenis_kelamin = $_POST['jenis_kelamin'];
+            $asal_kota = $_POST['asal_kota'];
+            $nama_club = $_POST['nama_club'];
+            $sekolah = $_POST['sekolah'];
+            $kelas = $_POST['kelas'];
+            $nomor_hp = $_POST['nomor_hp'];
+
+            $stmt = $conn->prepare("UPDATE peserta SET nama_peserta=?, category_id=?, kegiatan_id=?, tanggal_lahir=?, jenis_kelamin=?, asal_kota=?, nama_club=?, sekolah=?, kelas=?, nomor_hp=?, updated_at=NOW() WHERE id=?");
+            $stmt->bind_param("siisssssssi", $nama_peserta, $category_id, $kegiatan_id, $tanggal_lahir, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp, $id);
+            if ($stmt->execute()) {
+                $toast_message = "Data peserta berhasil diperbarui!";
+                $toast_type = 'success';
+            } else {
+                $toast_message = "Gagal memperbarui data!";
+                $toast_type = 'error';
+            }
+            $stmt->close();
+            break;
+
+        case 'delete':
+            $id = intval($_POST['id']);
+            $stmt = $conn->prepare("SELECT bukti_pembayaran FROM peserta WHERE id = ?");
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
+            $peserta_data = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($peserta_data) {
+                if (!empty($peserta_data['bukti_pembayaran'])) {
+                    $file_path = '../assets/uploads/' . $peserta_data['bukti_pembayaran'];
+                    if (file_exists($file_path)) unlink($file_path);
+                }
+                $stmt = $conn->prepare("DELETE FROM peserta WHERE id = ?");
+                $stmt->bind_param("i", $id);
+                if ($stmt->execute()) {
+                    $toast_message = "Data peserta berhasil dihapus!";
+                    $toast_type = 'success';
+                } else {
+                    $toast_message = "Gagal menghapus data!";
+                    $toast_type = 'error';
+                }
+                $stmt->close();
+            }
+            break;
     }
 }
 
@@ -311,6 +448,13 @@ while ($row = $result->fetch_assoc()) {
 
 $uniqueCount = count($pesertaGrouped);
 
+// --- Ambil daftar club unik untuk dropdown (NEW) ---
+$clubResult = $conn->query("SELECT DISTINCT nama_club FROM peserta WHERE nama_club IS NOT NULL AND nama_club != '' ORDER BY nama_club ASC");
+$clubList = [];
+while ($row = $clubResult->fetch_assoc()) {
+    $clubList[] = $row['nama_club'];
+}
+
 // ============================================
 // PAGINATION LOGIC
 // ============================================
@@ -436,25 +580,17 @@ $role = $_SESSION['role'] ?? 'user';
         <!-- Main Content -->
         <main class="flex-1 overflow-auto">
             <div class="px-6 lg:px-8 py-6">
-                <!-- Toast Messages -->
-                <?php if (isset($success_message)): ?>
-                    <div id="toast-success" class="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800">
-                        <i class="fas fa-check-circle text-emerald-500"></i>
-                        <span class="text-sm"><?= $success_message ?></span>
-                        <button onclick="this.parentElement.remove()" class="ml-auto text-emerald-500 hover:text-emerald-700">
+                <!-- Toast Notification -->
+                <?php if (!empty($toast_message)): ?>
+                <div id="toast" class="fixed top-4 right-4 z-[200]">
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg <?= $toast_type === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800' ?>">
+                        <i class="fas <?= $toast_type === 'success' ? 'fa-check-circle text-emerald-500' : 'fa-exclamation-circle text-red-500' ?>"></i>
+                        <span class="text-sm font-medium"><?= htmlspecialchars($toast_message) ?></span>
+                        <button onclick="dismissToast()" class="ml-2 <?= $toast_type === 'success' ? 'text-emerald-500 hover:text-emerald-700' : 'text-red-500 hover:text-red-700' ?>">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
-                <?php endif; ?>
-
-                <?php if (isset($error_message)): ?>
-                    <div id="toast-error" class="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-800">
-                        <i class="fas fa-exclamation-circle text-red-500"></i>
-                        <span class="text-sm"><?= $error_message ?></span>
-                        <button onclick="this.parentElement.remove()" class="ml-auto text-red-500 hover:text-red-700">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
+                </div>
                 <?php endif; ?>
 
                 <!-- Compact Header with Metrics -->
@@ -471,11 +607,11 @@ $role = $_SESSION['role'] ?? 'user';
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <a href="pendaftaran.php"
-                                   class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                <button onclick="openAddModal()"
+                                   class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors shadow-sm">
                                     <i class="fas fa-user-plus"></i>
                                     <span class="hidden sm:inline">Tambah Peserta</span>
-                                </a>
+                                </button>
                                 <?php
                                 $exportParams = [];
                                 if (!empty($category_id)) $exportParams['category_id'] = $category_id;
@@ -700,7 +836,7 @@ $role = $_SESSION['role'] ?? 'user';
                                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
                                                         <i class="fas fa-check-circle"></i> Lunas
                                                     </span>
-                                                    <button onclick="showImage('<?= htmlspecialchars($p['bukti_pembayaran']) ?>', '<?= htmlspecialchars($nama) ?>')" class="block mx-auto mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                                                    <button onclick="showImage('payment', '../assets/uploads/<?= htmlspecialchars($p['bukti_pembayaran']) ?>', '<?= htmlspecialchars($nama) ?>')" class="block mx-auto mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
                                                         Lihat Bukti
                                                     </button>
                                                 <?php else: ?>
@@ -794,13 +930,130 @@ $role = $_SESSION['role'] ?? 'user';
         </main>
     </div>
 
+    <!-- Add Participant Modal -->
+    <div id="addModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeAddModal()"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-3xl bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col transition-colors">
+            <div class="bg-gradient-to-br from-archery-600 to-archery-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-user-plus"></i> Tambah Peserta
+                </h3>
+                <button onclick="closeAddModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data" id="addPesertaForm" class="flex flex-col flex-1 overflow-hidden">
+                <input type="hidden" name="action" value="create">
+                <input type="hidden" id="peserta_id_existing" name="peserta_id_existing" value="0">
+                <input type="hidden" id="nama_peserta_hidden" name="nama_peserta">
+
+                <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+                    <!-- Step 1: Club & Name Selection -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Nama Club <span class="text-red-500">*</span></label>
+                            <select id="add_nama_club" name="nama_club" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500" onchange="loadPesertaByClub('add')" required>
+                                <option value="">-- Pilih Club --</option>
+                                <?php foreach ($clubList as $club): ?>
+                                    <option value="<?= htmlspecialchars($club) ?>"><?= htmlspecialchars($club) ?></option>
+                                <?php endforeach; ?>
+                                <option value="CLUB_BARU">+ Tambah Club Baru</option>
+                            </select>
+                            <input type="text" id="add_club_baru" name="club_baru" class="hidden mt-2 w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" placeholder="Nama club baru">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Nama Peserta <span class="text-red-500">*</span></label>
+                            <select id="add_nama_peserta_select" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500 disabled:opacity-50" onchange="loadPesertaData('add')" disabled>
+                                <option value="">-- Pilih club dahulu --</option>
+                            </select>
+                            <input type="text" id="add_nama_peserta_manual" class="hidden mt-2 w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" placeholder="Nama peserta baru">
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Personal Info -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-zinc-800">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Tanggal Lahir <span class="text-red-500">*</span></label>
+                            <input type="date" id="add_tanggal_lahir" name="tanggal_lahir" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" onchange="updateKategoriOptions('add')" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Jenis Kelamin <span class="text-red-500">*</span></label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-2 cursor-pointer text-sm dark:text-zinc-400">
+                                    <input type="radio" name="jenis_kelamin" value="Laki-laki" onchange="updateKategoriOptions('add')" required> Laki-laki
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer text-sm dark:text-zinc-400">
+                                    <input type="radio" name="jenis_kelamin" value="Perempuan" onchange="updateKategoriOptions('add')" required> Perempuan
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Kegiatan <span class="text-red-500">*</span></label>
+                            <select name="kegiatan_id" id="add_kegiatan_id" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" onchange="loadKegiatanCategories()" required>
+                                <option value="">-- Pilih Kegiatan --</option>
+                                <?php foreach ($kegiatanList as $keg): ?>
+                                    <option value="<?= $keg['id'] ?>"><?= htmlspecialchars($keg['nama_kegiatan']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Nomor HP <span class="text-red-500">*</span></label>
+                            <input type="tel" id="add_nomor_hp" name="nomor_hp" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" placeholder="08xxxxxxxx" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Asal Kota</label>
+                            <input type="text" id="add_asal_kota" name="asal_kota" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Sekolah</label>
+                            <input type="text" id="add_sekolah" name="sekolah" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Kelas</label>
+                            <input type="text" id="add_kelas" name="kelas" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Kategori -->
+                    <div class="pt-4 border-t border-slate-100 dark:border-zinc-800">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Pilih Kategori <span class="text-red-500">*</span></label>
+                        <div id="add_categories_list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto custom-scrollbar p-1">
+                            <!-- Populated by JS -->
+                            <div class="col-span-2 text-center py-4 text-slate-400 dark:text-zinc-500 text-sm">
+                                Silakan pilih kegiatan, tanggal lahir, dan jenis kelamin dahulu.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Bukti Bayar -->
+                    <div class="pt-4 border-t border-slate-100 dark:border-zinc-800">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Bukti Pembayaran</label>
+                        <input type="file" name="bukti_pembayaran" class="w-full text-sm text-slate-500 dark:text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-archery-50 file:text-archery-700 dark:file:bg-archery-900/30 dark:file:text-archery-400 hover:file:bg-archery-100 transition-all">
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3 flex-shrink-0">
+                    <button type="button" onclick="closeAddModal()" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">Batal</button>
+                    <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-transform active:scale-95">Simpan Pendaftaran</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Detail Modal -->
     <div id="detailModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeDetailModal()"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-5xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeDetailModal()"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-5xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col transition-colors">
             <div class="bg-gradient-to-br from-cyan-600 to-cyan-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
-                <h3 class="font-semibold text-lg">
-                    <i class="fas fa-info-circle mr-2"></i>Detail Pendaftaran Peserta
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-info-circle"></i> Detail Pendaftaran Peserta
                 </h3>
                 <button onclick="closeDetailModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
                     <i class="fas fa-times"></i>
@@ -814,112 +1067,73 @@ $role = $_SESSION['role'] ?? 'user';
 
     <!-- Edit Modal -->
     <div id="editModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeEditModal()"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeEditModal()"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col transition-colors">
             <div class="bg-gradient-to-br from-amber-500 to-amber-700 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
-                <h3 class="font-semibold text-lg">
-                    <i class="fas fa-edit mr-2"></i>Edit Data Peserta
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-edit"></i> Edit Data Peserta
                 </h3>
                 <button onclick="closeEditModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <!-- FORM: method=POST, no action (UNCHANGED) -->
-            <form method="POST" id="editForm" class="flex flex-col flex-1 overflow-hidden">
-                <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
-                    <!-- INPUT: name="update_id" (UNCHANGED) -->
-                    <input type="hidden" name="update_id" id="edit_id">
+            <form method="POST" class="flex flex-col flex-1 overflow-hidden">
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="id" id="edit_id">
 
+                <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Nama Peserta <span class="text-red-500">*</span></label>
-                            <!-- INPUT: name="nama_peserta" (UNCHANGED) -->
-                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="nama_peserta" id="edit_nama_peserta" required>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Peserta <span class="text-red-500">*</span></label>
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="nama_peserta" id="edit_nama_peserta" required>
                         </div>
-
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Kategori <span class="text-red-500">*</span></label>
-                            <!-- SELECT: name="category_id" (UNCHANGED) -->
-                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="category_id" id="edit_category_id" required>
-                                <option value="">Pilih Kategori</option>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kategori <span class="text-red-500">*</span></label>
+                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="category_id" id="edit_category_id" required>
                                 <?php foreach ($kategoriList as $kat): ?>
                                     <option value="<?= $kat['id'] ?>"><?= htmlspecialchars($kat['name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Kegiatan <span class="text-red-500">*</span></label>
-                            <!-- SELECT: name="kegiatan_id" (UNCHANGED) -->
-                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="kegiatan_id" id="edit_kegiatan_id" required>
-                                <option value="">Pilih Kegiatan</option>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kegiatan <span class="text-red-500">*</span></label>
+                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="kegiatan_id" id="edit_kegiatan_id" required>
                                 <?php foreach ($kegiatanList as $keg): ?>
                                     <option value="<?= $keg['id'] ?>"><?= htmlspecialchars($keg['nama_kegiatan']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Tanggal Lahir <span class="text-red-500">*</span></label>
-                            <!-- INPUT: name="tanggal_lahir" (UNCHANGED) -->
-                            <input type="date" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="tanggal_lahir" id="edit_tanggal_lahir" required>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Tanggal Lahir <span class="text-red-500">*</span></label>
+                            <input type="date" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="tanggal_lahir" id="edit_tanggal_lahir" required>
                         </div>
-
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Jenis Kelamin <span class="text-red-500">*</span></label>
-                            <!-- SELECT: name="jenis_kelamin" (UNCHANGED) -->
-                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="jenis_kelamin" id="edit_jenis_kelamin" required>
-                                <option value="">Pilih Jenis Kelamin</option>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Jenis Kelamin <span class="text-red-500">*</span></label>
+                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="jenis_kelamin" id="edit_jenis_kelamin" required>
                                 <option value="Laki-laki">Laki-laki</option>
                                 <option value="Perempuan">Perempuan</option>
                             </select>
                         </div>
-
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Asal Kota</label>
-                            <!-- INPUT: name="asal_kota" (UNCHANGED) -->
-                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="asal_kota" id="edit_asal_kota">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Nama Club</label>
-                            <!-- INPUT: name="nama_club" (UNCHANGED) -->
-                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="nama_club" id="edit_nama_club">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Sekolah</label>
-                            <!-- INPUT: name="sekolah" (UNCHANGED) -->
-                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="sekolah" id="edit_sekolah">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Kelas</label>
-                            <!-- INPUT: name="kelas" (UNCHANGED) -->
-                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="kelas" id="edit_kelas">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Nomor HP</label>
-                            <!-- INPUT: name="nomor_hp" (UNCHANGED) -->
-                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="nomor_hp" id="edit_nomor_hp" placeholder="Contoh: 08123456789">
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nomor HP</label>
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="nomor_hp" id="edit_nomor_hp">
                         </div>
                     </div>
-
-                    <div class="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
-                        <p class="text-sm text-blue-800">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            Field yang bertanda <span class="text-red-500">*</span> wajib diisi.
-                        </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Asal Kota</label>
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="asal_kota" id="edit_asal_kota">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Club</label>
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="nama_club" id="edit_nama_club">
+                        </div>
                     </div>
                 </div>
-                <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
-                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition-colors">
-                        Batal
-                    </button>
-                    <button type="submit" class="px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 transition-colors">
-                        <i class="fas fa-save mr-1"></i> Simpan
-                    </button>
+
+                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex justify-end gap-2 flex-shrink-0">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 transition-colors">Simpan</button>
                 </div>
             </form>
         </div>
@@ -927,41 +1141,34 @@ $role = $_SESSION['role'] ?? 'user';
 
     <!-- Delete Confirmation Modal -->
     <div id="deleteModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeDeleteModal()"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeDeleteModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden transition-colors">
             <div class="bg-gradient-to-br from-red-500 to-red-700 text-white px-6 py-4 flex items-center justify-between">
-                <h3 class="font-semibold text-lg">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>Konfirmasi Hapus
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-trash"></i> Konfirmasi Hapus
                 </h3>
                 <button onclick="closeDeleteModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="p-6 text-center">
-                <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-user-times text-red-500 text-2xl"></i>
+                <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-user-times text-red-500 dark:text-red-400 text-2xl"></i>
                 </div>
-                <h4 class="text-lg font-semibold text-slate-900 mb-2">Hapus peserta ini?</h4>
-                <p class="text-sm text-slate-500 mb-2">Nama Peserta:</p>
-                <p class="font-bold text-slate-900 mb-4" id="deletePesertaName"></p>
-                <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-left">
-                    <p class="text-sm text-amber-800">
-                        <i class="fas fa-warning mr-1"></i>
-                        Data yang dihapus tidak dapat dikembalikan!
+                <h4 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Hapus peserta ini?</h4>
+                <p class="font-bold text-red-600 dark:text-red-400 mb-4" id="deletePesertaName"></p>
+                <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-left">
+                    <p class="text-sm text-amber-800 dark:text-amber-400">
+                        <i class="fas fa-exclamation-triangle mr-1"></i> Data yang dihapus tidak dapat dikembalikan!
                     </p>
                 </div>
             </div>
-            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
-                <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition-colors">
-                    Batal
-                </button>
-                <!-- FORM: method=POST (UNCHANGED) -->
-                <form method="POST" id="deleteForm" class="inline">
-                    <!-- INPUT: name="delete_id" (UNCHANGED) -->
-                    <input type="hidden" name="delete_id" id="deleteIdInput">
-                    <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">
-                        <i class="fas fa-trash-alt mr-1"></i> Ya, Hapus
-                    </button>
+            <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex justify-end gap-2">
+                <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">Batal</button>
+                <form method="POST" class="inline">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="id" id="deleteIdInput">
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">Hapus</button>
                 </form>
             </div>
         </div>
@@ -969,21 +1176,19 @@ $role = $_SESSION['role'] ?? 'user';
 
     <!-- Image Modal -->
     <div id="imageModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeImageModal()"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div class="bg-gradient-to-br from-slate-700 to-slate-900 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeImageModal()"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col transition-colors">
+            <div class="bg-gradient-to-br from-zinc-700 to-zinc-900 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
                 <h3 class="font-semibold text-lg" id="imageModalLabel">Bukti Pembayaran</h3>
                 <button onclick="closeImageModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 text-center" id="imageModalBody">
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 text-center bg-slate-50 dark:bg-zinc-950" id="imageModalBody">
                 <!-- Content loaded by JS -->
             </div>
-            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
-                <button type="button" onclick="closeImageModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition-colors">
-                    Tutup
-                </button>
+            <div class="px-6 py-4 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2">
+                <button type="button" onclick="closeImageModal()" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">Tutup</button>
                 <a id="downloadImage" href="" download class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                     <i class="fas fa-download mr-1"></i> Download
                 </a>
@@ -1035,80 +1240,230 @@ $role = $_SESSION['role'] ?? 'user';
     </div>
 
     <script>
-        // Mobile menu toggle logic (Global scope)
+        // Mobile menu toggle logic
         function toggleMobileMenu() {
             const mobileSidebar = document.getElementById('mobile-sidebar');
             const mobileOverlay = document.getElementById('mobile-overlay');
-            console.log('Toggle called', { sidebar: !!mobileSidebar, overlay: !!mobileOverlay });
-            
             if (mobileSidebar && mobileOverlay) {
                 mobileSidebar.classList.toggle('-translate-x-full');
                 mobileOverlay.classList.toggle('hidden');
-                console.log('Classes toggled');
-            } else {
-                console.error('Mobile menu elements not found');
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM Content Loaded - Mobile Menu check');
-        });
+        // Modal Management
+        function openAddModal() {
+            document.getElementById('addPesertaForm').reset();
+            resetAddModalFields();
+            document.getElementById('addModal').classList.remove('hidden');
+        }
 
-        // Detail Modal
+        function closeAddModal() {
+            document.getElementById('addModal').classList.add('hidden');
+        }
+
+        function resetAddModalFields() {
+            document.getElementById('add_club_baru').classList.add('hidden');
+            document.getElementById('add_nama_peserta_select').disabled = true;
+            document.getElementById('add_nama_peserta_select').innerHTML = '<option value="">-- Pilih club dahulu --</option>';
+            document.getElementById('add_nama_peserta_manual').classList.add('hidden');
+            document.getElementById('peserta_id_existing').value = '0';
+            document.getElementById('add_categories_list').innerHTML = '<div class="col-span-2 text-center py-4 text-slate-400 dark:text-zinc-500 text-sm">Silakan pilih kegiatan, tanggal lahir, dan jenis kelamin dahulu.</div>';
+        }
+
+        let allCategories = [];
+
+        function loadKegiatanCategories() {
+            const kegiatanId = document.getElementById('add_kegiatan_id').value;
+            if (!kegiatanId) {
+                allCategories = [];
+                updateKategoriOptions('add');
+                return;
+            }
+
+            fetch(`?action=get_categories&kegiatan_id=${kegiatanId}`)
+                .then(res => res.json())
+                .then(data => {
+                    allCategories = data;
+                    updateKategoriOptions('add');
+                });
+        }
+
+        function loadPesertaByClub(prefix) {
+            const clubSelect = document.getElementById(prefix + '_nama_club');
+            const clubBaru = document.getElementById(prefix + '_club_baru');
+            const pesertaSelect = document.getElementById(prefix + '_nama_peserta_select');
+            const selectedClub = clubSelect.value;
+
+            if (selectedClub === 'CLUB_BARU') {
+                clubBaru.classList.remove('hidden');
+                pesertaSelect.disabled = false;
+                pesertaSelect.innerHTML = '<option value="PESERTA_BARU" selected>+ Tambah Peserta Baru</option>';
+                loadPesertaData(prefix);
+                return;
+            } else {
+                clubBaru.classList.add('hidden');
+            }
+
+            if (!selectedClub) {
+                pesertaSelect.disabled = true;
+                pesertaSelect.innerHTML = '<option value="">-- Pilih club dahulu --</option>';
+                return;
+            }
+
+            pesertaSelect.disabled = true;
+            pesertaSelect.innerHTML = '<option value="">Memuat...</option>';
+
+            fetch(`?action=get_peserta&club=${encodeURIComponent(selectedClub)}`)
+                .then(res => res.json())
+                .then(data => {
+                    pesertaSelect.innerHTML = '<option value="">-- Pilih Peserta --</option>';
+                    data.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.id;
+                        opt.textContent = p.nama_peserta;
+                        opt.dataset.peserta = JSON.stringify(p);
+                        pesertaSelect.appendChild(opt);
+                    });
+                    const newOpt = document.createElement('option');
+                    newOpt.value = 'PESERTA_BARU';
+                    newOpt.textContent = '+ Tambah Peserta Baru';
+                    pesertaSelect.appendChild(newOpt);
+                    pesertaSelect.disabled = false;
+                });
+        }
+
+        function loadPesertaData(prefix) {
+            const select = document.getElementById(prefix + '_nama_peserta_select');
+            const manual = document.getElementById(prefix + '_nama_peserta_manual');
+            const existingId = document.getElementById('peserta_id_existing');
+            const nameHidden = document.getElementById('nama_peserta_hidden');
+            
+            if (select.value === 'PESERTA_BARU') {
+                manual.classList.remove('hidden');
+                manual.required = true;
+                existingId.value = '0';
+                nameHidden.value = manual.value;
+                manual.oninput = () => { nameHidden.value = manual.value; };
+            } else if (select.value) {
+                manual.classList.add('hidden');
+                manual.required = false;
+                const data = JSON.parse(select.selectedOptions[0].dataset.peserta);
+                existingId.value = data.id;
+                nameHidden.value = data.nama_peserta;
+                
+                document.getElementById(prefix + '_tanggal_lahir').value = data.tanggal_lahir;
+                const genderRadio = document.querySelector(`input[name="jenis_kelamin"][value="${data.jenis_kelamin}"]`);
+                if (genderRadio) genderRadio.checked = true;
+                document.getElementById(prefix + '_nomor_hp').value = data.nomor_hp || '';
+                document.getElementById(prefix + '_asal_kota').value = data.asal_kota || '';
+                document.getElementById(prefix + '_sekolah').value = data.sekolah || '';
+                document.getElementById(prefix + '_kelas').value = data.kelas || '';
+                
+                updateKategoriOptions(prefix);
+            }
+        }
+
+        function updateKategoriOptions(prefix) {
+            const dob = document.getElementById(prefix + '_tanggal_lahir').value;
+            const gender = document.querySelector('input[name="jenis_kelamin"]:checked')?.value;
+            const container = document.getElementById(prefix + '_categories_list');
+            
+            if (!dob || !gender || allCategories.length === 0) {
+                return;
+            }
+
+            const birthYear = new Date(dob).getFullYear();
+            const currentYear = new Date().getFullYear();
+            const age = currentYear - birthYear;
+
+            container.innerHTML = allCategories.map(c => {
+                const ageMatch = age >= c.min_age && age <= c.max_age;
+                const genderMatch = c.gender === 'Campuran' || c.gender === gender;
+                const isEligible = ageMatch && genderMatch;
+                
+                let reason = '';
+                if (!ageMatch) reason = `Umur ${age} th tidak cocok (${c.min_age}-${c.max_age} th)`;
+                else if (!genderMatch) reason = `Hanya untuk ${c.gender}`;
+
+                return `
+                    <label class="flex items-start gap-3 p-3 rounded-xl border ${isEligible ? 'border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer' : 'border-slate-100 dark:border-zinc-800/50 bg-slate-50/50 dark:bg-zinc-900/30 opacity-60 cursor-not-allowed'} transition-colors">
+                        <input type="checkbox" name="category_ids[]" value="${c.id}" ${isEligible ? '' : 'disabled'} class="mt-1 rounded ${isEligible ? 'text-archery-600 focus:ring-archery-500' : 'text-slate-300'}">
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold ${isEligible ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-500'} capitalize">${c.name}</p>
+                            <p class="text-[10px] text-slate-500 dark:text-zinc-400">${c.min_age}-${c.max_age} th • ${c.gender}</p>
+                            ${isEligible ? '' : `<p class="text-[10px] text-red-500 dark:text-red-400 mt-1"><i class="fas fa-info-circle mr-1"></i>${reason}</p>`}
+                        </div>
+                    </label>
+                `;
+            }).join('');
+        }
+
+        // Show Detail Modal
         function showDetails(records) {
             const detailContent = document.getElementById('detailContent');
+            let html = `
+                <div class="space-y-6">
+                    <div class="flex flex-col sm:flex-row gap-6 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-800">
+                        <div class="w-20 h-20 rounded-2xl bg-archery-100 dark:bg-archery-900/30 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-user text-3xl text-archery-600 dark:text-archery-400"></i>
+                        </div>
+                        <div class="flex-1 space-y-2">
+                            <h4 class="text-xl font-bold text-slate-900 dark:text-white">${records[0].nama_peserta}</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1 text-sm text-slate-500 dark:text-zinc-400">
+                                <p><i class="fas fa-birthday-cake mr-2 w-4"></i>${records[0].tanggal_lahir}</p>
+                                <p><i class="fas fa-phone mr-2 w-4"></i>${records[0].nomor_hp || '-'}</p>
+                                <p><i class="fas fa-users mr-2 w-4"></i>${records[0].nama_club || '-'}</p>
+                                <p><i class="fas fa-map-marker-alt mr-2 w-4"></i>${records[0].asal_kota || '-'}</p>
+                                <p><i class="fas fa-school mr-2 w-4"></i>${records[0].sekolah || '-'}</p>
+                                <p><i class="fas fa-graduation-cap mr-2 w-4"></i>Kelas ${records[0].kelas || '-'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+                        <div class="px-5 py-3 bg-slate-50 dark:bg-zinc-800/50 border-b border-slate-100 dark:border-zinc-800">
+                            <p class="text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-widest">Pendaftaran Aktif (${records.length})</p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-left bg-slate-100/50 dark:bg-zinc-800/20">
+                                        <th class="px-5 py-3 font-semibold text-slate-600 dark:text-zinc-400">ID</th>
+                                        <th class="px-5 py-3 font-semibold text-slate-600 dark:text-zinc-400">Kategori & Kegiatan</th>
+                                        <th class="px-5 py-3 font-semibold text-slate-600 dark:text-zinc-400 text-center">Status</th>
+                                        <th class="px-5 py-3 font-semibold text-slate-600 dark:text-zinc-400 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
+            `;
 
-            let html = '<div class="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200">';
-            html += '<p class="text-sm text-blue-800"><i class="fas fa-info-circle mr-2"></i>';
-            html += '<strong>Peserta ini memiliki ' + records.length + ' pendaftaran dengan kategori/kegiatan yang berbeda</strong></p></div>';
+            records.forEach(r => {
+                const status = r.bukti_pembayaran ? 
+                    '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-200 dark:ring-emerald-800">LUNAS</span>' : 
+                    '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 ring-1 ring-amber-200 dark:ring-amber-800">PENDING</span>';
 
-            html += '<div class="overflow-x-auto">';
-            html += '<table class="w-full text-sm">';
-            html += '<thead class="bg-slate-100">';
-            html += '<tr>';
-            html += '<th class="px-3 py-2 text-left text-xs font-semibold text-slate-600">No</th>';
-            html += '<th class="px-3 py-2 text-left text-xs font-semibold text-slate-600">ID</th>';
-            html += '<th class="px-3 py-2 text-left text-xs font-semibold text-slate-600">Kategori</th>';
-            html += '<th class="px-3 py-2 text-left text-xs font-semibold text-slate-600">Kegiatan</th>';
-            html += '<th class="px-3 py-2 text-center text-xs font-semibold text-slate-600">Gender</th>';
-            html += '<th class="px-3 py-2 text-center text-xs font-semibold text-slate-600">Status</th>';
-            html += '<th class="px-3 py-2 text-center text-xs font-semibold text-slate-600">Aksi</th>';
-            html += '</tr>';
-            html += '</thead>';
-            html += '<tbody class="divide-y divide-slate-100">';
-
-            records.forEach(function(record, index) {
-                const statusBadge = record.bukti_pembayaran ?
-                    '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Lunas</span>' :
-                    '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Pending</span>';
-
-                html += '<tr class="hover:bg-slate-50">';
-                html += '<td class="px-3 py-2 text-slate-500">' + (index + 1) + '</td>';
-                html += '<td class="px-3 py-2 font-medium text-slate-900">' + record.id + '</td>';
-                html += '<td class="px-3 py-2 text-slate-600">' + (record.category_name || '-') + '</td>';
-                html += '<td class="px-3 py-2 text-slate-600">' + (record.nama_kegiatan || '-') + '</td>';
-                html += '<td class="px-3 py-2 text-center text-slate-600">' + record.jenis_kelamin + '</td>';
-                html += '<td class="px-3 py-2 text-center">' + statusBadge + '</td>';
-                html += '<td class="px-3 py-2 text-center">';
-                html += '<button class="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50" onclick="editPeserta(' + JSON.stringify(record).replace(/"/g, '&quot;') + ')" title="Edit"><i class="fas fa-edit"></i></button>';
-                html += '<button class="p-1.5 rounded-lg text-red-600 hover:bg-red-50" onclick="confirmDelete(' + record.id + ', \'' + record.nama_peserta.replace(/'/g, "\\'") + '\')" title="Hapus"><i class="fas fa-trash-alt"></i></button>';
-                html += '</td>';
-                html += '</tr>';
+                html += `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors">
+                        <td class="px-5 py-3 text-slate-500 dark:text-zinc-500 font-mono text-xs">#${r.id}</td>
+                        <td class="px-5 py-3">
+                            <p class="font-bold text-slate-900 dark:text-white">${r.category_name}</p>
+                            <p class="text-[10px] text-slate-500 dark:text-zinc-400">${r.nama_kegiatan}</p>
+                        </td>
+                        <td class="px-5 py-3 text-center">${status}</td>
+                        <td class="px-5 py-3 text-right space-x-1">
+                            <button onclick='editPeserta(${JSON.stringify(r).replace(/'/g, "&apos;")})' class="p-2 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"><i class="fas fa-edit"></i></button>
+                            <button onclick="confirmDelete(${r.id}, '${r.nama_peserta.replace(/'/g, "\\'")}')" class="p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-xs font-bold ring-1 ring-red-200 dark:ring-red-800">HAPUS</button>
+                        </td>
+                    </tr>
+                `;
             });
 
-            html += '</tbody>';
-            html += '</table>';
-            html += '</div>';
-
+            html += `</tbody></table></div></div></div>`;
             detailContent.innerHTML = html;
             document.getElementById('detailModal').classList.remove('hidden');
         }
 
-        function closeDetailModal() {
-            document.getElementById('detailModal').classList.add('hidden');
-        }
+        function closeDetailModal() { document.getElementById('detailModal').classList.add('hidden'); }
 
-        // Edit Modal
         function editPeserta(data) {
             document.getElementById('edit_id').value = data.id;
             document.getElementById('edit_nama_peserta').value = data.nama_peserta || '';
@@ -1118,62 +1473,53 @@ $role = $_SESSION['role'] ?? 'user';
             document.getElementById('edit_jenis_kelamin').value = data.jenis_kelamin || '';
             document.getElementById('edit_asal_kota').value = data.asal_kota || '';
             document.getElementById('edit_nama_club').value = data.nama_club || '';
-            document.getElementById('edit_sekolah').value = data.sekolah || '';
-            document.getElementById('edit_kelas').value = data.kelas || '';
             document.getElementById('edit_nomor_hp').value = data.nomor_hp || '';
-
             closeDetailModal();
             document.getElementById('editModal').classList.remove('hidden');
         }
 
-        function closeEditModal() {
-            document.getElementById('editModal').classList.add('hidden');
-        }
+        function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
 
-        // Delete Modal
-        function confirmDelete(id, nama) {
+        function confirmDelete(id, name) {
             document.getElementById('deleteIdInput').value = id;
-            document.getElementById('deletePesertaName').textContent = nama;
-
+            document.getElementById('deletePesertaName').textContent = name;
             closeDetailModal();
             document.getElementById('deleteModal').classList.remove('hidden');
         }
 
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.add('hidden');
-        }
+        function closeDeleteModal() { document.getElementById('deleteModal').classList.add('hidden'); }
 
-        // Image Modal
-        function showImage(filename, pesertaName) {
-            const modalBody = document.getElementById('imageModalBody');
-            const downloadLink = document.getElementById('downloadImage');
-            document.getElementById('imageModalLabel').textContent = 'Bukti Pembayaran - ' + pesertaName;
-
-            const fileExtension = filename.toLowerCase().split('.').pop();
-            const imagePath = '../assets/uploads/' + filename;
-
-            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(fileExtension)) {
-                modalBody.innerHTML = '<img src="' + imagePath + '" alt="Bukti Pembayaran" class="max-w-full max-h-96 mx-auto rounded-lg" onerror="this.onerror=null;this.parentElement.innerHTML=\'<div class=&quot;p-8 text-center&quot;><i class=&quot;fas fa-image text-slate-400 text-4xl mb-3&quot;></i><p class=&quot;text-slate-500&quot;>Gambar tidak dapat dimuat</p></div>\'">';
-                downloadLink.href = imagePath;
-                downloadLink.download = 'bukti_' + pesertaName.replace(/[^a-zA-Z0-9]/g, '_') + '.' + fileExtension;
-            } else if (fileExtension === 'pdf') {
-                modalBody.innerHTML = '<div class="p-8"><i class="fas fa-file-pdf text-red-500 text-5xl mb-4"></i><p class="text-slate-700 font-medium">File PDF</p><a href="' + imagePath + '" target="_blank" class="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Buka PDF</a></div>';
-                downloadLink.href = imagePath;
+        function showImage(type, url, name) {
+            const body = document.getElementById('imageModalBody');
+            const label = document.getElementById('imageModalLabel');
+            const download = document.getElementById('downloadImage');
+            label.textContent = type === 'payment' ? 'Bukti Pembayaran: ' + name : 'Profile: ' + name;
+            download.href = url;
+            if (url.toLowerCase().endsWith('.pdf')) {
+                body.innerHTML = `<iframe src="${url}" class="w-full h-[60vh] rounded-lg"></iframe>`;
             } else {
-                modalBody.innerHTML = '<div class="p-8"><i class="fas fa-file text-slate-400 text-5xl mb-4"></i><p class="text-slate-500">Format tidak didukung</p></div>';
-                downloadLink.href = imagePath;
+                body.innerHTML = `<img src="${url}" class="max-w-full max-h-[60vh] mx-auto rounded-lg shadow-lg border border-slate-200 dark:border-zinc-800">`;
             }
-
             document.getElementById('imageModal').classList.remove('hidden');
         }
 
-        function closeImageModal() {
-            document.getElementById('imageModal').classList.add('hidden');
-        }
+        function closeImageModal() { document.getElementById('imageModal').classList.add('hidden'); }
 
-        // Close modals on Escape
-        document.addEventListener('keydown', (e) => {
+        function dismissToast() {
+            const toast = document.getElementById('toast');
+            if (toast) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }
+        
+        setTimeout(dismissToast, 5000);
+
+        window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
+                closeAddModal();
                 closeDetailModal();
                 closeEditModal();
                 closeDeleteModal();
@@ -1181,29 +1527,29 @@ $role = $_SESSION['role'] ?? 'user';
             }
         });
 
-        // Auto-submit on select change (Scoped to filter form only)
         document.addEventListener('DOMContentLoaded', function() {
             const filterForm = document.getElementById('filterForm');
             if (filterForm) {
-                filterForm.querySelectorAll('select').forEach(function(select) {
-                    select.addEventListener('change', function() {
-                        filterForm.submit();
-                    });
+                filterForm.querySelectorAll('select').forEach(s => {
+                    s.addEventListener('change', () => filterForm.submit());
                 });
+            }
+
+            // Handle auto-open Add Participant modal via URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('add_peserta') === '1') {
+                const kegiatanId = urlParams.get('kegiatan_id');
+                openAddModal();
+                if (kegiatanId) {
+                    const kegiatanSelect = document.getElementById('add_kegiatan_id');
+                    if (kegiatanSelect) {
+                        kegiatanSelect.value = kegiatanId;
+                        loadKegiatanCategories();
+                    }
+                }
             }
         });
 
-        // Auto dismiss toasts after 5 seconds
-        setTimeout(function() {
-            const toasts = document.querySelectorAll('#toast-success, #toast-error');
-            toasts.forEach(function(toast) {
-                toast.style.transition = 'opacity 0.3s';
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            });
-        }, 5000);
-
-        // Theme Toggle Functionality
         <?= getThemeToggleScript() ?>
     </script>
 </body>

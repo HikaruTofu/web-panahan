@@ -8,6 +8,102 @@ include '../includes/check_access.php';
 include '../includes/theme.php';
 requireAdmin();
 
+// Toast message handling
+$toast_message = '';
+$toast_type = '';
+
+// Handle CRUD operations
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    switch ($_POST['action']) {
+        case 'create':
+            $name = mysqli_real_escape_string($conn, $_POST['name']);
+            $email = mysqli_real_escape_string($conn, $_POST['email']);
+            $password = $_POST['password'];
+            $role = mysqli_real_escape_string($conn, $_POST['role']);
+            $status = mysqli_real_escape_string($conn, $_POST['status'] ?? 'active');
+
+            // Validation
+            $checkEmail = $conn->prepare("SELECT id FROM users WHERE email = ?");
+            $checkEmail->bind_param("s", $email);
+            $checkEmail->execute();
+            if ($checkEmail->get_result()->num_rows > 0) {
+                $toast_message = "Email '$email' sudah terdaftar!";
+                $toast_type = 'error';
+            } else {
+                $hashed = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $conn->prepare("INSERT INTO users (name, email, password, role, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+                $stmt->bind_param("sssss", $name, $email, $hashed, $role, $status);
+                if ($stmt->execute()) {
+                    $toast_message = "User '$name' berhasil ditambahkan!";
+                    $toast_type = 'success';
+                } else {
+                    $toast_message = "Gagal menambahkan user!";
+                    $toast_type = 'error';
+                }
+                $stmt->close();
+            }
+            $checkEmail->close();
+            break;
+
+        case 'update':
+            $id = (int)$_POST['id'];
+            $name = mysqli_real_escape_string($conn, $_POST['name']);
+            $email = mysqli_real_escape_string($conn, $_POST['email']);
+            $role = mysqli_real_escape_string($conn, $_POST['role']);
+            $status = mysqli_real_escape_string($conn, $_POST['status']);
+            $password = $_POST['password'] ?? '';
+
+            // Check if email exists for other user
+            $checkEmail = $conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+            $checkEmail->bind_param("si", $email, $id);
+            $checkEmail->execute();
+            if ($checkEmail->get_result()->num_rows > 0) {
+                $toast_message = "Email '$email' sudah digunakan user lain!";
+                $toast_type = 'error';
+            } else {
+                if (!empty($password)) {
+                    $hashed = password_hash($password, PASSWORD_DEFAULT);
+                    $stmt = $conn->prepare("UPDATE users SET name=?, email=?, password=?, role=?, status=?, updated_at=NOW() WHERE id=?");
+                    $stmt->bind_param("sssssi", $name, $email, $hashed, $role, $status, $id);
+                } else {
+                    $stmt = $conn->prepare("UPDATE users SET name=?, email=?, role=?, status=?, updated_at=NOW() WHERE id=?");
+                    $stmt->bind_param("ssssi", $name, $email, $role, $status, $id);
+                }
+
+                if ($stmt->execute()) {
+                    $toast_message = "Data user '$name' berhasil diperbarui!";
+                    $toast_type = 'success';
+                } else {
+                    $toast_message = "Gagal memperbarui user!";
+                    $toast_type = 'error';
+                }
+                $stmt->close();
+            }
+            $checkEmail->close();
+            break;
+
+        case 'delete':
+            $id = (int)$_POST['id'];
+            // Prevent deleting self
+            if ($id == ($_SESSION['user_id'] ?? 0)) {
+                $toast_message = "Anda tidak bisa menghapus akun sendiri!";
+                $toast_type = 'error';
+            } else {
+                $stmt = $conn->prepare("DELETE FROM users WHERE id=?");
+                $stmt->bind_param("i", $id);
+                if ($stmt->execute()) {
+                    $toast_message = "User berhasil dihapus!";
+                    $toast_type = 'success';
+                } else {
+                    $toast_message = "Gagal menghapus user!";
+                    $toast_type = 'error';
+                }
+                $stmt->close();
+            }
+            break;
+    }
+}
+
 // Filter by search query (UNCHANGED - same GET parameter name)
 $searchQuery = isset($_GET['q']) ? trim($_GET['q']) : '';
 
@@ -62,6 +158,14 @@ $role = $_SESSION['role'] ?? 'user';
         .dark .custom-scrollbar::-webkit-scrollbar-track { background: #27272a; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #52525b; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #71717a; }
+        /* Modal backdrop */
+        .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 40; }
+        .modal-backdrop.active { display: flex; align-items: center; justify-content: center; }
+        /* Toast animation */
+        .toast-enter { animation: slideIn 0.3s ease-out; }
+        .toast-exit { animation: slideOut 0.3s ease-in forwards; }
+        @keyframes slideIn { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
     </style>
 </head>
 <body class="h-full bg-slate-50 dark:bg-zinc-950 transition-colors">
@@ -139,6 +243,19 @@ $role = $_SESSION['role'] ?? 'user';
 
         <!-- Main Content -->
         <main class="flex-1 overflow-auto">
+            <!-- Toast Notification -->
+            <?php if (!empty($toast_message)): ?>
+            <div id="toast" class="fixed top-4 right-4 z-50 toast-enter">
+                <div class="flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg <?= $toast_type === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800' ?>">
+                    <i class="fas <?= $toast_type === 'success' ? 'fa-check-circle text-emerald-500' : 'fa-exclamation-circle text-red-500' ?>"></i>
+                    <span class="text-sm font-medium"><?= htmlspecialchars($toast_message) ?></span>
+                    <button onclick="dismissToast()" class="ml-2 <?= $toast_type === 'success' ? 'text-emerald-500 hover:text-emerald-700' : 'text-red-500 hover:text-red-700' ?>">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div class="px-6 lg:px-8 py-6">
                 <!-- Compact Header with Metrics -->
                 <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm mb-6">
@@ -153,10 +270,10 @@ $role = $_SESSION['role'] ?? 'user';
                                     <p class="text-sm text-slate-500 dark:text-zinc-400">Kelola akun pengguna sistem</p>
                                 </div>
                             </div>
-                            <a href="tambah-user.php" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                            <button onclick="openModal('addModal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                 <i class="fas fa-plus"></i>
                                 <span class="hidden sm:inline">Tambah User</span>
-                            </a>
+                            </button>
                         </div>
                     </div>
 
@@ -270,17 +387,14 @@ $role = $_SESSION['role'] ?? 'user';
                                             </td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center justify-center gap-1">
-                                                    <!-- LINK: edit-user.php?id=... (UNCHANGED) -->
-                                                    <a href="edit-user.php?id=<?= $row['id'] ?>"
+                                                    <button onclick="editUser(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>', '<?= addslashes($row['email']) ?>', '<?= addslashes($row['role']) ?>', '<?= addslashes($row['status'] ?? 'active') ?>')"
                                                        class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit text-sm"></i>
-                                                    </a>
-                                                    <!-- LINK: hapus-user.php?id=... (UNCHANGED) -->
-                                                    <a href="hapus-user.php?id=<?= $row['id'] ?>"
-                                                       onclick="return confirm('Yakin ingin menghapus user <?= htmlspecialchars($row['name']) ?>?')"
+                                                    </button>
+                                                    <button onclick="deleteUser(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>')"
                                                        class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                         <i class="fas fa-trash text-sm"></i>
-                                                    </a>
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -297,9 +411,9 @@ $role = $_SESSION['role'] ?? 'user';
                                                     <p class="text-slate-400 dark:text-zinc-500 text-sm mb-4">Ubah kata kunci pencarian</p>
                                                 <?php else: ?>
                                                     <p class="text-slate-400 dark:text-zinc-500 text-sm mb-4">Tambahkan user baru untuk memulai</p>
-                                                    <a href="tambah-user.php" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                                    <button onclick="openModal('addModal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                                         <i class="fas fa-plus"></i> Tambah User
-                                                    </a>
+                                                    </button>
                                                 <?php endif; ?>
                                             </div>
                                         </td>
@@ -361,7 +475,186 @@ $role = $_SESSION['role'] ?? 'user';
         </div>
     </div>
 
+    <!-- Add User Modal -->
+    <div id="addModal" class="modal-backdrop">
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="bg-gradient-to-br from-archery-600 to-archery-800 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-user-plus"></i> Tambah User
+                </h3>
+                <button onclick="closeModal('addModal')" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form method="POST">
+                <div class="p-6 space-y-4">
+                    <input type="hidden" name="action" value="create">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" placeholder="Masukkan nama" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Email <span class="text-red-500">*</span></label>
+                        <input type="email" name="email" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500" placeholder="user@example.com" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Password <span class="text-red-500">*</span></label>
+                        <input type="password" name="password" minlength="6" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500" required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Role <span class="text-red-500">*</span></label>
+                            <select name="role" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500" required>
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Status <span class="text-red-500">*</span></label>
+                            <select name="status" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500" required>
+                                <option value="active">Aktif</option>
+                                <option value="inactive">Nonaktif</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
+                    <button type="button" onclick="closeModal('addModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                        <i class="fas fa-save mr-1"></i> Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editModal" class="modal-backdrop">
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="bg-gradient-to-br from-amber-500 to-amber-700 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-user-edit"></i> Edit User
+                </h3>
+                <button onclick="closeModal('editModal')" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form method="POST">
+                <div class="p-6 space-y-4">
+                    <input type="hidden" name="action" value="update">
+                    <input type="hidden" name="id" id="edit_id">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" id="edit_name" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Email <span class="text-red-500">*</span></label>
+                        <input type="email" name="email" id="edit_email" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Password Baru (Kosongkan jika tetap)</label>
+                        <input type="password" name="password" minlength="6" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Role <span class="text-red-500">*</span></label>
+                            <select name="role" id="edit_role" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500" required>
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Status <span class="text-red-500">*</span></label>
+                            <select name="status" id="edit_status" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500" required>
+                                <option value="active">Aktif</option>
+                                <option value="inactive">Nonaktif</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
+                    <button type="button" onclick="closeModal('editModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 transition-colors">
+                        <i class="fas fa-sync-alt mr-1"></i> Update
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete User Modal -->
+    <div id="deleteModal" class="modal-backdrop">
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="bg-gradient-to-br from-red-600 to-red-800 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-trash"></i> Hapus User
+                </h3>
+                <button onclick="closeModal('deleteModal')" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <p class="text-slate-700 dark:text-zinc-300">Apakah Anda yakin ingin menghapus user <strong id="delete_name" class="text-red-600 dark:text-red-400"></strong>?</p>
+                <p class="text-sm text-slate-500 dark:text-zinc-400 mt-2">Tindakan ini tidak dapat dibatalkan!</p>
+            </div>
+            <form method="POST">
+                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="id" id="delete_id">
+                    <button type="button" onclick="closeModal('deleteModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">
+                        <i class="fas fa-trash mr-1"></i> Hapus
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        // Modal functions
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function dismissToast() {
+            const toast = document.getElementById('toast');
+            if (toast) {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }
+        }
+
+        // Auto-dismiss toast
+        setTimeout(dismissToast, 5000);
+
+        function editUser(id, name, email, role, status) {
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_email').value = email;
+            document.getElementById('edit_role').value = role;
+            document.getElementById('edit_status').value = status;
+            openModal('editModal');
+        }
+
+        function deleteUser(id, name) {
+            document.getElementById('delete_id').value = id;
+            document.getElementById('delete_name').textContent = name;
+            openModal('deleteModal');
+        }
+
         // Mobile menu toggle
         const mobileMenuBtn = document.getElementById('mobile-menu-btn');
         const mobileOverlay = document.getElementById('mobile-overlay');
@@ -376,6 +669,17 @@ $role = $_SESSION['role'] ?? 'user';
         mobileMenuBtn?.addEventListener('click', toggleMobileMenu);
         mobileOverlay?.addEventListener('click', toggleMobileMenu);
         closeMobileMenu?.addEventListener('click', toggleMobileMenu);
+
+        // Prevent double submission
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function() {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Loading...';
+                }
+            });
+        });
 
         // Theme Toggle
         <?= getThemeToggleScript() ?>
