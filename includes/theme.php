@@ -167,35 +167,37 @@ HTML;
 function getConfirmationModal() {
     return <<<'HTML'
 <div id="confirmModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <!-- Backdrop -->
-    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0" id="confirmBackdrop"></div>
+    <!-- Backdrop with enhanced blur -->
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity opacity-0" id="confirmBackdrop"></div>
     
     <!-- Modal Panel -->
     <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
-        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <div class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" id="confirmPanel">
-                <div class="px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 sm:mx-0 sm:h-10 sm:w-10" id="confirmIconBg">
-                            <i class="fas fa-exclamation-triangle text-amber-600 dark:text-amber-500" id="confirmIcon"></i>
-                        </div>
-                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                            <h3 class="text-base font-bold leading-6 text-slate-900 dark:text-white" id="confirmTitle">
-                                Konfirmasi
-                            </h3>
-                            <div class="mt-2">
-                                <p class="text-sm text-slate-500 dark:text-zinc-400" id="confirmMessage">
-                                    Apakah Anda yakin ingin melanjutkan tindakan ini?
-                                </p>
-                            </div>
-                        </div>
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" id="confirmPanel">
+                <!-- Header with Gradient -->
+                <div id="confirmHeader" class="bg-gradient-to-br from-slate-700 to-slate-900 text-white px-6 py-4 flex items-center justify-between">
+                    <h3 class="font-bold text-lg flex items-center gap-2" id="confirmTitle">
+                        <i id="confirmIcon" class="fas fa-exclamation-triangle"></i>
+                        Confirm
+                    </h3>
+                    <button type="button" onclick="closeConfirmModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Content Area -->
+                <div class="p-6">
+                    <div id="confirmMessage" class="text-slate-700 dark:text-zinc-300 text-sm leading-relaxed">
+                        Apakah Anda yakin ingin melanjutkan tindakan ini?
                     </div>
                 </div>
-                <div class="bg-slate-50 dark:bg-zinc-800/50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                    <button type="button" id="confirmBtn" class="inline-flex w-full justify-center rounded-xl bg-slate-900 dark:bg-white px-3 py-2 text-sm font-bold text-white dark:text-slate-900 shadow-sm hover:bg-slate-800 dark:hover:bg-zinc-200 sm:ml-3 sm:w-auto transition-colors">
+
+                <!-- Footer with Buttons -->
+                <div class="bg-slate-50 dark:bg-zinc-800/50 px-6 py-4 border-t border-slate-200 dark:border-zinc-700 flex flex-row-reverse gap-3">
+                    <button type="button" id="confirmBtn" class="flex-1 inline-flex justify-center rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all active:scale-95">
                         Ya, Lanjutkan
                     </button>
-                    <button type="button" id="cancelBtn" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white dark:bg-zinc-800 px-3 py-2 text-sm font-bold text-slate-900 dark:text-white shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 sm:mt-0 sm:w-auto transition-colors">
+                    <button type="button" id="cancelBtn" class="flex-1 inline-flex justify-center rounded-xl bg-white dark:bg-zinc-800 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-zinc-300 shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 transition-all active:scale-95">
                         Batal
                     </button>
                 </div>
@@ -226,25 +228,32 @@ function getUiScripts() {
         const modal = document.getElementById('confirmModal');
         const backdrop = document.getElementById('confirmBackdrop');
         const panel = document.getElementById('confirmPanel');
-        const titleEl = document.getElementById('confirmTitle');
+        const header = document.getElementById('confirmHeader');
+        const titleEl = document.getElementById('confirmHeader').querySelector('h3'); // Select the H3 inside header
         const msgEl = document.getElementById('confirmMessage');
         const icon = document.getElementById('confirmIcon');
-        const iconBg = document.getElementById('confirmIconBg');
         const confirmBtn = document.getElementById('confirmBtn');
 
-        titleEl.textContent = title;
-        msgEl.textContent = message;
+        // Allow HTML in title and message as requested
+        titleEl.innerHTML = `<i id="confirmIcon" class="fas"></i> ${title}`;
+        msgEl.innerHTML = message;
         confirmCallback = callback;
 
-        // Type styling
+        const iconEl = document.getElementById('confirmIcon');
+
+        // Type styling aligned with users.php standards
         if (type === 'danger') {
-             icon.className = 'fas fa-exclamation-triangle text-red-600 dark:text-red-500';
-             iconBg.className = 'mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 sm:mx-0 sm:h-10 sm:w-10';
-             confirmBtn.className = 'inline-flex w-full justify-center rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto transition-colors';
+             header.className = 'bg-gradient-to-br from-red-600 to-red-800 text-white px-6 py-4 flex items-center justify-between';
+             iconEl.className = 'fas fa-trash-alt';
+             confirmBtn.className = 'flex-1 inline-flex justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-red-700 transition-all active:scale-95';
+        } else if (type === 'warning') {
+             header.className = 'bg-gradient-to-br from-amber-500 to-amber-700 text-white px-6 py-4 flex items-center justify-between';
+             iconEl.className = 'fas fa-exclamation-triangle';
+             confirmBtn.className = 'flex-1 inline-flex justify-center rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-amber-700 transition-all active:scale-95';
         } else {
-             icon.className = 'fas fa-info-circle text-blue-600 dark:text-blue-500';
-             iconBg.className = 'mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 sm:mx-0 sm:h-10 sm:w-10';
-             confirmBtn.className = 'inline-flex w-full justify-center rounded-xl bg-slate-900 dark:bg-white px-3 py-2 text-sm font-bold text-white dark:text-slate-900 shadow-sm hover:bg-slate-800 dark:hover:bg-zinc-200 sm:ml-3 sm:w-auto transition-colors';
+             header.className = 'bg-gradient-to-br from-blue-600 to-blue-800 text-white px-6 py-4 flex items-center justify-between';
+             iconEl.className = 'fas fa-info-circle';
+             confirmBtn.className = 'flex-1 inline-flex justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 transition-all active:scale-95';
         }
 
         modal.classList.remove('hidden');

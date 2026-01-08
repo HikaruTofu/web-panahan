@@ -217,7 +217,7 @@ $role = $_SESSION['role'] ?? 'user';
 
                     <?= getThemeToggleButton() ?>
                 </div>
-                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
+                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -611,39 +611,6 @@ $role = $_SESSION['role'] ?? 'user';
         </div>
     </div>
 
-    <!-- Delete Modal -->
-    <div id="deleteModal" class="modal-backdrop">
-        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-            <div class="bg-gradient-to-br from-red-600 to-red-800 text-white px-6 py-4 flex items-center justify-between">
-                <h3 class="font-semibold text-lg flex items-center gap-2">
-                    <i class="fas fa-exclamation-triangle"></i> Hapus Kategori
-                </h3>
-                <button onclick="closeModal('deleteModal')" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="p-6">
-                <p class="text-slate-700 dark:text-zinc-300">Apakah Anda yakin ingin menghapus kategori <strong id="delete_name" class="text-red-600 dark:text-red-400"></strong>?</p>
-                <p class="text-sm text-slate-500 dark:text-zinc-400 mt-2">
-                    <i class="fas fa-info-circle mr-1"></i> Tindakan ini tidak dapat dibatalkan!
-                </p>
-            </div>
-            <form method="POST">
-                <input type="hidden" name="action" value="delete">
-
-                <?php csrf_field(); ?>
-                <input type="hidden" name="id" id="delete_id">
-                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
-                    <button type="button" onclick="closeModal('deleteModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
-                        Batal
-                    </button>
-                    <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">
-                        <i class="fas fa-trash mr-1"></i> Hapus
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- Mobile Sidebar -->
     <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
@@ -680,7 +647,7 @@ $role = $_SESSION['role'] ?? 'user';
             </a>
         </nav>
         <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
-            <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
+            <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
                class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                 <i class="fas fa-sign-out-alt w-5"></i>
                 <span>Logout</span>
@@ -744,9 +711,22 @@ $role = $_SESSION['role'] ?? 'user';
         }
 
         function deleteData(id, name) {
-            document.getElementById('delete_id').value = id;
-            document.getElementById('delete_name').textContent = name;
-            openModal('deleteModal');
+            showConfirmModal(
+                'Hapus Kategori',
+                `Apakah Anda yakin ingin menghapus kategori <strong class="text-red-600 dark:text-red-400">${name}</strong>?<br><br><span class="text-xs text-red-500 italic font-semibold p-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg block">WARNING: Semua data SKOR dalam kategori ini akan terhapus!</span>`,
+                () => {
+                    const deleteForm = document.createElement('form');
+                    deleteForm.method = 'POST';
+                    deleteForm.innerHTML = `
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="id" value="${id}">
+                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                    `;
+                    document.body.appendChild(deleteForm);
+                    deleteForm.submit();
+                },
+                'danger'
+            );
         }
 
         // Mobile menu toggle

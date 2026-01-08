@@ -298,95 +298,114 @@ if ($resultAllRanks) {
     }
 }
 
-// Excel Export (UNCHANGED)
+// Excel Export
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
-    header("Content-Type: application/vnd.ms-excel");
-    header("Content-Disposition: attachment; filename=statistik_peserta_" . date('Y-m-d') . ".xls");
-    header("Pragma: no-cache");
-    header("Expires: 0");
+    require '../vendor/vendor/autoload.php';
+    
+    // use PhpOffice\PhpSpreadsheet\Spreadsheet;
+    // use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+    // use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
+    // Filter params
+    $kategori_filter = isset($_GET['kategori']) ? $_GET['kategori'] : '';
+    $gender = isset($_GET['gender']) ? $_GET['gender'] : '';
+    $nama = isset($_GET['nama']) ? $_GET['nama'] : '';
+    $club = isset($_GET['club']) ? $_GET['club'] : '';
+    $kegiatan_id = isset($_GET['kegiatan_id']) ? $_GET['kegiatan_id'] : 'all';
+
+    // 1. Fetch ALL Data first (to calculate rankings/stats accurately)
     $query = "SELECT
                 MIN(p.id) as id,
                 p.nama_peserta,
                 p.jenis_kelamin,
                 p.asal_kota,
                 p.nama_club,
-                p.sekolah
+                p.sekolah,
+                MAX(p.tanggal_lahir) as tanggal_lahir,
+                p.id as peserta_id
               FROM peserta p
-              GROUP BY p.nama_peserta, p.jenis_kelamin, p.asal_kota, p.nama_club, p.sekolah
-              ORDER BY p.nama_peserta ASC";
+              WHERE 1=1";
+    
+    // Base filters for query optimization
+    $params = [];
+    $types = '';
+    if (!empty($gender)) { $query .= " AND p.jenis_kelamin = ?"; $params[] = $gender; $types .= "s"; }
+    if (!empty($nama)) { $query .= " AND p.nama_peserta LIKE ?"; $params[] = "%$nama%"; $types .= "s"; }
+    if (!empty($club)) { $query .= " AND p.nama_club = ?"; $params[] = $club; $types .= "s"; }
 
-    $result = $conn->query($query);
+    $query .= " GROUP BY p.nama_peserta, p.jenis_kelamin, p.asal_kota, p.nama_club, p.sekolah";
+    $query .= " ORDER BY p.nama_peserta ASC";
 
-    echo "<table border='1'>";
-    echo "<tr>";
-    echo "<th>No</th>";
-    echo "<th>Nama Peserta</th>";
-    echo "<th>Gender</th>";
-    echo "<th>Asal Kota</th>";
-    echo "<th>Club</th>";
-    echo "<th>Sekolah</th>";
-    echo "<th>Total Turnamen</th>";
-    echo "<th>Kategori Dominan</th>";
-    echo "<th>Rata-rata Ranking</th>";
-    echo "<th>Juara 1</th>";
-    echo "<th>Juara 2</th>";
-    echo "<th>Juara 3</th>";
-    echo "<th>Top 10</th>";
-    echo "<th>Bracket Champion</th>";
-    echo "<th>Bracket Runner Up</th>";
-    echo "<th>Bracket 3rd Place</th>";
-    echo "<th>Bracket Win Rate</th>";
-    echo "</tr>";
-
-    $no = 1;
-    while ($peserta = $result->fetch_assoc()) {
-        $rankings = $allRankings[strtolower(trim($peserta['nama_peserta']))] ?? [];
-
-        $juara1 = 0;
-        $juara2 = 0;
-        $juara3 = 0;
-        $top10 = 0;
-
-        foreach ($rankings as $r) {
-            if ($r['ranking'] == 1) $juara1++;
-            if ($r['ranking'] == 2) $juara2++;
-            if ($r['ranking'] == 3) $juara3++;
-            if ($r['ranking'] <= 10) $top10++;
-        }
-
-        $bracketStats = getBracketStatistics($conn, $peserta['nama_peserta']);
-        $bracketWinRate = ($bracketStats['bracket_matches_won'] + $bracketStats['bracket_matches_lost']) > 0
-            ? round(($bracketStats['bracket_matches_won'] / ($bracketStats['bracket_matches_won'] + $bracketStats['bracket_matches_lost'])) * 100, 1) . '%'
-            : '0%';
-
-        $totalTurnamen = count($rankings);
-        $kategoriDominan = getKategoriDominan($rankings);
-        $avgRanking = $totalTurnamen > 0 ? round(array_sum(array_column($rankings, 'ranking')) / $totalTurnamen, 2) : '-';
-
-        echo "<tr>";
-        echo "<td>" . $no++ . "</td>";
-        echo "<td>" . htmlspecialchars($peserta['nama_peserta']) . "</td>";
-        echo "<td>" . htmlspecialchars($peserta['jenis_kelamin']) . "</td>";
-        echo "<td>" . htmlspecialchars($peserta['asal_kota'] ?? '-') . "</td>";
-        echo "<td>" . htmlspecialchars($peserta['nama_club'] ?? '-') . "</td>";
-        echo "<td>" . htmlspecialchars($peserta['sekolah'] ?? '-') . "</td>";
-        echo "<td>" . $totalTurnamen . "</td>";
-        echo "<td>" . $kategoriDominan['kategori'] . " - " . $kategoriDominan['label'] . "</td>";
-        echo "<td>" . $avgRanking . "</td>";
-        echo "<td>" . $juara1 . "</td>";
-        echo "<td>" . $juara2 . "</td>";
-        echo "<td>" . $juara3 . "</td>";
-        echo "<td>" . $top10 . "</td>";
-        echo "<td>" . $bracketStats['bracket_champion'] . "</td>";
-        echo "<td>" . $bracketStats['bracket_runner_up'] . "</td>";
-        echo "<td>" . $bracketStats['bracket_third_place'] . "</td>";
-        echo "<td>" . $bracketWinRate . "</td>";
-        echo "</tr>";
+    if (!empty($params)) {
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $result = $stmt->get_result();
+    } else {
+        $result = $conn->query($query);
     }
 
-    echo "</table>";
-    exit();
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Statistik Peserta');
+
+    // Headers
+    $headers = [
+        'No', 'Nama Peserta', 'Club', 'Total Scoreboard', 'Games Played', 
+        'Avg Ranking', 'Best Rank', 'Kategori', 'Status'
+    ];
+
+    $col = 'A';
+    $rowIdx = 1;
+    foreach ($headers as $header) {
+        $sheet->setCellValue($col . $rowIdx, $header);
+        $sheet->getStyle($col . $rowIdx)->getFont()->setBold(true);
+        $sheet->getStyle($col . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $col++;
+    }
+    $rowIdx++;
+
+    $no = 1;
+    while ($p = $result->fetch_assoc()) {
+        $stats = getPesertaStats($conn, $p['peserta_id'], $kegiatan_id);
+        $dominan = getKategoriDominan($stats['rankings']);
+        
+        // PHP-side filter for Category Dominance
+        if ($kategori_filter && $dominan['kategori'] !== $kategori_filter) continue;
+
+        $avgRank = count($stats['rankings']) > 0 ? number_format(array_sum(array_column($stats['rankings'], 'ranking')) / count($stats['rankings']), 1) : '-';
+        $bestRank = count($stats['rankings']) > 0 ? min(array_column($stats['rankings'], 'ranking')) : '-';
+
+        $col = 'A';
+        $sheet->setCellValue($col++ . $rowIdx, $no++);
+        $sheet->setCellValue($col++ . $rowIdx, $p['nama_peserta']);
+        $sheet->setCellValue($col++ . $rowIdx, $p['nama_club']);
+        $sheet->setCellValue($col++ . $rowIdx, $stats['total_scoreboards']);
+        $sheet->setCellValue($col++ . $rowIdx, count($stats['rankings']));
+        $sheet->setCellValue($col++ . $rowIdx, $avgRank);
+        $sheet->setCellValue($col++ . $rowIdx, $bestRank);
+        $sheet->setCellValue($col++ . $rowIdx, $dominan['label']);
+        $sheet->setCellValue($col++ . $rowIdx, $dominan['kategori']);
+
+        $rowIdx++;
+    }
+
+    // Auto-size columns
+    foreach (range('A', $col) as $columnID) {
+        $sheet->getColumnDimension($columnID)->setAutoSize(true);
+    }
+
+    $filename = "statistik_peserta_" . date('Y-m-d_His') . ".xlsx";
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $filename . '"');
+    header('Cache-Control: max-age=0');
+    
+    if (ob_get_length()) ob_clean();
+
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
 }
 
 // GET parameters (UNCHANGED - same names)
@@ -654,7 +673,7 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
                     <?= getThemeToggleButton() ?>
                 </div>
-                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
+                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -697,7 +716,7 @@ $role = $_SESSION['role'] ?? 'user';
                                 </form>
                                 <a href="?export=excel<?= !empty($gender) ? '&gender=' . $gender : '' ?><?= !empty($nama) ? '&nama=' . $nama : '' ?><?= !empty($club) ? '&club=' . $club : '' ?><?= !empty($kategori_filter) ? '&kategori=' . $kategori_filter : '' ?>"
                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
-                                   onclick="const url=this.href; showConfirmModal('Export Data', 'Apakah Anda yakin ingin mengekspor data statistik ke Excel?', () => window.location.href = url); return false;">
+                                   onclick="const url=this.href; showConfirmModal('Export Data', 'Apakah Anda yakin ingin mengekspor data statistik ke Excel?', () => window.location.href = url, 'info'); return false;">
                                     <i class="fas fa-file-excel"></i>
                                     <span class="hidden sm:inline">Export</span>
                                 </a>
@@ -1082,7 +1101,7 @@ $role = $_SESSION['role'] ?? 'user';
             </a>
         </nav>
         <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
-            <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
+            <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
                class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                 <i class="fas fa-sign-out-alt w-5"></i>
                 <span>Logout</span>

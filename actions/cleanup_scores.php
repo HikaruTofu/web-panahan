@@ -30,10 +30,11 @@ echo "<style>
     .btn { padding: 10px 20px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; font-size: 14px; }
     .btn-danger { background: #dc3545; color: white; }
     .btn-secondary { background: #6c757d; color: white; }
-</style>
-<script src="https://cdn.tailwindcss.com"></script>
-<script><?= getThemeTailwindConfig() ?></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">";
+</style>";
+echo "
+<script src=\"https://cdn.tailwindcss.com\"></script>
+<script>" . getThemeTailwindConfig() . "</script>
+<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css\">";
 
 // Step 1: Get list of athletes NOT in databaru.txt but have scores in DB
 echo "<h2>Step 1: Identify Athletes with Scores NOT in databaru.txt</h2>";

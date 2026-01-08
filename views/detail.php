@@ -3,9 +3,151 @@
 session_start();
 include '../includes/check_access.php';
 include '../includes/theme.php';
-requireLogin();
+requireAdmin();
+
+
+
 
 include '../config/panggil.php';
+
+// Handle export to Excel
+if (isset($_GET['export']) && $_GET['export'] == 'excel') {
+    require '../vendor/vendor/autoload.php';
+    
+    // use PhpOffice\PhpSpreadsheet\Spreadsheet;
+    // use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+    // use PhpOffice\PhpSpreadsheet\Style\Alignment;
+
+    $kegiatan_id_export = trim($_GET['kegiatan_id'] ?? '');
+    $filter_kategori_export = trim($_GET['filter_kategori'] ?? '');
+    $filter_gender_export = trim($_GET['filter_gender'] ?? '');
+    $search_export = trim($_GET['search'] ?? '');
+
+    // Reuse the main query logic (simplified for export)
+    // We need to build a query that matches the view's data
+    // Use robust filter logic
+    
+    $query = "SELECT DISTINCT p.*, c.name AS category_name
+              FROM peserta p
+              LEFT JOIN categories c ON p.category_id = c.id
+              LEFT JOIN score sc ON sc.peserta_id = p.id AND sc.kegiatan_id = p.kegiatan_id
+              WHERE 1=1";
+    
+    $params = [];
+    $types = '';
+    
+    // Filter by Kegiatan (Critical for Detail View)
+    if (!empty($kegiatan_id_export)) {
+         $query .= " AND (p.kegiatan_id = ? OR sc.kegiatan_id = ?)";
+         $params[] = $kegiatan_id_export;
+         $params[] = $kegiatan_id_export;
+         $types .= "ii";
+    }
+
+    if (!empty($filter_kategori_export)) {
+        $query .= " AND p.category_id = ?";
+        $params[] = $filter_kategori_export;
+        $types .= "i";
+    }
+
+    if (!empty($filter_gender_export)) {
+        $query .= " AND p.jenis_kelamin = ?";
+        $params[] = $filter_gender_export;
+        $types .= "s";
+    }
+
+    if (!empty($search_export)) {
+        $query .= " AND (LOWER(p.nama_peserta) LIKE LOWER(?) OR LOWER(p.nama_club) LIKE LOWER(?) OR LOWER(p.asal_kota) LIKE LOWER(?))";
+        $searchTerm = "%$search_export%";
+        $params[] = $searchTerm;
+        $params[] = $searchTerm;
+        $params[] = $searchTerm;
+        $types .= "sss";
+    }
+
+    $query .= " ORDER BY p.nama_peserta ASC";
+
+    if (!empty($params)) {
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $result = $stmt->get_result();
+    } else {
+        $result = $conn->query($query);
+    }
+
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Data Peserta Detail');
+
+    // Headers
+    $headers = [
+        'No', 'Nama Peserta', 'Kategori', 'Tanggal Lahir', 'Umur', 
+        'Jenis Kelamin', 'Asal Kota', 'Nama Club', 'Sekolah', 'Kelas', 
+        'Nomor HP', 'Status Pembayaran', 'Tanggal Daftar'
+    ];
+
+    $col = 'A';
+    $rowIdx = 1;
+    foreach ($headers as $header) {
+        $sheet->setCellValue($col . $rowIdx, $header);
+        $sheet->getStyle($col . $rowIdx)->getFont()->setBold(true);
+        $sheet->getStyle($col . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $col++;
+    }
+    $rowIdx++;
+
+    $no = 1;
+    while ($item = $result->fetch_assoc()) {
+        $umur = "-";
+        if (!empty($item['tanggal_lahir'])) {
+            $dob = new DateTime($item['tanggal_lahir']);
+            $today = new DateTime();
+            $umur = $today->diff($dob)->y . " tahun";
+        }
+
+        $statusBayar = !empty($item['bukti_pembayaran']) ? 'Sudah Bayar' : 'Belum Bayar';
+
+        $col = 'A';
+        $sheet->setCellValue($col++ . $rowIdx, $no++);
+        $sheet->setCellValue($col++ . $rowIdx, $item['nama_peserta']);
+        $sheet->setCellValue($col++ . $rowIdx, $item['category_name'] ?? '-');
+        $sheet->setCellValue($col++ . $rowIdx, $item['tanggal_lahir'] ?? '-');
+        $sheet->setCellValue($col++ . $rowIdx, $umur);
+        $sheet->setCellValue($col++ . $rowIdx, $item['jenis_kelamin']);
+        $sheet->setCellValue($col++ . $rowIdx, $item['asal_kota'] ?? '-');
+        $sheet->setCellValue($col++ . $rowIdx, $item['nama_club'] ?? '-');
+        $sheet->setCellValue($col++ . $rowIdx, $item['sekolah'] ?? '-');
+        $sheet->setCellValue($col++ . $rowIdx, $item['kelas'] ?? '-');
+        $sheet->setCellValue($col++ . $rowIdx, $item['nomor_hp'] ?? '-'); 
+        $sheet->getStyle($col . $rowIdx)->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+
+        $sheet->setCellValue($col++ . $rowIdx, $statusBayar);
+        
+        $created_at = $item['created_at'] ?? '-';
+        $sheet->setCellValue($col++ . $rowIdx, $created_at);
+
+        $rowIdx++;
+    }
+
+    // Auto-size columns
+    foreach (range('A', $col) as $columnID) {
+        $sheet->getColumnDimension($columnID)->setAutoSize(true);
+    }
+
+    $filename = "detail_peserta_" . date('Y-m-d_His') . ".xlsx";
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $filename . '"');
+    header('Cache-Control: max-age=0');
+    
+    if (ob_get_length()) ob_clean();
+
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
+
 
 if (!checkRateLimit('view_load', 60, 60)) {
     header('HTTP/1.1 429 Too Many Requests');
@@ -192,7 +334,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
         try {
             $queryPeserta = "
             SELECT 
-                p.id,
+                MAX(p.id) as id,
                 p.nama_peserta,
                 p.jenis_kelamin,
                 COALESCE(SUM(
@@ -208,13 +350,13 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 AND s.kegiatan_id = ? 
                 AND s.category_id = ? 
                 AND s.score_board_id = ?
-            WHERE p.kegiatan_id = ? AND p.category_id = ?
-            GROUP BY p.id, p.nama_peserta, p.jenis_kelamin
+            WHERE p.category_id = ? AND p.nama_peserta IN (SELECT nama_peserta FROM peserta WHERE kegiatan_id = ?)
+            GROUP BY p.nama_peserta, p.jenis_kelamin
             ORDER BY total_score DESC, total_x DESC, p.nama_peserta ASC
         ";
             $stmtPeserta = $conn->prepare($queryPeserta);
-            // Bind params: kegiatan_id, category_id, scoreboard_id (for JOIN), then kegiatan_id, category_id (for WHERE)
-            $stmtPeserta->bind_param("iiiii", $kegiatan_id, $category_id, $scoreboard_id, $kegiatan_id, $category_id);
+            // Bind params: kegiatan_id, category_id, scoreboard_id (for JOIN), then category_id, kegiatan_id (for inclusive WHERE)
+            $stmtPeserta->bind_param("iiiii", $kegiatan_id, $category_id, $scoreboard_id, $category_id, $kegiatan_id);
             $stmtPeserta->execute();
             $resultPeserta = $stmtPeserta->get_result();
 
@@ -312,7 +454,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                         </div>
                         <?= getThemeToggleButton() ?>
                     </div>
-                    <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
+                    <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
                        class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                         <i class="fas fa-sign-out-alt w-5"></i><span>Logout</span>
                     </a>
@@ -438,7 +580,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 </a>
             </nav>
             <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
-                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
+                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
                    class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -1186,30 +1328,33 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
     try {
         $queryPeserta = "
             SELECT 
-                p.id,
+                MAX(p.id) as id,
                 p.nama_peserta,
                 p.jenis_kelamin,
-                c.name as category_name
+                MAX(c.name) as category_name
             FROM peserta p
             LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.kegiatan_id = ? AND p.category_id = ?
+            WHERE p.category_id = ? AND p.nama_peserta IN (SELECT nama_peserta FROM peserta WHERE kegiatan_id = ?)
+            GROUP BY p.nama_peserta, p.jenis_kelamin
             ORDER BY p.nama_peserta ASC
         ";
         $stmtPeserta = $conn->prepare($queryPeserta);
-        $stmtPeserta->bind_param("ii", $kegiatan_id, $category_id);
+        $stmtPeserta->bind_param("ii", $category_id, $kegiatan_id);
         $stmtPeserta->execute();
         $resultPeserta = $stmtPeserta->get_result();
 
+        $nameToRepId = [];
         while ($row = $resultPeserta->fetch_assoc()) {
             $pesertaList[] = $row;
+            $nameToRepId[$row['nama_peserta']] = $row['id'];
         }
 
 
         if (isset($_GET['scoreboard'])) {
-            $stmtTotal = $conn->prepare("SELECT * FROM score WHERE kegiatan_id=? AND category_id=? AND score_board_id =? AND peserta_id=?");
+            $stmtTotal = $conn->prepare("SELECT s.* FROM score s JOIN peserta p ON s.peserta_id = p.id WHERE s.kegiatan_id=? AND s.category_id=? AND s.score_board_id =? AND p.nama_peserta = ?");
             foreach ($pesertaList as $a) {
                 $sb_id = intval($_GET['scoreboard']);
-                $stmtTotal->bind_param("iiii", $kegiatan_id, $category_id, $sb_id, $a['id']);
+                $stmtTotal->bind_param("iiis", $kegiatan_id, $category_id, $sb_id, $a['nama_peserta']);
                 $stmtTotal->execute();
                 $mysql_score_total = $stmtTotal->get_result();
                 $score = 0;
@@ -1232,16 +1377,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             // Fetch all individual scores for detailed view (ranking mode)
             if (isset($_GET['rangking'])) {
                 $allScores = [];
-                $queryAllScores = "SELECT peserta_id, arrow, session, score
-                                   FROM score
-                                   WHERE kegiatan_id = ? AND category_id = ? AND score_board_id = ?
-                                   ORDER BY peserta_id, session, arrow";
+                $queryAllScores = "SELECT s.peserta_id, s.arrow, s.session, s.score, p.nama_peserta
+                                   FROM score s
+                                   JOIN peserta p ON s.peserta_id = p.id
+                                   WHERE s.kegiatan_id = ? AND s.category_id = ? AND s.score_board_id = ?
+                                   ORDER BY p.nama_peserta, s.session, s.arrow";
                 $stmtAllScores = $conn->prepare($queryAllScores);
                 $stmtAllScores->bind_param("iii", $kegiatan_id, $category_id, $_GET['scoreboard']);
                 $stmtAllScores->execute();
                 $resultAllScores = $stmtAllScores->get_result();
                 while ($row = $resultAllScores->fetch_assoc()) {
-                    $pid = $row['peserta_id'];
+                    $pid = $nameToRepId[$row['nama_peserta']] ?? $row['peserta_id'];
                     if (!isset($allScores[$pid])) {
                         $allScores[$pid] = [];
                     }
@@ -1451,7 +1597,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         </div>
                         <?= getThemeToggleButton() ?>
                     </div>
-                    <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
+                    <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
                        class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                         <i class="fas fa-sign-out-alt w-5"></i><span>Logout</span>
                     </a>
@@ -1965,7 +2111,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             <?php } ?>
 
             function delete_score_board(kegiatan_id, category_id, id) {
-                showConfirmModal('Hapus Data', 'Apakah anda yakin akan menghapus data ini?', () => {
+                showConfirmModal('Hapus Data', 'Apakah Anda yakin ingin menghapus data ini?', () => {
                    window.location.href = `detail.php?action=scorecard&resource=index&kegiatan_id=${kegiatan_id}&category_id=${category_id}&delete_score_board=${id}`;
                 }, 'danger');
             }
@@ -2467,175 +2613,66 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 window.location.href = 'detail.php?action=scorecard&resource=form&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>';
             }
 
+            // Updated: Use backend export instead of Client-side HTML blob
             function exportTableToExcel() {
-                const table = document.getElementById('scorecardTable');
-                if (!table) return;
-
-                const tableClone = table.cloneNode(true);
-                tableClone.querySelectorAll('.no-print').forEach(el => el.remove());
-                tableClone.querySelectorAll('thead th:last-child').forEach(th => th.remove());
-                tableClone.querySelectorAll('tbody td:last-child').forEach(td => td.remove());
-
-                const htmlContent = `
-                    <html xmlns:x="urn:schemas-microsoft-com:office:excel">
-                    <head>
-                        <meta charset="UTF-8">
-                        <style>
-                            table { border-collapse: collapse; width: 100%; }
-                            th, td { border: 1px solid #000; padding: 8px; text-align: center; }
-                            th { background-color: #000; color: white; font-weight: bold; }
-                        </style>
-                    </head>
-                    <body>${tableClone.outerHTML}</body>
-                    </html>
-                `;
-
-                const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `Scorecard_List_${new Date().toISOString().split('T')[0]}.xls`;
-                a.click();
-                window.URL.revokeObjectURL(url);
+                // Redirect to the same page with export=excel param
+                // We need to construct the URL with current filters if possible, or just usage basic params
+                // But typically the Main Export Button (Link) is enough. 
+                // If this is called from a button that doesn't have the href, we redirect.
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.set('export', 'excel');
+                window.location.href = '?' + urlParams.toString();
             }
 
+            // Updated: Use actions/excel_score.php and showConfirmModal
             function exportScorecardToExcel() {
-                const categoryName = '<?= htmlspecialchars($kategoriData['name']) ?>';
-                const eventName = '<?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?>';
-
-                const firstPlayerSection = document.querySelector('.overflow-x-auto table');
-                let jumlahSesi = 0;
-                let jumlahPanah = 0;
-
-                if (firstPlayerSection) {
-                    const sessionRows = firstPlayerSection.querySelectorAll('tbody tr');
-                    jumlahSesi = sessionRows.length;
-
-                    const secondHeaderRow = firstPlayerSection.querySelectorAll('thead tr:nth-child(2) th');
-                    jumlahPanah = secondHeaderRow.length;
+                const categoryId = '<?= $category_id ?>';
+                const kegiatanId = '<?= $kegiatan_id ?>';
+                
+                // Get scoreboard ID from URL if exists
+                const urlParams = new URLSearchParams(window.location.search);
+                const scoreboardId = urlParams.get('scoreboard');
+                
+                if (!categoryId || !kegiatanId || !scoreboardId) {
+                     showConfirmModal('Export Gagal', 'Data ID tidak lengkap (scoreboard ID dibutuhkan).', null, 'error');
+                     return;
                 }
 
-                if (jumlahPanah === 0 && pesertaData.length > 0) {
-                    const firstPlayerId = `peserta_${pesertaData[0].id}`;
-                    let arrowCount = 1;
-                    while (document.getElementById(`${firstPlayerId}_a${arrowCount}_s1`)) {
-                        arrowCount++;
-                    }
-                    jumlahPanah = arrowCount - 1;
-                }
-
-                if (jumlahPanah === 0 || pesertaData.length === 0) {
-                    alert('Data tidak lengkap untuk export!');
-                    return;
-                }
-
-                let sheet1HTML = '<table border="1" cellpadding="6" cellspacing="0">';
-                sheet1HTML += '<tr><td colspan="20" style="font-size: 18px; font-weight: bold; border: 1px solid #000;">' + categoryName + '</td></tr>';
-                sheet1HTML += '<tr><td colspan="20" style="font-size: 14px; border: 1px solid #000;">' + eventName + '</td></tr>';
-                sheet1HTML += '<tr>';
-                sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">No</td>';
-                sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Nama</td>';
-
-                for (let i = 1; i <= jumlahSesi; i++) {
-                    sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Rambalan ' + i + '</td>';
-                }
-                sheet1HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Total</td></tr>';
-
-                for (let index = 0; index < pesertaData.length; index++) {
-                    const peserta = pesertaData[index];
-                    const playerId = 'peserta_' + peserta.id;
-                    sheet1HTML += '<tr>';
-                    sheet1HTML += '<td style="border: 1px solid #000;">' + (index + 1) + '</td>';
-                    sheet1HTML += '<td style="text-align: left; border: 1px solid #000;">' + peserta.nama_peserta + '</td>';
-
-                    for (let s = 1; s <= jumlahSesi; s++) {
-                        const totalInput = document.getElementById(playerId + '_total_a' + s);
-                        const value = totalInput ? (totalInput.value || '0') : '0';
-                        sheet1HTML += '<td style="border: 1px solid #000;">' + value + '</td>';
-                    }
-
-                    const grandTotalEl = document.getElementById(playerId + '_grand_total');
-                    const grandTotal = grandTotalEl ? grandTotalEl.textContent.replace(' poin', '') : '0';
-                    sheet1HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + grandTotal + '</td>';
-                    sheet1HTML += '</tr>';
-                }
-
-                sheet1HTML += '</table>';
-
-                let sheet2HTML = '<table border="1" cellpadding="6" cellspacing="0">';
-                sheet2HTML += '<tr><td colspan="20" style="font-size: 18px; font-weight: bold; border: 1px solid #000;">' + categoryName + '</td></tr>';
-                sheet2HTML += '<tr><td colspan="20" style="font-size: 14px; border: 1px solid #000;">' + eventName + ' - TRAINING</td></tr>';
-                sheet2HTML += '</table>';
-
-                for (let pesertaIndex = 0; pesertaIndex < pesertaData.length; pesertaIndex++) {
-                    const peserta = pesertaData[pesertaIndex];
-                    const playerId = 'peserta_' + peserta.id;
-
-                    sheet2HTML += '<br/><table border="1" cellpadding="6" cellspacing="0">';
-                    sheet2HTML += '<tr><td colspan="20" style="background-color: #ddd; font-weight: bold; padding: 8px; border: 1px solid #000;">Rank#' + (pesertaIndex + 1) + ' ' + peserta.nama_peserta + '</td></tr>';
-                    sheet2HTML += '<tr>';
-                    sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Rambalan</td>';
-
-                    for (let a = 1; a <= jumlahPanah; a++) {
-                        sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Shot ' + a + '</td>';
-                    }
-                    sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">Total</td>';
-                    sheet2HTML += '<td style="background-color: #000; color: white; font-weight: bold; border: 1px solid #000;">End</td></tr>';
-
-                    for (let s = 1; s <= jumlahSesi; s++) {
-                        sheet2HTML += '<tr>';
-                        sheet2HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + s + '</td>';
-
-                        for (let a = 1; a <= jumlahPanah; a++) {
-                            const input = document.getElementById(playerId + '_a' + a + '_s' + s);
-                            const value = input ? (input.value || '') : '';
-                            sheet2HTML += '<td style="border: 1px solid #000;">' + value + '</td>';
-                        }
-
-                        const totalInput = document.getElementById(playerId + '_total_a' + s);
-                        const totalValue = totalInput ? (totalInput.value || '0') : '0';
-                        sheet2HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + totalValue + '</td>';
-
-                        const endInput = document.getElementById(playerId + '_end_a' + s);
-                        const endValue = endInput ? (endInput.value || '0') : '0';
-                        sheet2HTML += '<td style="font-weight: bold; border: 1px solid #000;">' + endValue + '</td>';
-
-                        sheet2HTML += '</tr>';
-                    }
-
-                    sheet2HTML += '</table>';
-                }
-
-                const fullHTML = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">' +
-                    '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">' +
-                    '<!--[if gte mso 9]><xml>' +
-                    '<x:ExcelWorkbook>' +
-                    '<x:ExcelWorksheets>' +
-                    '<x:ExcelWorksheet>' +
-                    '<x:Name>Rekap Total</x:Name>' +
-                    '<x:WorksheetOptions><x:Panes></x:Panes></x:WorksheetOptions>' +
-                    '</x:ExcelWorksheet>' +
-                    '<x:ExcelWorksheet>' +
-                    '<x:Name>Training Detail</x:Name>' +
-                    '<x:WorksheetOptions><x:Panes></x:Panes></x:WorksheetOptions>' +
-                    '</x:ExcelWorksheet>' +
-                    '</x:ExcelWorksheets>' +
-                    '</x:ExcelWorkbook>' +
-                    '</xml><![endif]-->' +
-                    '</head><body>' +
-                    '<div>' + sheet1HTML + '</div>' +
-                    '<br clear=all style="mso-special-character:line-break;page-break-before:always">' +
-                    '<div>' + sheet2HTML + '</div>' +
-                    '</body></html>';
-
-                const blob = new Blob([fullHTML], { type: 'application/vnd.ms-excel' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'Scorecard_' + categoryName + '_' + new Date().toISOString().split('T')[0] + '.xls';
-                a.click();
-                window.URL.revokeObjectURL(url);
+                showConfirmModal(
+                    'Export Scorecard', 
+                    'Download data scorecard ke Excel (.xlsx)?', 
+                    function() {
+                        window.location.href = `../actions/excel_score.php?kegiatan_id=${kegiatanId}&category_id=${categoryId}&scoreboard=${scoreboardId}`;
+                    },
+                    'info'
+                );
             }
+
+            // Auto-Capitalize Inputs
+            document.addEventListener('DOMContentLoaded', function() {
+                const upperFields = ['nama_peserta', 'club', 'kota', 'sekolah', 'search'];
+                
+                upperFields.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        // Force CSS uppercase
+                        el.style.textTransform = 'uppercase';
+                        
+                        // Force Value uppercase on input
+                        el.addEventListener('input', function() {
+                            let start = this.selectionStart;
+                            let end = this.selectionEnd;
+                            this.value = this.value.toUpperCase();
+                            this.setSelectionRange(start, end);
+                        });
+                        
+                        // Also on blur to be safe
+                        el.addEventListener('blur', function() {
+                            this.value = this.value.toUpperCase();
+                        });
+                    }
+                });
+            });
 
             // Mobile menu functionality
             const mobileMenuBtn = document.getElementById('mobile-menu-btn');
@@ -2699,7 +2736,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 </a>
             </nav>
             <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
-                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
+                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
                    class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -2801,7 +2838,7 @@ $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $filter_kategori = isset($_GET['filter_kategori']) ? intval($_GET['filter_kategori']) : 0;
 $filter_gender = isset($_GET['filter_gender']) ? $_GET['filter_gender'] : '';
 
-$whereConditions = ["p.kegiatan_id = ?"];
+$whereConditions = ["p.nama_peserta IN (SELECT nama_peserta FROM peserta WHERE kegiatan_id = ?)"];
 $params = [$kegiatan_id];
 $types = "i";
 
@@ -2828,24 +2865,25 @@ $whereClause = implode(" AND ", $whereConditions);
 
 $queryPeserta = "
     SELECT 
-        p.id,
+        MAX(p.id) as id,
         p.nama_peserta,
-        p.tanggal_lahir,
+        MAX(p.tanggal_lahir) as tanggal_lahir,
         p.jenis_kelamin,
-        p.asal_kota,
-        p.nama_club,
-        p.sekolah,
-        p.kelas,
-        p.nomor_hp,
-        p.bukti_pembayaran,
-        c.name as category_name,
-        c.min_age,
-        c.max_age,
-        c.gender as category_gender,
-        TIMESTAMPDIFF(YEAR, p.tanggal_lahir, CURDATE()) as umur
+        MAX(p.asal_kota) as asal_kota,
+        MAX(p.nama_club) as nama_club,
+        MAX(p.sekolah) as sekolah,
+        MAX(p.kelas) as kelas,
+        MAX(p.nomor_hp) as nomor_hp,
+        MAX(p.bukti_pembayaran) as bukti_pembayaran,
+        MAX(c.name) as category_name,
+        MAX(c.min_age) as min_age,
+        MAX(c.max_age) as max_age,
+        MAX(c.gender) as category_gender,
+        MAX(TIMESTAMPDIFF(YEAR, p.tanggal_lahir, CURDATE())) as umur
     FROM peserta p
     LEFT JOIN categories c ON p.category_id = c.id
     WHERE $whereClause
+    GROUP BY p.nama_peserta, p.jenis_kelamin
     ORDER BY p.nama_peserta ASC
 ";
 
@@ -3049,7 +3087,7 @@ function buildPaginationUrl($page, $params = []) {
                     </div>
                     <?= getThemeToggleButton() ?>
                 </div>
-                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
+                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>

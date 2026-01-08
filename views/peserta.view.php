@@ -91,6 +91,42 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_categories') {
     }
 }
 
+// Handle AJAX participant search for Merge Tool
+if (isset($_GET['action']) && $_GET['action'] === 'search_peserta') {
+    header('Content-Type: application/json');
+    $query_str = isset($_GET['q']) ? trim($_GET['q']) : '';
+    if (strlen($query_str) < 2) {
+        echo json_encode([]);
+        exit;
+    }
+    try {
+        $query = "
+            SELECT p.id, p.nama_peserta, p.tanggal_lahir, p.nama_club, p.jenis_kelamin, p.kegiatan_id, p.category_id, c.name as category_name, k.nama_kegiatan
+            FROM peserta p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN kegiatan k ON p.kegiatan_id = k.id
+            WHERE p.nama_peserta LIKE ? 
+            OR p.nama_club LIKE ?
+            LIMIT 10
+        ";
+        $stmt = $conn->prepare($query);
+        $search_param = "%$query_str%";
+        $stmt->bind_param("ss", $search_param, $search_param);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $results = [];
+        while ($row = $result->fetch_assoc()) {
+            $results[] = $row;
+        }
+        $stmt->close();
+        echo json_encode($results);
+        exit;
+    } catch (Exception $e) {
+        echo json_encode(['error' => $e->getMessage()]);
+        exit;
+    }
+}
+
 // Handle CRUD Operations
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
     if (!checkRateLimit('peserta_crud', 10, 60)) {
@@ -198,8 +234,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
 
         case 'update':
             $id = intval($_POST['id']);
+            $old_name = $_POST['old_nama_peserta'] ?? '';
             $nama_peserta = $_POST['nama_peserta'];
-            $category_id = intval($_POST['category_id']);
+            $category_ids = isset($_POST['category_ids']) ? $_POST['category_ids'] : [];
             $kegiatan_id = intval($_POST['kegiatan_id']);
             $tanggal_lahir = $_POST['tanggal_lahir'];
             $jenis_kelamin = $_POST['jenis_kelamin'];
@@ -209,22 +246,73 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
             $kelas = $_POST['kelas'];
             $nomor_hp = $_POST['nomor_hp'];
 
-            $stmt = $conn->prepare("UPDATE peserta SET nama_peserta=?, category_id=?, kegiatan_id=?, tanggal_lahir=?, jenis_kelamin=?, asal_kota=?, nama_club=?, sekolah=?, kelas=?, nomor_hp=?, updated_at=NOW() WHERE id=?");
-            $stmt->bind_param("siisssssssi", $nama_peserta, $category_id, $kegiatan_id, $tanggal_lahir, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp, $id);
-            if ($stmt->execute()) {
+            // Start transaction for data integrity
+            $conn->begin_transaction();
+
+            try {
+                // 1. Update shared info for ALL rows matching old name + DOB
+                // This keeps the participant details in sync across different category/activity rows
+                $stmt = $conn->prepare("UPDATE peserta SET nama_peserta=?, tanggal_lahir=?, jenis_kelamin=?, asal_kota=?, nama_club=?, sekolah=?, kelas=?, nomor_hp=?, updated_at=NOW() WHERE nama_peserta=? AND (tanggal_lahir=? OR tanggal_lahir IS NULL OR tanggal_lahir = '')");
+                $stmt->bind_param("ssssssssss", $nama_peserta, $tanggal_lahir, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp, $old_name, $tanggal_lahir);
+                $stmt->execute();
+                $stmt->close();
+
+                // 2. Sync categories for the SELECTED kegiatan_id
+                // Get currently registered categories for this person in this activity
+                $existing_cats = [];
+                $q = "SELECT id, category_id FROM peserta WHERE nama_peserta=? AND kegiatan_id=?";
+                $stmt = $conn->prepare($q);
+                $stmt->bind_param("si", $nama_peserta, $kegiatan_id);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                while($row = $res->fetch_assoc()) {
+                    $existing_cats[$row['category_id']] = $row['id'];
+                }
+                $stmt->close();
+
+                // Add new category registrations
+                foreach ($category_ids as $cat_id) {
+                    $cat_id = intval($cat_id);
+                    if (!isset($existing_cats[$cat_id])) {
+                        $ins = "INSERT INTO peserta (nama_peserta, category_id, kegiatan_id, tanggal_lahir, jenis_kelamin, asal_kota, nama_club, sekolah, kelas, nomor_hp, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+                        $stmt = $conn->prepare($ins);
+                        $stmt->bind_param("siisssssss", $nama_peserta, $cat_id, $kegiatan_id, $tanggal_lahir, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp);
+                        $stmt->execute();
+                        $stmt->close();
+                    }
+                }
+
+                // Remove unselected category registrations (only if no scores exist to prevent data loss)
+                foreach ($existing_cats as $cat_id => $row_id) {
+                    if (!in_array($cat_id, $category_ids)) {
+                        $check_score = $conn->prepare("SELECT id FROM score WHERE peserta_id = ? LIMIT 1");
+                        $check_score->bind_param("i", $row_id);
+                        $check_score->execute();
+                        $has_score = $check_score->get_result()->num_rows > 0;
+                        $check_score->close();
+
+                        if (!$has_score) {
+                            $conn->query("DELETE FROM peserta WHERE id = $row_id");
+                        }
+                    }
+                }
+
+                $conn->commit();
                 $_SESSION['toast_message'] = "Data peserta berhasil diperbarui!";
                 $_SESSION['toast_type'] = 'success';
-                
+
                 $params = $_GET;
                 if ($kegiatan_id) $params['kegiatan_id'] = $kegiatan_id;
-                
                 header("Location: ?" . http_build_query($params));
                 exit;
-            } else {
-                $toast_message = "Gagal memperbarui data!";
-                $toast_type = 'error';
+
+            } catch (Exception $e) {
+                $conn->rollback();
+                $_SESSION['toast_message'] = "Gagal memperbarui data: " . $e->getMessage();
+                $_SESSION['toast_type'] = 'error';
+                header("Location: ?" . http_build_query($_GET));
+                exit;
             }
-            $stmt->close();
             break;
 
         case 'delete':
@@ -255,16 +343,118 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 $stmt->close();
             }
             break;
+
+        case 'merge':
+            $masterId = intval($_POST['master_id']);
+            $duplicateIds = isset($_POST['duplicate_ids']) ? $_POST['duplicate_ids'] : [];
+            
+            if (empty($duplicateIds) || $masterId == 0) {
+                 $_SESSION['toast_message'] = "Data utama atau duplikat tidak valid.";
+                 $_SESSION['toast_type'] = 'error';
+                 header("Location: " . $_SERVER['PHP_SELF'] . "?" . http_build_query($_GET));
+                 exit;
+            }
+
+            $conn->begin_transaction();
+            try {
+                // 1. Fetch Master Data
+                $stmt = $conn->prepare("SELECT nama_peserta, tanggal_lahir, jenis_kelamin, asal_kota, nama_club, sekolah, kelas, nomor_hp, bukti_pembayaran FROM peserta WHERE id = ?");
+                $stmt->bind_param("i", $masterId);
+                $stmt->execute();
+                $masterData = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$masterData) throw new Exception("Data utama tidak ditemukan.");
+
+                foreach ($duplicateIds as $dupId) {
+                    $dupId = intval($dupId);
+                    if ($dupId === $masterId) continue;
+
+                    // 2. Fetch Duplicate Data context
+                    $stmt = $conn->prepare("SELECT category_id, kegiatan_id FROM peserta WHERE id = ?");
+                    $stmt->bind_param("i", $dupId);
+                    $stmt->execute();
+                    $dupCtx = $stmt->get_result()->fetch_assoc();
+                    $stmt->close();
+
+                    if (!$dupCtx) continue;
+
+                    // 3. Check for Collision (Master Identity in Duplicate's Context)
+                    // We check if a participant with Master's Name AND Duplicate's Category/Kegiatan ALREADY EXISTS (excluding the duplicate row itself)
+                    // Note: We ignore date of birth in collision check to be broader? No, let's stick to name + category context as primarily defining the collision.
+                    // Actually, if we are merging "Husin" to "Muhammad Husin", we want to know if "Muhammad Husin" is ALREADY registered in "Husin's" category.
+                    
+                    $checkQ = "SELECT id FROM peserta WHERE nama_peserta = ? AND category_id = ? AND kegiatan_id = ? AND id != ?";
+                    $stmtCheck = $conn->prepare($checkQ);
+                    $stmtCheck->bind_param("siis", $masterData['nama_peserta'], $dupCtx['category_id'], $dupCtx['kegiatan_id'], $dupId);
+                    $stmtCheck->execute();
+                    $collision = $stmtCheck->get_result()->fetch_assoc();
+                    $stmtCheck->close();
+
+                    if ($collision) {
+                        // CASE A: Collision Found (Redundant Registration)
+                        // "Muhammad Husin" is already in this category.
+                        // Move scores from "Husin" (dupId) to "Muhammad Husin" (collision['id'])
+                        $targetId = $collision['id'];
+
+                        // Relink scores
+                        $stmtScore = $conn->prepare("UPDATE score SET peserta_id = ? WHERE peserta_id = ?");
+                        $stmtScore->bind_param("ii", $targetId, $dupId);
+                        $stmtScore->execute();
+                        $stmtScore->close();
+
+                        // Delete the duplicate row
+                        $stmtDel = $conn->prepare("DELETE FROM peserta WHERE id = ?");
+                        $stmtDel->bind_param("i", $dupId);
+                        $stmtDel->execute();
+                        $stmtDel->close();
+
+                    } else {
+                        // CASE B: No Collision (Unique Registration)
+                        // "Muhammad Husin" is NOT in this category.
+                        // Update "Husin" (dupId) to become "Muhammad Husin"
+                        
+                        $updateQ = "UPDATE peserta SET nama_peserta=?, tanggal_lahir=?, jenis_kelamin=?, asal_kota=?, nama_club=?, sekolah=?, kelas=?, nomor_hp=?, updated_at=NOW() WHERE id=?";
+                        $stmtUpd = $conn->prepare($updateQ);
+                        $stmtUpd->bind_param("ssssssssi", 
+                            $masterData['nama_peserta'], 
+                            $masterData['tanggal_lahir'], 
+                            $masterData['jenis_kelamin'], 
+                            $masterData['asal_kota'], 
+                            $masterData['nama_club'], 
+                            $masterData['sekolah'], 
+                            $masterData['kelas'], 
+                            $masterData['nomor_hp'], 
+                            $dupId
+                        );
+                        $stmtUpd->execute();
+                        $stmtUpd->close();
+                    }
+                }
+
+                $conn->commit();
+                $_SESSION['toast_message'] = "Data berhasil digabungkan!";
+                $_SESSION['toast_type'] = 'success';
+            } catch (Exception $e) {
+                $conn->rollback();
+                $_SESSION['toast_message'] = "Gagal menggabungkan data: " . $e->getMessage();
+                $_SESSION['toast_type'] = 'error';
+            }
+            header("Location: " . $_SERVER['PHP_SELF'] . "?" . http_build_query($_GET));
+            exit;
+            break;
     }
     }
 }
 
-// Handle export to Excel (UNCHANGED)
+// Handle export to Excel
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
-    header("Content-Type: application/vnd.ms-excel");
-    header("Content-Disposition: attachment; filename=data_peserta_" . date('Y-m-d') . ".xls");
-    header("Pragma: no-cache");
-    header("Expires: 0");
+    require '../vendor/vendor/autoload.php';
+    
+    // Use FQCN instead of 'use' inside block
+    // use PhpOffice\PhpSpreadsheet\Spreadsheet;
+    // use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+    // use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
     $category_id = trim($_GET['category_id'] ?? '');
     $kegiatan_id = trim($_GET['kegiatan_id'] ?? '');
@@ -322,6 +512,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
         $result = $conn->query($query);
     }
 
+    // Grouping by Name logic
     $groupedData = [];
     while ($row = $result->fetch_assoc()) {
         $nama_display = $row['nama_peserta'];
@@ -342,56 +533,80 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
         }
     }
 
-    echo "<table border='1'>";
-    echo "<tr>";
-    echo "<th>No</th>";
-    echo "<th>ID(s)</th>";
-    echo "<th>Nama Peserta</th>";
-    echo "<th>Kategori</th>";
-    echo "<th>Kegiatan</th>";
-    echo "<th>Tanggal Lahir</th>";
-    echo "<th>Umur</th>";
-    echo "<th>Jenis Kelamin</th>";
-    echo "<th>Asal Kota</th>";
-    echo "<th>Nama Club</th>";
-    echo "<th>Sekolah</th>";
-    echo "<th>Kelas</th>";
-    echo "<th>Nomor HP</th>";
-    echo "<th>Status Pembayaran</th>";
-    echo "<th>Tanggal Daftar</th>";
-    echo "</tr>";
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Data Peserta');
+
+    // Headers
+    $headers = [
+        'No', 'ID(s)', 'Nama Peserta', 'Kategori', 'Kegiatan', 
+        'Tanggal Lahir', 'Umur', 'Jenis Kelamin', 'Asal Kota', 
+        'Nama Club', 'Sekolah', 'Kelas', 'Nomor HP', 'Status Pembayaran', 'Tanggal Daftar'
+    ];
+
+    $col = 'A';
+    $rowIdx = 1;
+    foreach ($headers as $header) {
+        $sheet->setCellValue($col . $rowIdx, $header);
+        $sheet->getStyle($col . $rowIdx)->getFont()->setBold(true);
+        $sheet->getStyle($col . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $col++;
+    }
+    $rowIdx++;
 
     $no = 1;
-    foreach ($groupedData as $row) {
+    foreach ($groupedData as $item) {
         $umur = "-";
-        if (!empty($row['tanggal_lahir'])) {
-            $dob = new DateTime($row['tanggal_lahir']);
+        if (!empty($item['tanggal_lahir'])) {
+            $dob = new DateTime($item['tanggal_lahir']);
             $today = new DateTime();
             $umur = $today->diff($dob)->y . " tahun";
         }
 
-        $statusBayar = !empty($row['bukti_pembayaran']) ? 'Sudah Bayar' : 'Belum Bayar';
+        $statusBayar = !empty($item['bukti_pembayaran']) ? 'Sudah Bayar' : 'Belum Bayar';
 
-        echo "<tr>";
-        echo "<td>" . $no++ . "</td>";
-        echo "<td>" . implode(', ', $row['ids']) . "</td>";
-        echo "<td>" . htmlspecialchars($row['nama_peserta']) . "</td>";
-        echo "<td>" . htmlspecialchars(implode(', ', $row['categories']) ?: '-') . "</td>";
-        echo "<td>" . htmlspecialchars(implode(', ', $row['kegiatan']) ?: '-') . "</td>";
-        echo "<td>" . htmlspecialchars($row['tanggal_lahir'] ?? '-') . "</td>";
-        echo "<td>" . $umur . "</td>";
-        echo "<td>" . htmlspecialchars($row['jenis_kelamin']) . "</td>";
-        echo "<td>" . htmlspecialchars($row['asal_kota'] ?? '-') . "</td>";
-        echo "<td>" . htmlspecialchars($row['nama_club'] ?? '-') . "</td>";
-        echo "<td>" . htmlspecialchars($row['sekolah'] ?? '-') . "</td>";
-        echo "<td>" . htmlspecialchars($row['kelas'] ?? '-') . "</td>";
-        echo "<td>" . htmlspecialchars($row['nomor_hp'] ?? '-') . "</td>";
-        echo "<td>" . $statusBayar . "</td>";
-        echo "<td>" . htmlspecialchars($row['created_at'] ?? '-') . "</td>";
-        echo "</tr>";
+        $col = 'A';
+        $sheet->setCellValue($col++ . $rowIdx, $no++);
+        $sheet->setCellValue($col++ . $rowIdx, implode(', ', $item['ids']));
+        $sheet->setCellValue($col++ . $rowIdx, $item['nama_peserta']);
+        $sheet->setCellValue($col++ . $rowIdx, implode(', ', $item['categories']) ?: '-');
+        $sheet->setCellValue($col++ . $rowIdx, implode(', ', $item['kegiatan']) ?: '-');
+        $sheet->setCellValue($col++ . $rowIdx, $item['tanggal_lahir'] ?? '-');
+        $sheet->setCellValue($col++ . $rowIdx, $umur);
+        $sheet->setCellValue($col++ . $rowIdx, $item['jenis_kelamin']);
+        $sheet->setCellValue($col++ . $rowIdx, $item['asal_kota'] ?? '-');
+        $sheet->setCellValue($col++ . $rowIdx, $item['nama_club'] ?? '-');
+        $sheet->setCellValue($col++ . $rowIdx, $item['sekolah'] ?? '-');
+        $sheet->setCellValue($col++ . $rowIdx, $item['kelas'] ?? '-');
+        $sheet->setCellValue($col++ . $rowIdx, $item['nomor_hp'] ?? '-'); // Ensure string format
+        $sheet->getStyle($col . $rowIdx)->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+        
+        $sheet->setCellValue($col++ . $rowIdx, $statusBayar);
+        
+        // Fix for long dates or empty
+        $created_at = $item['created_at'] ?? '-';
+        $sheet->setCellValue($col++ . $rowIdx, $created_at);
+
+        $rowIdx++;
     }
-    echo "</table>";
-    exit();
+
+    // Auto-size columns
+    foreach (range('A', $col) as $columnID) {
+        $sheet->getColumnDimension($columnID)->setAutoSize(true);
+    }
+
+    $filename = "data_peserta_" . date('Y-m-d_His') . ".xlsx";
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $filename . '"');
+    header('Cache-Control: max-age=0');
+    
+    // Clear any previous output
+    if (ob_get_length()) ob_clean();
+
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
 }
 
 // --- Ambil kategori untuk dropdown (UNCHANGED) ---
@@ -487,12 +702,14 @@ while ($row = $result->fetch_assoc()) {
             'display_name' => $nama_display,
             'data' => $row,
             'ids' => [$row['id']],
+            'category_ids' => [$row['category_id']],
             'categories' => [],
             'kegiatan' => [],
             'all_records' => [$row]
         ];
     } else {
         $pesertaGrouped[$nama_key]['ids'][] = $row['id'];
+        $pesertaGrouped[$nama_key]['category_ids'][] = $row['category_id'];
         $pesertaGrouped[$nama_key]['all_records'][] = $row;
     }
 
@@ -697,7 +914,7 @@ $role = $_SESSION['role'] ?? 'user';
 
                                 <a href="<?= $exportUrl ?>"
                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
-                                   onclick="event.preventDefault(); const url = this.href; showConfirmModal('Export Data', 'Export data peserta ke Excel?', () => window.location.href = url)">
+                                   onclick="event.preventDefault(); const url = this.href; showConfirmModal('Export Data', 'Export data peserta ke Excel?', () => window.location.href = url, 'info')">
                                     <i class="fas fa-file-excel text-emerald-600"></i>
                                     <span class="hidden sm:inline">Export</span>
                                 </a>
@@ -983,7 +1200,14 @@ $role = $_SESSION['role'] ?? 'user';
 
                                                     <?php endif; ?>
 
-                                                    <button type="button" onclick="editPeserta(<?= htmlspecialchars(json_encode($p)) ?>)"
+                                                    <?php if (count($group['ids']) > 1): ?>
+                                                        <button type="button" onclick="openMergeModal(<?= htmlspecialchars(json_encode($group)) ?>)"
+                                                                class="p-1.5 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors" title="Gabungkan Duplikat">
+                                                            <i class="fas fa-compress-alt"></i>
+                                                        </button>
+                                                    <?php endif; ?>
+
+                                                    <button type="button" onclick="editPeserta(<?= htmlspecialchars(json_encode($group)) ?>)"
                                                             class="p-1.5 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
@@ -1248,6 +1472,8 @@ $role = $_SESSION['role'] ?? 'user';
                 <input type="hidden" name="action" value="update">
                 <input type="hidden" name="id" id="edit_id">
 
+                <input type="hidden" name="old_nama_peserta" id="edit_old_name">
+
                 <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
@@ -1255,34 +1481,20 @@ $role = $_SESSION['role'] ?? 'user';
                             <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="nama_peserta" id="edit_nama_peserta" required>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kategori <span class="text-red-500">*</span></label>
-                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="category_id" id="edit_category_id" required>
-
-                                <?php foreach ($kategoriList as $kat): ?>
-
-                                    <option value="<?= $kat['id'] ?>"><?= htmlspecialchars($kat['name']) ?></option>
-
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kegiatan <span class="text-red-500">*</span></label>
-                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="kegiatan_id" id="edit_kegiatan_id" required>
-
+                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="kegiatan_id" id="edit_kegiatan_id" onchange="loadEditCategories()" required>
                                 <?php foreach ($kegiatanList as $keg): ?>
-
                                     <option value="<?= $keg['id'] ?>"><?= htmlspecialchars($keg['nama_kegiatan']) ?></option>
-
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Tanggal Lahir <span class="text-red-500">*</span></label>
-                            <input type="text" class="datepicker w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="tanggal_lahir" id="edit_tanggal_lahir" placeholder="Pilih Tanggal" required>
+                            <input type="text" class="datepicker w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="tanggal_lahir" id="edit_tanggal_lahir" placeholder="Pilih Tanggal" onchange="updateKategoriOptions('edit')" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Jenis Kelamin <span class="text-red-500">*</span></label>
-                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="jenis_kelamin" id="edit_jenis_kelamin" required>
+                            <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="jenis_kelamin" id="edit_jenis_kelamin" onchange="updateKategoriOptions('edit')" required>
                                 <option value="Laki-laki">Laki-laki</option>
                                 <option value="Perempuan">Perempuan</option>
                             </select>
@@ -1291,8 +1503,6 @@ $role = $_SESSION['role'] ?? 'user';
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nomor HP</label>
                             <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="nomor_hp" id="edit_nomor_hp">
                         </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Asal Kota</label>
                             <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="asal_kota" id="edit_asal_kota">
@@ -1300,6 +1510,21 @@ $role = $_SESSION['role'] ?? 'user';
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Club</label>
                             <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="nama_club" id="edit_nama_club">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Sekolah</label>
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="sekolah" id="edit_sekolah">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kelas</label>
+                            <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="kelas" id="edit_kelas">
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 dark:border-zinc-800">
+                        <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Pilih Kategori <span class="text-red-500">*</span></label>
+                        <div id="edit_categories_list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto custom-scrollbar p-1">
+                            <!-- Populated by JS -->
                         </div>
                     </div>
                 </div>
@@ -1312,42 +1537,66 @@ $role = $_SESSION['role'] ?? 'user';
         </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeDeleteModal()"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden transition-colors">
-            <div class="bg-gradient-to-br from-red-500 to-red-700 text-white px-6 py-4 flex items-center justify-between">
-                <h3 class="font-semibold text-lg flex items-center gap-2">
-                    <i class="fas fa-trash"></i> Konfirmasi Hapus
-                </h3>
-                <button onclick="closeDeleteModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+    <!-- Merge Modal -->
+    <div id="mergeModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeMergeModal()"></div>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col transition-colors">
+            <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-compress-alt"></i>
+                    <h3 class="font-semibold text-lg">Gabungkan Data Duplikat</h3>
+                </div>
+                <button onclick="closeMergeModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="p-6 text-center">
-                <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-user-times text-red-500 dark:text-red-400 text-2xl"></i>
-                </div>
-                <h4 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Hapus peserta ini?</h4>
-                <p class="font-bold text-red-600 dark:text-red-400 mb-4" id="deletePesertaName"></p>
-                <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-left">
-                    <p class="text-sm text-amber-800 dark:text-amber-400">
-                        <i class="fas fa-exclamation-triangle mr-1"></i> Data yang dihapus tidak dapat dikembalikan!
-                    </p>
-                </div>
-            </div>
-            <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex justify-end gap-2">
-                <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">Batal</button>
-                <form method="POST" class="inline">
+            <form action="" method="post" class="flex flex-col flex-1 overflow-hidden" onsubmit="return validateMerge()">
+                <?php csrf_field(); ?>
+                <input type="hidden" name="action" value="merge">
+                
+                <div class="p-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50 dark:bg-zinc-950">
+                    <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6">
+                        <div class="flex gap-3">
+                            <i class="fas fa-exclamation-triangle text-amber-600 dark:text-amber-400 mt-1"></i>
+                            <div class="text-sm">
+                                <p class="font-bold text-amber-800 dark:text-amber-300">Konfirmasi Penggabungan</p>
+                                <ul class="list-disc list-inside text-amber-700 dark:text-amber-400 text-xs mt-1 space-y-1">
+                                    <li>Data dengan kategori yang <strong>sama</strong> akan disatukan (skor dipindah, duplikat dihapus).</li>
+                                    <li>Data dengan kategori <strong>berbeda</strong> akan <strong>disimpan</strong> & diubah namanya mengikuti Data Utama (tidak dihapus).</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
 
-                    <?php csrf_field(); ?>
-                    <input type="hidden" name="action" value="delete">
-                    <input type="hidden" name="id" id="deleteIdInput">
-                    <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">Hapus</button>
-                </form>
-            </div>
+                    <h4 class="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-3">Pilih Data Utama (Master)</h4>
+                    <p class="text-xs text-slate-500 mb-4 items-list-hint">Data ini akan menjadi satu-satunya yang tersimpan setelah penggabungan.</p>
+                    <div id="merge_items_list" class="space-y-3 mb-6">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <div class="pt-6 border-t border-slate-200 dark:border-zinc-800">
+                        <h4 class="text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-3">Cari & Tambah Peserta Lain</h4>
+                        <div class="relative mb-4">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="merge_search_input" 
+                                   class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 transition-all" 
+                                   placeholder="Cari nama atau club untuk digabungkan..."
+                                   onkeyup="debounce(searchMergeParticipants, 500)()">
+                        </div>
+                        <div id="merge_search_results" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                            <!-- Results will appear here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2 flex-shrink-0">
+                    <button type="button" onclick="closeMergeModal()" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors shadow-lg">Gabungkan Sekarang</button>
+                </div>
+            </form>
         </div>
     </div>
+
 
     <!-- Image Modal -->
     <div id="imageModal" class="fixed inset-0 z-50 hidden">
@@ -1414,8 +1663,8 @@ $role = $_SESSION['role'] ?? 'user';
         </div>
     </div>
 
+    <?= getConfirmationModal() ?>
     <script>
-        <?= getConfirmationModal() ?>
 
         // Mobile menu toggle logic
         function toggleMobileMenu() {
@@ -1448,12 +1697,13 @@ $role = $_SESSION['role'] ?? 'user';
         }
 
         let allCategories = [];
+        let currentEditingCategoryIds = [];
 
-        function loadKegiatanCategories() {
-            const kegiatanId = document.getElementById('add_kegiatan_id').value;
+        function loadCategories(prefix) {
+            const kegiatanId = document.getElementById(prefix + '_kegiatan_id').value;
             if (!kegiatanId) {
                 allCategories = [];
-                updateKategoriOptions('add');
+                updateKategoriOptions(prefix);
                 return;
             }
 
@@ -1461,9 +1711,13 @@ $role = $_SESSION['role'] ?? 'user';
                 .then(res => res.json())
                 .then(data => {
                     allCategories = data;
-                    updateKategoriOptions('add');
+                    updateKategoriOptions(prefix);
                 });
         }
+
+        // Keep old name for backward compatibility if needed, but point to new function
+        function loadKegiatanCategories() { loadCategories('add'); }
+        function loadEditCategories() { loadCategories('edit'); }
 
         function loadPesertaByClub(prefix) {
             const clubSelect = document.getElementById(prefix + '_nama_club');
@@ -1542,10 +1796,18 @@ $role = $_SESSION['role'] ?? 'user';
 
         function updateKategoriOptions(prefix) {
             const dob = document.getElementById(prefix + '_tanggal_lahir').value;
-            const gender = document.querySelector('input[name="jenis_kelamin"]:checked')?.value;
+            let gender = '';
+            
+            if (prefix === 'add') {
+                gender = document.querySelector('input[name="jenis_kelamin"]:checked')?.value;
+            } else {
+                gender = document.getElementById('edit_jenis_kelamin').value;
+            }
+
             const container = document.getElementById(prefix + '_categories_list');
             
             if (!dob || !gender || allCategories.length === 0) {
+                if (container) container.innerHTML = '<div class="col-span-2 text-center py-4 text-slate-400 dark:text-zinc-500 text-sm">Silakan pilih kegiatan, tanggal lahir, dan jenis kelamin dahulu.</div>';
                 return;
             }
 
@@ -1562,9 +1824,11 @@ $role = $_SESSION['role'] ?? 'user';
                 if (!ageMatch) reason = `Umur ${age} th tidak cocok (${c.min_age}-${c.max_age} th)`;
                 else if (!genderMatch) reason = `Hanya untuk ${c.gender}`;
 
+                const isChecked = prefix === 'edit' && currentEditingCategoryIds.includes(parseInt(c.id));
+
                 return `
                     <label class="flex items-start gap-3 p-3 rounded-xl border ${isEligible ? 'border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer' : 'border-slate-100 dark:border-zinc-800/50 bg-slate-50/50 dark:bg-zinc-900/30 opacity-60 cursor-not-allowed'} transition-colors">
-                        <input type="checkbox" name="category_ids[]" value="${c.id}" ${isEligible ? '' : 'disabled'} class="mt-1 rounded ${isEligible ? 'text-archery-600 focus:ring-archery-500' : 'text-slate-300'}">
+                        <input type="checkbox" name="category_ids[]" value="${c.id}" ${isEligible ? '' : 'disabled'} ${isChecked ? 'checked' : ''} class="mt-1 rounded ${isEligible ? 'text-archery-600 focus:ring-archery-500' : 'text-slate-300'}">
                         <div class="flex-1">
                             <p class="text-sm font-semibold ${isEligible ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-500'} capitalize">${c.name}</p>
                             <p class="text-[10px] text-slate-500 dark:text-zinc-400">${c.min_age}-${c.max_age} th • ${c.gender}</p>
@@ -1642,29 +1906,246 @@ $role = $_SESSION['role'] ?? 'user';
         function closeDetailModal() { document.getElementById('detailModal').classList.add('hidden'); }
 
         function editPeserta(data) {
-            document.getElementById('edit_id').value = data.id;
-            document.getElementById('edit_nama_peserta').value = data.nama_peserta || '';
-            document.getElementById('edit_category_id').value = data.category_id || '';
-            document.getElementById('edit_kegiatan_id').value = data.kegiatan_id || '';
-            document.getElementById('edit_tanggal_lahir').value = data.tanggal_lahir || '';
-            document.getElementById('edit_jenis_kelamin').value = data.jenis_kelamin || '';
-            document.getElementById('edit_asal_kota').value = data.asal_kota || '';
-            document.getElementById('edit_nama_club').value = data.nama_club || '';
-            document.getElementById('edit_nomor_hp').value = data.nomor_hp || '';
+            // Handle both single row and group data
+            const mainData = data.data || data;
+            const ids = data.ids || [data.id];
+            currentEditingCategoryIds = data.category_ids || [data.category_id];
+
+            document.getElementById('edit_id').value = mainData.id;
+            document.getElementById('edit_old_name').value = mainData.nama_peserta || '';
+            document.getElementById('edit_nama_peserta').value = mainData.nama_peserta || '';
+            document.getElementById('edit_kegiatan_id').value = mainData.kegiatan_id || '';
+            document.getElementById('edit_tanggal_lahir').value = mainData.tanggal_lahir || '';
+            document.getElementById('edit_jenis_kelamin').value = mainData.jenis_kelamin || '';
+            document.getElementById('edit_asal_kota').value = mainData.asal_kota || '';
+            document.getElementById('edit_nama_club').value = mainData.nama_club || '';
+            document.getElementById('edit_nomor_hp').value = mainData.nomor_hp || '';
+            document.getElementById('edit_sekolah').value = mainData.sekolah || '';
+            document.getElementById('edit_kelas').value = mainData.kelas || '';
+
+            loadCategories('edit');
+            
             closeDetailModal();
             document.getElementById('editModal').classList.remove('hidden');
         }
 
         function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
 
-        function confirmDelete(id, name) {
-            document.getElementById('deleteIdInput').value = id;
-            document.getElementById('deletePesertaName').textContent = name;
-            closeDetailModal();
-            document.getElementById('deleteModal').classList.remove('hidden');
+        function openMergeModal(group) {
+            const list = document.getElementById('merge_items_list');
+            list.innerHTML = '';
+            document.getElementById('merge_search_input').value = '';
+            document.getElementById('merge_search_results').innerHTML = '';
+            
+            // Initialize with current group data
+            window.currentMergeGroup = JSON.parse(JSON.stringify(group)); // Deep copy
+            
+            // Render existing items
+            window.currentMergeGroup.all_records.forEach((record, index) => {
+                renderMergeItem(record, index === 0);
+            });
+
+            updateMergeSelection();
+            document.getElementById('mergeModal').classList.remove('hidden');
         }
 
-        function closeDeleteModal() { document.getElementById('deleteModal').classList.add('hidden'); }
+        function renderMergeItem(record, isChecked = false) {
+            // Check if already exists to prevent duplicate rendering
+            const list = document.getElementById('merge_items_list');
+            if (list.querySelector(`input[value="${record.id}"]`)) return;
+
+            const item = document.createElement('div');
+            item.className = 'bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-4 cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-all relative group/item';
+            
+            item.onclick = (e) => {
+                const radio = item.querySelector('input[type="radio"]');
+                radio.checked = true;
+                updateMergeSelection();
+            };
+
+            const statusClass = record.nama_kegiatan ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'bg-slate-100 dark:bg-zinc-800 text-slate-500';
+
+            item.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="mt-1">
+                        <input type="radio" name="master_id" value="${record.id}" ${isChecked ? 'checked' : ''} 
+                               class="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 dark:border-zinc-600 dark:bg-zinc-800"
+                               onclick="event.stopPropagation(); updateMergeSelection();">
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-1">
+                            <div>
+                                <span class="text-sm font-bold text-slate-900 dark:text-white">ID: ${record.id}</span>
+                                <span class="ml-2 text-xs text-slate-500 dark:text-zinc-500 font-normal">(${record.nama_peserta})</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusClass}">
+                                ${record.nama_kegiatan || 'Tanpa Kegiatan'}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-y-1 text-xs text-slate-500 dark:text-zinc-400">
+                            <div><i class="fas fa-calendar-alt w-4"></i> ${record.tanggal_lahir || '-'}</div>
+                            <div><i class="fas fa-user-tag w-4"></i> ${record.category_name || '-'}</div>
+                            <div class="col-span-2"><i class="fas fa-university w-4"></i> ${record.nama_club || '-'}</div>
+                        </div>
+                    </div>
+                    ${!window.currentMergeGroup.ids.includes(record.id) ? `
+                        <button type="button" onclick="event.stopPropagation(); removeMergeItem(this, ${record.id})" 
+                                class="opacity-0 group-hover/item:opacity-100 p-1 text-red-500 hover:text-red-700 transition-opacity">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+            list.appendChild(item);
+        }
+
+        function removeMergeItem(btn, id) {
+            btn.closest('.group\\/item').remove();
+            // Remove from currentMergeGroup.ids if explicitly added (logic can be refined if needed)
+            updateMergeSelection();
+        }
+
+        function updateMergeSelection() {
+            const items = document.querySelectorAll('#merge_items_list > div');
+            items.forEach(item => {
+                const radio = item.querySelector('input[type="radio"]');
+                if (radio && radio.checked) {
+                    item.classList.add('ring-2', 'ring-indigo-500', 'border-indigo-500');
+                    item.classList.remove('border-slate-200', 'dark:border-zinc-700');
+                } else {
+                    item.classList.remove('ring-2', 'ring-indigo-500', 'border-indigo-500');
+                    item.classList.add('border-slate-200', 'dark:border-zinc-700');
+                }
+            });
+        }
+
+        function closeMergeModal() {
+            document.getElementById('mergeModal').classList.add('hidden');
+        }
+
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        function searchMergeParticipants() {
+            const query = document.getElementById('merge_search_input').value;
+            const resultsContainer = document.getElementById('merge_search_results');
+            
+            if (query.length < 2) {
+                resultsContainer.innerHTML = '';
+                return;
+            }
+
+            resultsContainer.innerHTML = '<div class="text-center py-2 text-sm text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>Mencari...</div>';
+
+            fetch(`?action=search_peserta&q=${encodeURIComponent(query)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                resultsContainer.innerHTML = '';
+                if (data.length === 0) {
+                    resultsContainer.innerHTML = '<div class="text-center py-2 text-sm text-slate-500">Tidak ada hasil ditemukan.</div>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    // Don't show if already in the list
+                    if (document.querySelector(`#merge_items_list input[value="${item.id}"]`)) return;
+
+                    const el = document.createElement('div');
+                    el.className = 'flex items-center justify-between p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg cursor-pointer transition-colors';
+                    el.onclick = () => addKeyToMerge(item);
+                    el.innerHTML = `
+                        <div class="flex-1">
+                            <div class="text-sm font-medium text-slate-900 dark:text-white">${item.nama_peserta}</div>
+                            <div class="text-xs text-slate-500 dark:text-zinc-400">
+                                ${item.nama_club || '-'} • ${item.category_name || '-'}
+                            </div>
+                        </div>
+                        <button type="button" class="p-1.5 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
+                            <i class="fas fa-plus text-xs"></i>
+                        </button>
+                    `;
+                    resultsContainer.appendChild(el);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultsContainer.innerHTML = '<div class="text-center py-2 text-sm text-red-500">Terjadi kesalahan.</div>';
+            });
+        }
+
+        function addKeyToMerge(item) {
+            renderMergeItem(item, false);
+            // Optionally add to window.currentMergeGroup.ids if needed for validation logic
+            // But validation now scrapes DOM so strictly not required to sync existing ID array
+            document.getElementById('merge_search_results').innerHTML = ''; // Clear results
+            document.getElementById('merge_search_input').value = '';
+        }
+
+        function validateMerge() {
+            const masterRadio = document.querySelector('input[name="master_id"]:checked');
+            if (!masterRadio) {
+                alert('Pilih satu data sebagai data utama.');
+                return false;
+            }
+
+            const masterId = parseInt(masterRadio.value);
+            
+            // Gather all IDs from the list
+            const allInputs = document.querySelectorAll('#merge_items_list input[name="master_id"]');
+            const duplicateIds = [];
+            
+            allInputs.forEach(input => {
+                const id = parseInt(input.value);
+                if (id !== masterId) {
+                    duplicateIds.push(id);
+                }
+            });
+
+            if (duplicateIds.length === 0) {
+                alert('Tidak ada duplikat yang bisa digabungkan.');
+                return false;
+            }
+
+            const form = document.querySelector('#mergeModal form');
+            form.querySelectorAll('input[name="duplicate_ids[]"]').forEach(el => el.remove());
+
+            duplicateIds.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'duplicate_ids[]';
+                input.value = id;
+                form.appendChild(input);
+            });
+
+            return confirm('Yakin ingin menggabungkan data ini? Tindakan ini tidak dapat dibatalkan.');
+        }
+
+        function confirmDelete(id, name) {
+            showConfirmModal(
+                'Hapus Peserta',
+                `Apakah Anda yakin ingin menghapus peserta <strong class="text-red-600 dark:text-red-400">${name}</strong>?<br><br><span class="text-sm text-slate-500 dark:text-zinc-400"><i class="fas fa-exclamation-triangle mr-1"></i> Data yang dihapus tidak dapat dikembalikan!</span>`,
+                () => {
+                    const deleteForm = document.createElement('form');
+                    deleteForm.method = 'POST';
+                    deleteForm.innerHTML = `
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="id" value="${id}">
+                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                    `;
+                    document.body.appendChild(deleteForm);
+                    deleteForm.submit();
+                },
+                'danger'
+            );
+        }
 
         function showImage(type, url, name) {
             const body = document.getElementById('imageModalBody');
@@ -1699,7 +2180,6 @@ $role = $_SESSION['role'] ?? 'user';
                 closeAddModal();
                 closeDetailModal();
                 closeEditModal();
-                closeDeleteModal();
                 closeImageModal();
             }
         });
@@ -1729,8 +2209,8 @@ $role = $_SESSION['role'] ?? 'user';
 
 
         <?= getThemeToggleScript() ?>
-        <?= getUiScripts() ?>
     </script>
+    <?= getUiScripts() ?>
 </body>
 </html>
 <?php skip_post: ?>

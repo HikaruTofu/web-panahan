@@ -11,6 +11,7 @@ if (!checkRateLimit('view_load', 60, 60)) {
 }
 
 $_GET = cleanInput($_GET);
+$searchQuery = $_GET['q'] ?? '';
 
 // Toast message handling
 $toast_message = '';
@@ -39,53 +40,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $kegiatanId = intval($_POST['id']);
 
         // Get name for toast - Prepared Statement
-        $stmt = $conn->prepare("SELECT nama_kegiatan FROM kegiatan WHERE id = ?");
-        $stmt->bind_param("i", $kegiatanId);
-        $stmt->execute();
-        $nameResult = $stmt->get_result();
+        $stmt_n = $conn->prepare("SELECT nama_kegiatan FROM kegiatan WHERE id = ?");
+        $stmt_n->bind_param("i", $kegiatanId);
+        $stmt_n->execute();
+        $nameResult = $stmt_n->get_result();
         $kegiatanName = $nameResult->fetch_assoc()['nama_kegiatan'] ?? 'Kegiatan';
-        $stmt->close();
+        $stmt_n->close();
 
-        // Hapus dari kegiatan_kategori (foreign key)
-        $stmt = $conn->prepare("DELETE FROM kegiatan_kategori WHERE kegiatan_id = ?");
-        $stmt->bind_param("i", $kegiatanId);
-        $stmt->execute();
-        $stmt->close();
+        // Start exhaustive cascading deletion
+        $conn->begin_transaction();
 
-        // Kemudian hapus dari kegiatan
-        $stmt = $conn->prepare("DELETE FROM kegiatan WHERE id = ?");
-        $stmt->bind_param("i", $kegiatanId);
-        if ($stmt->execute()) {
-            $toast_message = "Kegiatan '$kegiatanName' berhasil dihapus!";
-            $toast_type = 'success';
-        } else {
-            $toast_message = "Gagal menghapus kegiatan!";
-            $toast_type = 'error';
+        try {
+            // 1. Delete deeply nested related data first
+            // Delete scores (using kegiatan_id directly if possible, or via participants)
+            $conn->query("DELETE FROM score WHERE kegiatan_id = $kegiatanId");
+            
+            // Delete qualification scores
+            $conn->query("DELETE FROM qualification_scores WHERE kegiatan_id = $kegiatanId");
+            
+            // Delete peserta rounds (must be done via subquery since it doesn't have kegiatan_id)
+            $conn->query("DELETE FROM peserta_rounds WHERE peserta_id IN (SELECT id FROM peserta WHERE kegiatan_id = $kegiatanId)");
+            
+            // Delete tournament participants (if table exists)
+            // Delete tournament participants (skipped: table uses tournament_id, not kegiatan_id)
+            // $conn->query("DELETE FROM tournament_participants WHERE kegiatan_id = $kegiatanId");
+            
+            // Delete bracket related data
+            $conn->query("DELETE FROM bracket_matches WHERE kegiatan_id = $kegiatanId");
+            $conn->query("DELETE FROM bracket_champions WHERE kegiatan_id = $kegiatanId");
+            $conn->query("DELETE FROM tournament_settings WHERE kegiatan_id = $kegiatanId");
+
+            // 2. Delete main relations
+            // Delete participants
+            $conn->query("DELETE FROM peserta WHERE kegiatan_id = $kegiatanId");
+
+            // Delete categories linkage
+            $conn->query("DELETE FROM kegiatan_kategori WHERE kegiatan_id = $kegiatanId");
+
+            // 3. Final: Delete the activity itself
+            $stmt = $conn->prepare("DELETE FROM kegiatan WHERE id = ?");
+            $stmt->bind_param("i", $kegiatanId);
+            
+            if ($stmt->execute()) {
+                $conn->commit();
+                $toast_message = "Kegiatan '$kegiatanName' berhasil dihapus beserta seluruh data terkait (peserta, skor, bracket, dsb)";
+                $toast_type = "success";
+            } else {
+                throw new Exception($stmt->error);
+            }
+            $stmt->close();
+        } catch (Exception $e) {
+            $conn->rollback();
+            $toast_message = "Gagal menghapus kegiatan: " . $e->getMessage();
+            $toast_type = "error";
         }
-        $stmt->close();
     } else {
         $nama = $_POST['namaKegiatan'];
-    $kategoriDipilih = isset($_POST['kategori']) ? $_POST['kategori'] : [];
-    $editId = isset($_POST['editId']) ? intval($_POST['editId']) : null;
+        $kategoriDipilih = isset($_POST['kategori']) ? $_POST['kategori'] : [];
+        $editId = isset($_POST['editId']) ? intval($_POST['editId']) : null;
 
-    if ($editId) {
-        // Update data existing
-        $stmt = $conn->prepare("UPDATE kegiatan SET nama_kegiatan = ? WHERE id = ?");
-        $stmt->bind_param("si", $nama, $editId);
-        if ($stmt->execute()) {
-            $toast_message = "Kegiatan '$nama' berhasil diperbarui!";
-            $toast_type = 'success';
-        } else {
-            $toast_message = "Gagal memperbarui kegiatan!";
-            $toast_type = 'error';
+        if ($editId) {
+            // Update data existing
+            $stmt = $conn->prepare("UPDATE kegiatan SET nama_kegiatan = ? WHERE id = ?");
+            $stmt->bind_param("si", $nama, $editId);
+            if ($stmt->execute()) {
+                $toast_message = "Kegiatan '$nama' berhasil diperbarui!";
+                $toast_type = 'success';
+            } else {
+                $toast_message = "Gagal memperbarui kegiatan!";
+                $toast_type = 'error';
+            }
+            $stmt->close();
         }
-        $stmt->close();
 
-        // Hapus kategori lama
-        $conn->query("DELETE FROM kegiatan_kategori WHERE kegiatan_id = $editId");
-
-        $kegiatanId = $editId;
-    } else {
+        // Hapus kategori lama if editing
+        if ($editId) {
+            $conn->query("DELETE FROM kegiatan_kategori WHERE kegiatan_id = $editId");
+            $kegiatanId = $editId;
+        } else {
         // Insert data baru
         $stmt = $conn->prepare("INSERT INTO kegiatan (nama_kegiatan) VALUES (?)");
         $stmt->bind_param("s", $nama);
@@ -109,10 +141,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
         }
     }
+    }
 }
-}
+skip_post:
 
 // Ambil data kegiatan dengan kategorinya dan statistik peserta
+$searchCondition = "";
+if (!empty($searchQuery)) {
+    $searchCondition = " WHERE k.nama_kegiatan LIKE ? ";
+}
+
 $query = "
     SELECT
         k.id,
@@ -123,11 +161,16 @@ $query = "
     FROM kegiatan k
     LEFT JOIN kegiatan_kategori kk ON k.id = kk.kegiatan_id
     LEFT JOIN categories c ON kk.category_id = c.id
+    $searchCondition
     GROUP BY k.id, k.nama_kegiatan
     ORDER BY k.id DESC
 ";
 
 $stmt = $conn->prepare($query);
+if (!empty($searchQuery)) {
+    $searchWildcard = "%$searchQuery%";
+    $stmt->bind_param("s", $searchWildcard);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 $kegiatanData = [];
@@ -255,7 +298,7 @@ $role = $_SESSION['role'] ?? 'user';
 
                     <?= getThemeToggleButton() ?>
                 </div>
-                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
+                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -290,7 +333,7 @@ $role = $_SESSION['role'] ?? 'user';
             <?php endif; ?>
 
             <div class="px-6 lg:px-8 py-6">
-                <!-- Compact Header with Metrics -->
+                <!-- Precisely aligned header with users.php -->
                 <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm mb-6">
                     <div class="px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -310,38 +353,45 @@ $role = $_SESSION['role'] ?? 'user';
                         </div>
                     </div>
 
-                    <!-- Metrics Bar -->
+                    <!-- Metrics Bar Precisely Aligned -->
                     <div class="px-6 py-3 bg-slate-50 dark:bg-zinc-800/50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         <div class="flex items-center gap-2">
-
-                            <span class="text-2xl font-bold text-slate-900 dark:text-white"><?= $stats['total_kegiatan'] ?? 0 ?></span>
+                            <span class="text-2xl font-bold text-slate-900 dark:text-white"><?= number_format($stats['total_kegiatan'] ?? 0) ?></span>
                             <span class="text-slate-500 dark:text-zinc-400">Kegiatan</span>
                         </div>
                         <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
-                            <i class="fas fa-users text-archery-500 text-xs"></i>
-
-                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $stats['total_peserta'] ?? 0 ?></span>
+                            <i class="fas fa-users text-purple-500 text-xs"></i>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= number_format($stats['total_peserta'] ?? 0) ?></span>
                             <span class="text-slate-400 dark:text-zinc-500">Total Peserta</span>
                         </div>
                         <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
-                            <i class="fas fa-tags text-cyan-500 text-xs"></i>
-
-                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $stats['total_kategori_used'] ?? 0 ?></span>
-                            <span class="text-slate-400 dark:text-zinc-500">Kategori Dipakai</span>
+                            <i class="fas fa-tags text-amber-500 text-xs"></i>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= number_format($stats['total_kategori_used'] ?? 0) ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Kategori Terpakai</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Search Bar -->
                 <div class="flex flex-col sm:flex-row gap-4 mb-6">
-                    <div class="relative flex-1">
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 text-xs"></i>
-                        <input type="text" id="searchInput" onkeyup="searchData()"
-                               class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
-                               placeholder="Cari kegiatan...">
-                    </div>
+                    <form method="get" class="flex-1 flex gap-2">
+                        <div class="relative flex-1">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 text-xs"></i>
+                            <input type="search" name="q" value="<?= htmlspecialchars($searchQuery) ?>"
+                                   class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white"
+                                   placeholder="Cari nama kegiatan...">
+                        </div>
+                        <button type="submit" class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                            Cari
+                        </button>
+                        <?php if (!empty($searchQuery)): ?>
+                        <a href="?" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 text-sm hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors flex items-center">
+                            <i class="fas fa-times"></i>
+                        </a>
+                        <?php endif; ?>
+                    </form>
                 </div>
 
                 <!-- Desktop Table -->
@@ -523,7 +573,7 @@ $role = $_SESSION['role'] ?? 'user';
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
 
-                                    <button onclick="deleteData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium">
+                                    <button onclick="deleteData(<?= $item['id'] ?>, '<?= addslashes(htmlspecialchars($item['nama'] ?? '')) ?>')" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium">
                                         <i class="fas fa-trash"></i> Hapus
                                     </button>
                                 </div>
@@ -604,37 +654,12 @@ $role = $_SESSION['role'] ?? 'user';
             </form>
         </div>
     </div>
-    <!-- Delete Modal -->
-    <div id="deleteModal" class="modal-backdrop">
-        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-            <div class="bg-gradient-to-br from-red-600 to-red-800 text-white px-6 py-4 flex items-center justify-between">
-                <h3 class="font-semibold text-lg flex items-center gap-2">
-                    <i class="fas fa-trash"></i> Hapus Kegiatan
-                </h3>
-                <button onclick="closeModal('deleteModal')" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="p-6">
-                <p class="text-slate-700 dark:text-zinc-300">Apakah Anda yakin ingin menghapus kegiatan <strong id="delete_name_val" class="text-red-600 dark:text-red-400"></strong>?</p>
-                <p class="text-sm text-slate-500 dark:text-zinc-400 mt-2">Tindakan ini tidak dapat dibatalkan!</p>
-            </div>
-            <form method="POST">
-                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
-                    <input type="hidden" name="action" value="delete">
-
-                    <?php csrf_field(); ?>
-                    <input type="hidden" name="id" id="delete_id">
-                    <button type="button" onclick="closeModal('deleteModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
-                        Batal
-                    </button>
-                    <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">
-                        <i class="fas fa-trash mr-1"></i> Hapus
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Delete Modal replaced by showConfirmModal -->
+    <form id="deleteForm" method="POST" style="display: none;">
+        <?php csrf_field(); ?>
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" id="delete_id">
+    </form>
 
     <!-- Mobile Sidebar -->
     <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
@@ -671,7 +696,7 @@ $role = $_SESSION['role'] ?? 'user';
             </a>
         </nav>
         <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
-            <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
+            <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
                class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                 <i class="fas fa-sign-out-alt w-5"></i>
                 <span>Logout</span>
@@ -683,7 +708,11 @@ $role = $_SESSION['role'] ?? 'user';
 // Data kegiatan dari PHP
 
 const kegiatanData = <?= json_encode($kegiatanData) ?>;
-const allData = [...kegiatanData];
+
+function closeModal() {
+    document.getElementById('myModal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+}
 
 // Toast functions
 function dismissToast() {
@@ -714,14 +743,8 @@ function openModal() {
     checkboxes.forEach(checkbox => checkbox.checked = false);
 }
 
-function closeModal(id) {
-    const modalId = id || 'myModal';
-    document.getElementById(modalId).classList.remove('active');
-    document.body.style.overflow = '';
-}
-
 function editData(id) {
-    const item = allData.find(data => data.id == id);
+    const item = kegiatanData.find(data => data.id == id);
     if (item) {
         document.getElementById('myModal').classList.add('active');
         document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Data Kegiatan';
@@ -744,103 +767,15 @@ function editData(id) {
 }
 
 function deleteData(id, name) {
-    document.getElementById('delete_id').value = id;
-    document.getElementById('delete_name_val').textContent = name;
-    openModal('deleteModal');
-}
-
-function searchData() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-
-    if (searchTerm === '') {
-        displayData(allData);
-    } else {
-        const filtered = allData.filter(item =>
-            item.nama.toLowerCase().includes(searchTerm)
-        );
-        displayData(filtered);
-    }
-}
-
-function displayData(data) {
-    const tableBody = document.getElementById('tableBody');
-    const mobileCards = document.getElementById('mobileCards');
-
-    if (data.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-12"><div class="flex flex-col items-center text-center"><div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3"><i class="fas fa-search text-slate-400 text-2xl"></i></div><p class="text-slate-500 font-medium">Tidak ada data yang ditemukan</p></div></td></tr>`;
-        mobileCards.innerHTML = `<div class="bg-white rounded-xl border border-slate-200 p-8 text-center"><div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3"><i class="fas fa-search text-slate-400 text-2xl"></i></div><p class="text-slate-500 font-medium">Tidak ada data yang ditemukan</p></div>`;
-        return;
-    }
-
-    tableBody.innerHTML = data.map((item, index) => {
-        let categoryBadges = '';
-        if (item.category_names && item.category_names.length > 0) {
-            categoryBadges = item.category_names.map(name =>
-                `<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700">${name}</span>`
-            ).join(' ');
-        } else {
-            categoryBadges = '<span class="text-slate-400 italic text-sm">Belum ada kategori</span>';
-        }
-
-        const pesertaBadge = item.peserta_count > 0
-            ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-archery-50 text-archery-700"><i class="fas fa-users text-xs"></i> ${item.peserta_count}</span>`
-            : '<span class="text-slate-400 text-sm">-</span>';
-
-        return `
-            <tr class="hover:bg-slate-50 transition-colors">
-                <td class="px-4 py-3 text-sm text-slate-500">${index + 1}</td>
-                <td class="px-4 py-3"><p class="font-medium text-slate-900">${item.nama}</p></td>
-                <td class="px-4 py-3"><div class="flex flex-wrap gap-1">${categoryBadges}</div></td>
-                <td class="px-4 py-3 text-center">${pesertaBadge}</td>
-                <td class="px-4 py-3">
-                    <div class="flex items-center justify-center gap-1">
-                        <a href="peserta.view.php?add_peserta=1&kegiatan_id=${item.id}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium hover:bg-purple-100"><i class="fas fa-user-plus text-xs"></i> Daftar</a>
-                        <a href="detail.php?id=${item.id}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100"><i class="fas fa-eye text-xs"></i> Detail</a>
-                        <button onclick="editData(${item.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50"><i class="fas fa-edit text-sm"></i></button>
-                        <button onclick="deleteData(${item.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"><i class="fas fa-trash text-sm"></i></button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join('');
-
-    mobileCards.innerHTML = data.map((item, index) => {
-        let categoryBadges = '';
-        if (item.category_names && item.category_names.length > 0) {
-            categoryBadges = item.category_names.map(name =>
-                `<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 text-cyan-700">${name}</span>`
-            ).join(' ');
-        } else {
-            categoryBadges = '<span class="text-slate-400 italic text-sm">Belum ada kategori</span>';
-        }
-
-        const pesertaInfo = item.peserta_count > 0
-            ? `<span class="inline-flex items-center gap-1"><i class="fas fa-users text-archery-500"></i> ${item.peserta_count} peserta</span>`
-            : '';
-
-        return `
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4" data-id="${item.id}">
-                <div class="flex items-start gap-3 mb-3">
-                    <span class="text-sm text-slate-400 font-medium w-6">${index + 1}</span>
-                    <div class="flex-1 min-w-0">
-                        <p class="font-semibold text-slate-900">${item.nama}</p>
-                        <div class="flex items-center gap-2 mt-1 text-xs text-slate-500">
-                            ${pesertaInfo}
-                        </div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <div class="flex flex-wrap gap-1">${categoryBadges}</div>
-                </div>
-                <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100">
-                    <a href="peserta.view.php?add_peserta=1&kegiatan_id=${item.id}" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium"><i class="fas fa-user-plus"></i> Daftar</a>
-                    <a href="detail.php?id=${item.id}" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium"><i class="fas fa-eye"></i> Detail</a>
-                    <button onclick="editData(${item.id})" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-medium"><i class="fas fa-edit"></i> Edit</button>
-                    <button onclick="deleteData(${item.id})" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 text-red-700 text-xs font-medium"><i class="fas fa-trash"></i> Hapus</button>
-                </div>
-            </div>
-        `;
-    }).join('');
+    showConfirmModal(
+        'Hapus Kegiatan',
+        `Apakah Anda yakin ingin menghapus kegiatan <strong class="text-red-600 dark:text-red-400">${name}</strong>?<br><br><span class="text-xs text-red-500 italic font-semibold">PERINGATAN: Semua data PESERTA dan SKOR dalam kegiatan ini juga akan dihapus permanen!</span>`,
+        () => {
+            document.getElementById('delete_id').value = id;
+            document.getElementById('deleteForm').submit();
+        },
+        'danger'
+    );
 }
 
 // Form validation
@@ -896,8 +831,10 @@ closeMobileMenu?.addEventListener('click', toggleMobileMenu);
 
 // Theme Toggle
 
-<?= getThemeToggleScript() ?></script>
+<?= getThemeToggleScript() ?>
+</script>
     <?= getConfirmationModal() ?>
+    <?= getUiScripts() ?>
 </body>
 </html>
-<?php skip_post: ?>
+<?php if (isset($conn)) $conn->close(); ?>
