@@ -1261,6 +1261,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
     if (isset($_POST['create'])) {
         enforceAdmin();
+        if (!checkRateLimit('create_scoreboard', 10, 60)) {
+            die('Terlalu banyak permintaan.');
+        }
+        verify_csrf();
+        $_POST = cleanInput($_POST);
         security_log("New score board created for activity $kegiatan_id, category $category_id");
         $stmtC = $conn->prepare("INSERT INTO `score_boards` (`kegiatan_id`, `category_id`, `jumlah_sesi`, `jumlah_anak_panah`, `created`) VALUES (?, ?, ?, ?, ?)");
         $stmtC->bind_param("iiiis", $kegiatan_id, $category_id, $_POST['jumlahSesi'], $_POST['jumlahPanah'], $_POST['local_time']);
@@ -1271,6 +1276,18 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
     if (isset($_POST['save_score'])) {
         header("Content-Type: application/json; charset=UTF-8");
+        
+        if (!checkRateLimit('save_score', 120, 60)) {
+            echo json_encode(['status' => 'error', 'message' => 'Rate limit exceeded']);
+            exit;
+        }
+        // CSRF Verification for AJAX
+        if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+             echo json_encode(['status' => 'error', 'message' => 'CSRF Invalid']);
+             exit;
+        }
+        $_POST = cleanInput($_POST);
+
         $sb_id = intval($_GET['scoreboard'] ?? 0);
         $peserta_id = intval($_POST['peserta_id'] ?? 0);
         $arrow = intval($_POST['arrow'] ?? 0);
