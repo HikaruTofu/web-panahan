@@ -286,7 +286,9 @@ try {
     <title>Dashboard - Turnamen Panahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script><?= getThemeTailwindConfig() ?></script>
+    <script><?= getThemeTailwindConfig() ?></script>
     <script><?= getThemeInitScript() ?></script>
+    <script><?= getUiScripts() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Skeleton Animation */
@@ -414,7 +416,7 @@ try {
                     <?= getThemeToggleButton() ?>
                 </div>
                 <a href="../actions/logout.php"
-                   onclick="return confirm('Yakin ingin logout?')"
+                   onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -845,7 +847,7 @@ try {
             </a>
         </nav>
         <div class="absolute bottom-0 left-0 right-0 px-4 py-4 border-t border-zinc-800">
-            <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+            <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
                class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 text-sm">
                 <i class="fas fa-sign-out-alt w-5"></i>
                 <span>Logout</span>
@@ -1074,6 +1076,7 @@ try {
         // Theme Toggle Functionality
         <?= getThemeToggleScript() ?>
     </script>
+    <?= getConfirmationModal() ?>
 </body>
 </html>
 <?php skip_post: ?>

@@ -582,6 +582,7 @@ $role = $_SESSION['role'] ?? 'user';
     <script src="https://cdn.tailwindcss.com"></script>
     <script><?= getThemeTailwindConfig() ?></script>
     <script><?= getThemeInitScript() ?></script>
+    <script><?= getUiScripts() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -653,7 +654,7 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
                     <?= getThemeToggleButton() ?>
                 </div>
-                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -696,7 +697,7 @@ $role = $_SESSION['role'] ?? 'user';
                                 </form>
                                 <a href="?export=excel<?= !empty($gender) ? '&gender=' . $gender : '' ?><?= !empty($nama) ? '&nama=' . $nama : '' ?><?= !empty($club) ? '&club=' . $club : '' ?><?= !empty($kategori_filter) ? '&kategori=' . $kategori_filter : '' ?>"
                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
-                                   onclick="return confirm('Export data statistik ke Excel?')">
+                                   onclick="const url=this.href; showConfirmModal('Export Data', 'Apakah Anda yakin ingin mengekspor data statistik ke Excel?', () => window.location.href = url); return false;">
                                     <i class="fas fa-file-excel"></i>
                                     <span class="hidden sm:inline">Export</span>
                                 </a>
@@ -1081,7 +1082,7 @@ $role = $_SESSION['role'] ?? 'user';
             </a>
         </nav>
         <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
-            <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+            <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
                class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                 <i class="fas fa-sign-out-alt w-5"></i>
                 <span>Logout</span>
@@ -1231,5 +1232,7 @@ $role = $_SESSION['role'] ?? 'user';
         // Theme Toggle
         <?= getThemeToggleScript() ?>
     </script>
+    </script>
+    <?= getConfirmationModal() ?>
 </body>
 </html>

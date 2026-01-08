@@ -319,7 +319,9 @@ CREATE TABLE `peserta` (
   `nomor_hp` varchar(20) DEFAULT NULL,
   `bukti_pembayaran` varchar(255) DEFAULT NULL,
   `category_id` int(11) DEFAULT NULL,
-  `kegiatan_id` int(11) DEFAULT NULL
+  `kegiatan_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --

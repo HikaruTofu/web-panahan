@@ -137,16 +137,25 @@ function enforceAdmin() {
  */
 function security_log($event, $status = 'INFO') {
     $log_dir = dirname(__DIR__) . '/logs';
+    $log_ready = true;
+
     if (!file_exists($log_dir)) {
-        mkdir($log_dir, 0755, true);
-        // Add .htaccess to deny access to logs
-        file_put_contents($log_dir . '/.htaccess', "Deny from all");
+        if (!@mkdir($log_dir, 0755, true)) {
+            $log_ready = false;
+        } else {
+            @file_put_contents($log_dir . '/.htaccess', "Deny from all");
+        }
     }
-    
+
     $date = date('Y-m-d H:i:s');
     $user = $_SESSION['username'] ?? 'Anonymous';
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
-    $message = "[$date] [$status] [User: $user] [IP: $ip] - $event" . PHP_EOL;
-    
-    error_log($message, 3, $log_dir . '/security.log');
+    $message = "[$date] [$status] [User: $user] [IP: $ip] - $event";
+
+    if ($log_ready && is_writable($log_dir)) {
+        @error_log($message . PHP_EOL, 3, $log_dir . '/security.log');
+    } else {
+        // Fallback to standard system error log
+        error_log("SECURITY LOG: $message");
+    }
 }

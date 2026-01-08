@@ -160,4 +160,158 @@ function getThemeToggleButton($extraClasses = '') {
 </button>
 HTML;
 }
+/**
+ * Get the global confirmation modal HTML
+ * Include this at the end of the body
+ */
+function getConfirmationModal() {
+    return <<<'HTML'
+<div id="confirmModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0" id="confirmBackdrop"></div>
+    
+    <!-- Modal Panel -->
+    <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-md opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" id="confirmPanel">
+                <div class="px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 sm:mx-0 sm:h-10 sm:w-10" id="confirmIconBg">
+                            <i class="fas fa-exclamation-triangle text-amber-600 dark:text-amber-500" id="confirmIcon"></i>
+                        </div>
+                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                            <h3 class="text-base font-bold leading-6 text-slate-900 dark:text-white" id="confirmTitle">
+                                Konfirmasi
+                            </h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-slate-500 dark:text-zinc-400" id="confirmMessage">
+                                    Apakah Anda yakin ingin melanjutkan tindakan ini?
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-slate-50 dark:bg-zinc-800/50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                    <button type="button" id="confirmBtn" class="inline-flex w-full justify-center rounded-xl bg-slate-900 dark:bg-white px-3 py-2 text-sm font-bold text-white dark:text-slate-900 shadow-sm hover:bg-slate-800 dark:hover:bg-zinc-200 sm:ml-3 sm:w-auto transition-colors">
+                        Ya, Lanjutkan
+                    </button>
+                    <button type="button" id="cancelBtn" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white dark:bg-zinc-800 px-3 py-2 text-sm font-bold text-slate-900 dark:text-white shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 sm:mt-0 sm:w-auto transition-colors">
+                        Batal
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Includes for Flatpickr -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/id.js"></script>
+HTML;
+}
+
+/**
+ * Get scripts for custom UI components (Modal & Flatpickr)
+ * Include at the end of body
+ */
+function getUiScripts() {
+    return <<<'JS'
+<script>
+    // --- Custom Confirmation Modal ---
+    let confirmCallback = null;
+
+    function showConfirmModal(title, message, callback, type = 'warning') {
+        const modal = document.getElementById('confirmModal');
+        const backdrop = document.getElementById('confirmBackdrop');
+        const panel = document.getElementById('confirmPanel');
+        const titleEl = document.getElementById('confirmTitle');
+        const msgEl = document.getElementById('confirmMessage');
+        const icon = document.getElementById('confirmIcon');
+        const iconBg = document.getElementById('confirmIconBg');
+        const confirmBtn = document.getElementById('confirmBtn');
+
+        titleEl.textContent = title;
+        msgEl.textContent = message;
+        confirmCallback = callback;
+
+        // Type styling
+        if (type === 'danger') {
+             icon.className = 'fas fa-exclamation-triangle text-red-600 dark:text-red-500';
+             iconBg.className = 'mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 sm:mx-0 sm:h-10 sm:w-10';
+             confirmBtn.className = 'inline-flex w-full justify-center rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto transition-colors';
+        } else {
+             icon.className = 'fas fa-info-circle text-blue-600 dark:text-blue-500';
+             iconBg.className = 'mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 sm:mx-0 sm:h-10 sm:w-10';
+             confirmBtn.className = 'inline-flex w-full justify-center rounded-xl bg-slate-900 dark:bg-white px-3 py-2 text-sm font-bold text-white dark:text-slate-900 shadow-sm hover:bg-slate-800 dark:hover:bg-zinc-200 sm:ml-3 sm:w-auto transition-colors';
+        }
+
+        modal.classList.remove('hidden');
+        
+        // Animate in
+        setTimeout(() => {
+            backdrop.classList.remove('opacity-0');
+            panel.classList.remove('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
+            panel.classList.add('opacity-100', 'translate-y-0', 'sm:scale-100');
+        }, 10);
+    }
+
+    function closeConfirmModal() {
+        const modal = document.getElementById('confirmModal');
+        const backdrop = document.getElementById('confirmBackdrop');
+        const panel = document.getElementById('confirmPanel');
+
+        backdrop.classList.add('opacity-0');
+        panel.classList.remove('opacity-100', 'translate-y-0', 'sm:scale-100');
+        panel.classList.add('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            confirmCallback = null;
+        }, 300);
+    }
+
+    document.getElementById('confirmBtn').addEventListener('click', () => {
+        if (confirmCallback) confirmCallback();
+        closeConfirmModal();
+    });
+
+    document.getElementById('cancelBtn').addEventListener('click', closeConfirmModal);
+
+    // --- Flatpickr Initialization ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const isDark = document.documentElement.classList.contains('dark');
+        
+        flatpickr(".datepicker", {
+            dateFormat: "Y-m-d",
+            altInput: true,
+            altFormat: "j F Y",
+            locale: "id",
+            disableMobile: "true", // Force custom picker on mobile
+            theme: isDark ? "dark" : "light",
+            onChange: function(selectedDates, dateStr, instance) {
+                instance.element.dispatchEvent(new Event('change'));
+            }
+        });
+        
+        // Re-init on dynamic content if needed
+        window.initDatePickers = function() {
+             const isDark = document.documentElement.classList.contains('dark');
+             flatpickr(".datepicker", {
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "j F Y",
+                locale: "id",
+                disableMobile: "true",
+                theme: isDark ? "dark" : "light",
+                onChange: function(selectedDates, dateStr, instance) {
+                    instance.element.dispatchEvent(new Event('change'));
+                }
+            });
+        };
+    });
+</script>
+JS;
+}
 ?>

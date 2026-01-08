@@ -312,7 +312,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                         </div>
                         <?= getThemeToggleButton() ?>
                     </div>
-                    <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                    <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
                        class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                         <i class="fas fa-sign-out-alt w-5"></i><span>Logout</span>
                     </a>
@@ -438,7 +438,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 </a>
             </nav>
             <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
-                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
                    class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -482,7 +482,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
             }
 
             function backToSetup() {
-                if (confirm('Kembali ke setup akan mereset semua data bracket. Lanjutkan?')) {
+                showConfirmModal('Reset Bracket', 'Kembali ke setup akan mereset semua data bracket. Lanjutkan?', () => {
                     document.getElementById('setupContainer').style.display = 'block';
                     document.getElementById('bracketContainer').classList.add('hidden');
 
@@ -492,7 +492,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     bracketData = {};
                     shuffledPeserta = [];
                     semifinalLosers = [];
-                }
+                }, 'warning');
             }
 
             function showPlaceholderBracket() {
@@ -1451,7 +1451,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         </div>
                         <?= getThemeToggleButton() ?>
                     </div>
-                    <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                    <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
                        class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                         <i class="fas fa-sign-out-alt w-5"></i><span>Logout</span>
                     </a>
@@ -1765,6 +1765,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             <?php } ?>
 
             const pesertaData = <?= json_encode($pesertaList) ?>;
+            const CSRF_TOKEN = "<?= $_SESSION['csrf_token'] ?>";
             let selectedPesertaId = null;
             let saveTimeout = null;
             let inputTimeout = null;
@@ -1964,9 +1965,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             <?php } ?>
 
             function delete_score_board(kegiatan_id, category_id, id) {
-                if (confirm("Apakah anda yakin akan menghapus data ini?")) {
-                    window.location.href = `detail.php?action=scorecard&resource=index&kegiatan_id=${kegiatan_id}&category_id=${category_id}&delete_score_board=${id}`;
-                }
+                showConfirmModal('Hapus Data', 'Apakah anda yakin akan menghapus data ini?', () => {
+                   window.location.href = `detail.php?action=scorecard&resource=index&kegiatan_id=${kegiatan_id}&category_id=${category_id}&delete_score_board=${id}`;
+                }, 'danger');
             }
 
             <?php
@@ -2085,9 +2086,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             }
 
             function changePeserta() {
-                if (confirm('Yakin ingin ganti peserta? Data yang telah diinput sudah tersimpan.')) {
+                showConfirmModal('Ganti Peserta', 'Yakin ingin ganti peserta? Data yang telah diinput sudah tersimpan.', () => {
                     location.reload();
-                }
+                });
             }
 
             function goBack() {
@@ -2384,6 +2385,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         "Content-Type": "application/x-www-form-urlencoded"
                     },
                     body: "save_score=1" +
+                        "&csrf_token=" + encodeURIComponent(CSRF_TOKEN) +
                         "&peserta_id=" + encodeURIComponent(arr_playerID[1]) +
                         "&arrow=" + encodeURIComponent(arrow) +
                         "&session=" + encodeURIComponent(session) +
@@ -2697,7 +2699,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 </a>
             </nav>
             <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
-                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
                    class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -2753,11 +2755,18 @@ $kegiatan_id = isset($_GET['kegiatan_id']) ? intval($_GET['kegiatan_id']) : null
 
 if (!$kegiatan_id) {
     try {
-        $queryFirstKegiatan = "SELECT id FROM kegiatan WHERE id = " . (isset($_GET['POST']) ? intval($_GET['POST']) : $_GET['id']);
-        $resultFirstKegiatan = $conn->query($queryFirstKegiatan);
-        if ($resultFirstKegiatan && $resultFirstKegiatan->num_rows > 0) {
-            $firstKegiatan = $resultFirstKegiatan->fetch_assoc();
-            $kegiatan_id = $firstKegiatan['id'];
+        $id_param = isset($_GET['POST']) ? intval($_GET['POST']) : (isset($_GET['id']) ? intval($_GET['id']) : 0);
+        if ($id_param > 0) {
+            $queryFirstKegiatan = "SELECT id FROM kegiatan WHERE id = ?";
+            $stmtFirst = $conn->prepare($queryFirstKegiatan);
+            $stmtFirst->bind_param("i", $id_param);
+            $stmtFirst->execute();
+            $resultFirstKegiatan = $stmtFirst->get_result();
+            if ($resultFirstKegiatan && $resultFirstKegiatan->num_rows > 0) {
+                $firstKegiatan = $resultFirstKegiatan->fetch_assoc();
+                $kegiatan_id = $firstKegiatan['id'];
+            }
+            $stmtFirst->close();
         }
     } catch (Exception $e) {
         die("Error mengambil kegiatan: " . $e->getMessage());
@@ -3038,7 +3047,7 @@ function buildPaginationUrl($page, $params = []) {
                     </div>
                     <?= getThemeToggleButton() ?>
                 </div>
-                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -3409,7 +3418,7 @@ function buildPaginationUrl($page, $params = []) {
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     <?php foreach ($statistik['kategori'] as $kategori => $jumlah): ?>
                     <div class="bg-white dark:bg-zinc-800 rounded-lg p-3 text-center shadow-sm">
-                        <p class="font-medium text-slate-700 dark:text-zinc-300 text-sm"><?= htmlspecialchars($kategori) ?></p>
+                        <p class="font-medium text-slate-700 dark:text-zinc-300 text-sm"><?= htmlspecialchars($kategori ?? '') ?></p>
                         <p class="text-lg font-bold text-archery-600 dark:text-archery-400"><?= $jumlah ?></p>
                         <p class="text-xs text-slate-400 dark:text-zinc-500">orang</p>
                     </div>
@@ -3461,12 +3470,12 @@ function buildPaginationUrl($page, $params = []) {
                     <i class="fas fa-user text-zinc-400 text-sm"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
-                    <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
+                    <p class="text-sm font-medium truncate"><?= htmlspecialchars($name ?? '') ?></p>
+                    <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role ?? '') ?></p>
                 </div>
                 <?= getThemeToggleButton() ?>
             </div>
-            <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+            <a href="../actions/logout.php" onclick="event.preventDefault(); const url = this.href; showConfirmModal('Logout', 'Yakin ingin logout?', () => window.location.href = url, 'danger')"
                class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                 <i class="fas fa-sign-out-alt w-5"></i>
                 <span>Logout</span>
@@ -3487,6 +3496,7 @@ function buildPaginationUrl($page, $params = []) {
         </div>
     </div>
 
+    <?= getConfirmationModal() ?>
     <script>
         document.getElementById('filter_kategori').addEventListener('change', function () {
             updateInputButton();
@@ -3630,6 +3640,7 @@ function buildPaginationUrl($page, $params = []) {
         // Theme Toggle
         <?= getThemeToggleScript() ?>
     </script>
+    <?= getUiScripts() ?>
 </body>
 
 </html>

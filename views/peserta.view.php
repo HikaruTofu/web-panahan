@@ -16,9 +16,10 @@ if (!checkRateLimit('view_load', 60, 60)) {
 
 $_GET = cleanInput($_GET);
 
-// Toast message handling
-$toast_message = '';
-$toast_type = '';
+// Toast message handling - check session first for flash messages
+$toast_message = $_SESSION['toast_message'] ?? '';
+$toast_type = $_SESSION['toast_type'] ?? '';
+unset($_SESSION['toast_message'], $_SESSION['toast_type']);
 
 // Handle AJAX request for getting peserta by club (from pendaftaran.php)
 if (isset($_GET['action']) && $_GET['action'] === 'get_peserta') {
@@ -95,13 +96,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
     if (!checkRateLimit('peserta_crud', 10, 60)) {
         $toast_message = "Terlalu banyak permintaan. Silakan coba lagi dalam satu menit.";
         $toast_type = 'error';
-        goto skip_post;
-    }
-    verify_csrf();
-    $_POST = cleanInput($_POST);
-    $action = $_POST['action'];
-    
-    switch ($action) {
+    } else {
+        verify_csrf();
+        $_POST = cleanInput($_POST);
+        $action = $_POST['action'];
+        
+        switch ($action) {
         case 'create':
             $nama_peserta = $_POST['nama_peserta'] ?? '';
             $tanggal_lahir = $_POST['tanggal_lahir'] ?? '';
@@ -180,8 +180,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
             }
 
             if ($successCount > 0) {
-                $toast_message = "$successCount pendaftaran berhasil ditambahkan!";
-                $toast_type = 'success';
+                $_SESSION['toast_message'] = "$successCount pendaftaran berhasil ditambahkan!";
+                $_SESSION['toast_type'] = 'success';
+                
+                // Redirect to clean URL while preserving relevant filters
+                $params = $_GET;
+                unset($params['add_peserta']); // Stop modal from reopening
+                if ($kegiatan_id) $params['kegiatan_id'] = $kegiatan_id; // Show new activity
+                
+                header("Location: ?" . http_build_query($params));
+                exit;
             } else {
                 $toast_message = "Kategori yang dipilih sudah terdaftar!";
                 $toast_type = 'error';
@@ -204,8 +212,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
             $stmt = $conn->prepare("UPDATE peserta SET nama_peserta=?, category_id=?, kegiatan_id=?, tanggal_lahir=?, jenis_kelamin=?, asal_kota=?, nama_club=?, sekolah=?, kelas=?, nomor_hp=?, updated_at=NOW() WHERE id=?");
             $stmt->bind_param("siisssssssi", $nama_peserta, $category_id, $kegiatan_id, $tanggal_lahir, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp, $id);
             if ($stmt->execute()) {
-                $toast_message = "Data peserta berhasil diperbarui!";
-                $toast_type = 'success';
+                $_SESSION['toast_message'] = "Data peserta berhasil diperbarui!";
+                $_SESSION['toast_type'] = 'success';
+                
+                $params = $_GET;
+                if ($kegiatan_id) $params['kegiatan_id'] = $kegiatan_id;
+                
+                header("Location: ?" . http_build_query($params));
+                exit;
             } else {
                 $toast_message = "Gagal memperbarui data!";
                 $toast_type = 'error';
@@ -229,8 +243,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 $stmt = $conn->prepare("DELETE FROM peserta WHERE id = ?");
                 $stmt->bind_param("i", $id);
                 if ($stmt->execute()) {
-                    $toast_message = "Data peserta berhasil dihapus!";
-                    $toast_type = 'success';
+                    $_SESSION['toast_message'] = "Data peserta berhasil dihapus!";
+                    $_SESSION['toast_type'] = 'success';
+                    
+                    header("Location: ?" . http_build_query($_GET));
+                    exit;
                 } else {
                     $toast_message = "Gagal menghapus data!";
                     $toast_type = 'error';
@@ -611,7 +628,7 @@ $role = $_SESSION['role'] ?? 'user';
 
                     <?= getThemeToggleButton() ?>
                 </div>
-                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                <a href="../actions/logout.php" onclick="event.preventDefault(); const url = this.href; showConfirmModal('Logout', 'Yakin ingin logout?', () => window.location.href = url, 'danger')"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -679,7 +696,7 @@ $role = $_SESSION['role'] ?? 'user';
 
                                 <a href="<?= $exportUrl ?>"
                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
-                                   onclick="return confirm('Export data peserta ke Excel?')">
+                                   onclick="event.preventDefault(); const url = this.href; showConfirmModal('Export Data', 'Export data peserta ke Excel?', () => window.location.href = url)">
                                     <i class="fas fa-file-excel text-emerald-600"></i>
                                     <span class="hidden sm:inline">Export</span>
                                 </a>
@@ -1119,7 +1136,7 @@ $role = $_SESSION['role'] ?? 'user';
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-zinc-800">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Tanggal Lahir <span class="text-red-500">*</span></label>
-                            <input type="date" id="add_tanggal_lahir" name="tanggal_lahir" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" onchange="updateKategoriOptions('add')" required>
+                            <input type="text" id="add_tanggal_lahir" name="tanggal_lahir" class="datepicker w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" placeholder="Pilih Tanggal" onchange="updateKategoriOptions('add')" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Jenis Kelamin <span class="text-red-500">*</span></label>
@@ -1260,7 +1277,7 @@ $role = $_SESSION['role'] ?? 'user';
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Tanggal Lahir <span class="text-red-500">*</span></label>
-                            <input type="date" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="tanggal_lahir" id="edit_tanggal_lahir" required>
+                            <input type="text" class="datepicker w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="tanggal_lahir" id="edit_tanggal_lahir" placeholder="Pilih Tanggal" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Jenis Kelamin <span class="text-red-500">*</span></label>
@@ -1388,7 +1405,7 @@ $role = $_SESSION['role'] ?? 'user';
             </a>
         </nav>
         <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
-            <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+            <a href="../actions/logout.php" onclick="event.preventDefault(); const url = this.href; showConfirmModal('Logout', 'Yakin ingin logout?', () => window.location.href = url, 'danger')"
                class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                 <i class="fas fa-sign-out-alt w-5"></i>
                 <span>Logout</span>
@@ -1397,6 +1414,8 @@ $role = $_SESSION['role'] ?? 'user';
     </div>
 
     <script>
+        <?= getConfirmationModal() ?>
+
         // Mobile menu toggle logic
         function toggleMobileMenu() {
             const mobileSidebar = document.getElementById('mobile-sidebar');
@@ -1709,6 +1728,7 @@ $role = $_SESSION['role'] ?? 'user';
 
 
         <?= getThemeToggleScript() ?>
+        <?= getUiScripts() ?>
     </script>
 </body>
 </html>

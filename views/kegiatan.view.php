@@ -171,6 +171,7 @@ $role = $_SESSION['role'] ?? 'user';
     <script><?= getThemeTailwindConfig() ?></script>
 
     <script><?= getThemeInitScript() ?></script>
+    <script><?= getUiScripts() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -254,7 +255,7 @@ $role = $_SESSION['role'] ?? 'user';
 
                     <?= getThemeToggleButton() ?>
                 </div>
-                <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+                <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
                    class="flex items-center gap-2 w-full mt-3 px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                     <i class="fas fa-sign-out-alt w-5"></i>
                     <span>Logout</span>
@@ -670,7 +671,7 @@ $role = $_SESSION['role'] ?? 'user';
             </a>
         </nav>
         <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
-            <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
+            <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url); return false;"
                class="flex items-center gap-2 w-full px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm">
                 <i class="fas fa-sign-out-alt w-5"></i>
                 <span>Logout</span>
@@ -895,8 +896,8 @@ closeMobileMenu?.addEventListener('click', toggleMobileMenu);
 
 // Theme Toggle
 
-<?= getThemeToggleScript() ?>
-</script>
+<?= getThemeToggleScript() ?></script>
+    <?= getConfirmationModal() ?>
 </body>
 </html>
 <?php skip_post: ?>
