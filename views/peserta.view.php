@@ -8,6 +8,13 @@ include '../includes/check_access.php';
 include '../includes/theme.php';
 requireAdmin();
 
+if (!checkRateLimit('view_load', 60, 60)) {
+    header('HTTP/1.1 429 Too Many Requests');
+    die('Terlalu banyak permintaan. Silakan coba lagi nanti.');
+}
+
+$_GET = cleanInput($_GET);
+
 // Toast message handling
 $toast_message = '';
 $toast_type = '';
@@ -84,6 +91,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_categories') {
 
 // Handle CRUD Operations
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    if (!checkRateLimit('peserta_crud', 10, 60)) {
+        $toast_message = "Terlalu banyak permintaan. Silakan coba lagi dalam satu menit.";
+        $toast_type = 'error';
+        goto skip_post;
+    }
     verify_csrf();
     $_POST = cleanInput($_POST);
     $action = $_POST['action'];
@@ -508,6 +520,7 @@ function buildPaginationUrl($page, $params = []) {
 $username = $_SESSION['username'] ?? 'User';
 $name = $_SESSION['name'] ?? $username;
 $role = $_SESSION['role'] ?? 'user';
+skip_post:
 ?>
 <!DOCTYPE html>
 <html lang="id" class="h-full">
@@ -516,7 +529,9 @@ $role = $_SESSION['role'] ?? 'user';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Peserta - Turnamen Panahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
+skip_post:
     <script><?= getThemeTailwindConfig() ?></script>
+skip_post:
     <script><?= getThemeInitScript() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -586,10 +601,13 @@ $role = $_SESSION['role'] ?? 'user';
                         <i class="fas fa-user text-zinc-400 text-sm"></i>
                     </div>
                     <div class="flex-1 min-w-0">
+skip_post:
                         <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
+skip_post:
                         <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
                     </div>
                     <!-- Theme Toggle -->
+skip_post:
                     <?= getThemeToggleButton() ?>
                 </div>
                 <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
@@ -609,16 +627,22 @@ $role = $_SESSION['role'] ?? 'user';
         <main class="flex-1 overflow-auto">
             <div class="px-6 lg:px-8 py-6">
                 <!-- Toast Notification -->
+skip_post:
                 <?php if (!empty($toast_message)): ?>
                 <div id="toast" class="fixed top-4 right-4 z-[200]">
+skip_post:
                     <div class="flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg <?= $toast_type === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800' ?>">
+skip_post:
                         <i class="fas <?= $toast_type === 'success' ? 'fa-check-circle text-emerald-500' : 'fa-exclamation-circle text-red-500' ?>"></i>
+skip_post:
                         <span class="text-sm font-medium"><?= htmlspecialchars($toast_message) ?></span>
+skip_post:
                         <button onclick="dismissToast()" class="ml-2 <?= $toast_type === 'success' ? 'text-emerald-500 hover:text-emerald-700' : 'text-red-500 hover:text-red-700' ?>">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                 </div>
+skip_post:
                 <?php endif; ?>
 
                 <!-- Compact Header with Metrics -->
@@ -649,7 +673,9 @@ $role = $_SESSION['role'] ?? 'user';
                                 if (!empty($club)) $exportParams['club'] = $club;
                                 $exportParams['export'] = 'excel';
                                 $exportUrl = '?' . http_build_query($exportParams);
+skip_post:
                                 ?>
+skip_post:
                                 <a href="<?= $exportUrl ?>"
                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
                                    onclick="return confirm('Export data peserta ke Excel?')">
@@ -663,28 +689,33 @@ $role = $_SESSION['role'] ?? 'user';
                     <!-- Metrics Bar -->
                     <div class="px-6 py-3 bg-slate-50 dark:bg-zinc-800 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         <div class="flex items-center gap-2">
+skip_post:
                             <span class="text-2xl font-bold text-slate-900 dark:text-white"><?= $uniqueCount ?></span>
                             <span class="text-slate-500 dark:text-zinc-400">Peserta Unik</span>
                         </div>
                         <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <span class="text-slate-400 dark:text-zinc-500 text-xs">Total Entri:</span>
+skip_post:
                             <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalPeserta ?></span>
                         </div>
                         <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-mars text-blue-500 text-xs"></i>
+skip_post:
                             <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalLaki ?></span>
                             <span class="text-slate-400 dark:text-zinc-500">Laki-laki</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-venus text-pink-500 text-xs"></i>
+skip_post:
                             <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalPerempuan ?></span>
                             <span class="text-slate-400 dark:text-zinc-500">Perempuan</span>
                         </div>
                         <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-check-circle text-emerald-500 text-xs"></i>
+skip_post:
                             <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $totalBayar ?></span>
                             <span class="text-slate-400 dark:text-zinc-500">Sudah Bayar</span>
                         </div>
@@ -705,10 +736,14 @@ $role = $_SESSION['role'] ?? 'user';
                                 <!-- SELECT: name="category_id" (UNCHANGED) -->
                                 <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="category_id">
                                     <option value="">Semua Kategori</option>
+skip_post:
                                     <?php foreach ($kategoriList as $kat): ?>
+skip_post:
                                         <option value="<?= $kat['id'] ?>" <?= $category_id==$kat['id']?'selected':'' ?>>
+skip_post:
                                             <?= htmlspecialchars($kat['name']) ?>
                                         </option>
+skip_post:
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -717,10 +752,14 @@ $role = $_SESSION['role'] ?? 'user';
                                 <!-- SELECT: name="kegiatan_id" (UNCHANGED) -->
                                 <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="kegiatan_id">
                                     <option value="">Semua Kegiatan</option>
+skip_post:
                                     <?php foreach ($kegiatanList as $keg): ?>
+skip_post:
                                         <option value="<?= $keg['id'] ?>" <?= $kegiatan_id==$keg['id']?'selected':'' ?>>
+skip_post:
                                             <?= htmlspecialchars($keg['nama_kegiatan']) ?>
                                         </option>
+skip_post:
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -729,18 +768,22 @@ $role = $_SESSION['role'] ?? 'user';
                                 <!-- SELECT: name="gender" (UNCHANGED) -->
                                 <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="gender">
                                     <option value="">Semua</option>
+skip_post:
                                     <option value="Laki-laki" <?= $gender=="Laki-laki"?'selected':'' ?>>Laki-laki</option>
+skip_post:
                                     <option value="Perempuan" <?= $gender=="Perempuan"?'selected':'' ?>>Perempuan</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama</label>
                                 <!-- INPUT: name="nama" (UNCHANGED) -->
+skip_post:
                                 <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="nama" value="<?= htmlspecialchars($nama) ?>" placeholder="Cari nama...">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Club</label>
                                 <!-- INPUT: name="club" (UNCHANGED) -->
+skip_post:
                                 <input type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-archery-500 focus:border-archery-500" name="club" value="<?= htmlspecialchars($club) ?>" placeholder="Nama club...">
                             </div>
                             <div class="flex items-end gap-2">
@@ -756,11 +799,14 @@ $role = $_SESSION['role'] ?? 'user';
                 </div>
 
                 <!-- Info Alert for Duplicates -->
+skip_post:
                 <?php if ($totalPeserta > $uniqueCount): ?>
                 <div class="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">
                     <i class="fas fa-info-circle text-blue-500"></i>
+skip_post:
                     <span class="text-sm">Ditemukan <?= $totalPeserta - $uniqueCount ?> peserta dengan nama yang sama. Data telah digabungkan.</span>
                 </div>
+skip_post:
                 <?php endif; ?>
 
                 <!-- Data Table -->
@@ -782,6 +828,7 @@ $role = $_SESSION['role'] ?? 'user';
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
+skip_post:
                                 <?php if (empty($pesertaGrouped)): ?>
                                     <tr>
                                         <td colspan="10" class="px-4 py-12 text-center">
@@ -794,6 +841,7 @@ $role = $_SESSION['role'] ?? 'user';
                                             </div>
                                         </td>
                                     </tr>
+skip_post:
                                 <?php else: ?>
                                     <?php
                                     $no = $offset + 1;
@@ -810,81 +858,117 @@ $role = $_SESSION['role'] ?? 'user';
                                         }
 
                                         $hasBayar = !empty($p['bukti_pembayaran']);
+skip_post:
                                     ?>
                                         <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+skip_post:
                                             <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++ ?></td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center gap-2">
+skip_post:
                                                     <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($nama) ?></p>
+skip_post:
                                                     <?php if ($recordCount > 1): ?>
                                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+skip_post:
                                                             x<?= $recordCount ?>
                                                         </span>
+skip_post:
                                                     <?php endif; ?>
                                                 </div>
+skip_post:
                                                 <p class="text-xs text-slate-400 dark:text-zinc-500">ID: <?= implode(', ', $group['ids']) ?></p>
                                             </td>
                                             <td class="px-4 py-3">
+skip_post:
                                                 <?php if (!empty($group['categories'])): ?>
                                                     <div class="flex flex-wrap gap-1">
+skip_post:
                                                         <?php foreach ($group['categories'] as $cat): ?>
+skip_post:
                                                             <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400"><?= htmlspecialchars($cat) ?></span>
+skip_post:
                                                         <?php endforeach; ?>
                                                     </div>
+skip_post:
                                                 <?php else: ?>
                                                     <span class="text-slate-400 dark:text-zinc-500 text-xs">-</span>
+skip_post:
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3">
+skip_post:
                                                 <?php if (!empty($group['kegiatan'])): ?>
                                                     <div class="flex flex-wrap gap-1">
+skip_post:
                                                         <?php foreach ($group['kegiatan'] as $keg): ?>
+skip_post:
                                                             <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"><?= htmlspecialchars($keg) ?></span>
+skip_post:
                                                         <?php endforeach; ?>
                                                     </div>
+skip_post:
                                                 <?php else: ?>
                                                     <span class="text-slate-400 dark:text-zinc-500 text-xs">-</span>
+skip_post:
                                                 <?php endif; ?>
                                             </td>
+skip_post:
                                             <td class="px-4 py-3 text-center text-sm text-slate-600 dark:text-zinc-400"><?= $umur ?></td>
                                             <td class="px-4 py-3 text-center">
+skip_post:
                                                 <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400' ?>">
+skip_post:
                                                     <i class="fas <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?> text-xs"></i>
+skip_post:
                                                     <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'L' : 'P' ?>
                                                 </span>
                                             </td>
+skip_post:
                                             <td class="px-4 py-3 text-sm text-slate-600 dark:text-zinc-400 max-w-32 truncate" title="<?= htmlspecialchars($p['nama_club'] ?? '') ?>">
+skip_post:
                                                 <?= htmlspecialchars($p['nama_club'] ?? '-') ?>
                                             </td>
+skip_post:
                                             <td class="px-4 py-3 text-sm text-slate-600 dark:text-zinc-400 max-w-32 truncate" title="<?= htmlspecialchars($p['sekolah'] ?? '') ?>">
+skip_post:
                                                 <?= htmlspecialchars($p['sekolah'] ?? '-') ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
+skip_post:
                                                 <?php if ($hasBayar): ?>
                                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
                                                         <i class="fas fa-check-circle"></i> Lunas
                                                     </span>
+skip_post:
                                                     <button onclick="showImage('payment', '../assets/uploads/<?= htmlspecialchars($p['bukti_pembayaran']) ?>', '<?= htmlspecialchars($nama) ?>')" class="block mx-auto mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
                                                         Lihat Bukti
                                                     </button>
+skip_post:
                                                 <?php else: ?>
                                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
                                                         <i class="fas fa-clock"></i> Pending
                                                     </span>
+skip_post:
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
                                                 <div class="flex items-center justify-center gap-1">
+skip_post:
                                                     <?php if ($recordCount > 1): ?>
+skip_post:
                                                         <button type="button" onclick="showDetails(<?= htmlspecialchars(json_encode($group['all_records'])) ?>)"
                                                                 class="p-1.5 rounded-lg text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 transition-colors" title="Lihat Detail">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
+skip_post:
                                                     <?php endif; ?>
+skip_post:
                                                     <button type="button" onclick="editPeserta(<?= htmlspecialchars(json_encode($p)) ?>)"
                                                             class="p-1.5 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
+skip_post:
                                                     <button type="button" onclick="confirmDelete(<?= $p['id'] ?>, '<?= htmlspecialchars($nama, ENT_QUOTES) ?>')"
                                                             class="p-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                         <i class="fas fa-trash-alt"></i>
@@ -892,30 +976,40 @@ $role = $_SESSION['role'] ?? 'user';
                                                 </div>
                                             </td>
                                         </tr>
+skip_post:
                                     <?php endforeach; ?>
+skip_post:
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
+skip_post:
                     <?php if (!empty($pesertaGroupedPaginated)): ?>
                         <!-- Pagination Footer -->
                         <div class="px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <p class="text-sm text-slate-500 dark:text-zinc-400">
+skip_post:
                                 Menampilkan <span class="font-medium text-slate-900 dark:text-white"><?= $offset + 1 ?></span> - <span class="font-medium text-slate-900 dark:text-white"><?= min($offset + $limit, $total_rows) ?></span> dari <span class="font-medium text-slate-900 dark:text-white"><?= $total_rows ?></span> peserta unik (<span class="text-slate-400 dark:text-zinc-500"><?= $totalPeserta ?> total entri</span>)
                             </p>
+skip_post:
                             <?php if ($total_pages > 1): ?>
                             <nav class="flex items-center gap-1">
                                 <!-- First & Prev -->
+skip_post:
                                 <?php if ($page > 1): ?>
+skip_post:
                                 <a href="<?= buildPaginationUrl(1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="First">
                                     <i class="fas fa-angles-left text-xs"></i>
                                 </a>
+skip_post:
                                 <a href="<?= buildPaginationUrl($page - 1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Previous">
                                     <i class="fas fa-angle-left text-xs"></i>
                                 </a>
+skip_post:
                                 <?php else: ?>
                                 <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angles-left text-xs"></i></span>
                                 <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angle-left text-xs"></i></span>
+skip_post:
                                 <?php endif; ?>
 
                                 <!-- Page Numbers -->
@@ -923,35 +1017,51 @@ $role = $_SESSION['role'] ?? 'user';
                                 $start_page = max(1, $page - 2);
                                 $end_page = min($total_pages, $page + 2);
 
+skip_post:
                                 if ($start_page > 1): ?>
+skip_post:
                                 <a href="<?= buildPaginationUrl(1) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">1</a>
+skip_post:
                                 <?php if ($start_page > 2): ?><span class="px-1 text-slate-400 dark:text-zinc-500">...</span><?php endif; ?>
                                 <?php endif;
 
+skip_post:
                                 for ($i = $start_page; $i <= $end_page; $i++): ?>
+skip_post:
                                 <a href="<?= buildPaginationUrl($i) ?>" class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors <?= $i === $page ? 'bg-archery-600 text-white' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800' ?>"><?= $i ?></a>
                                 <?php endfor;
 
+skip_post:
                                 if ($end_page < $total_pages): ?>
+skip_post:
                                 <?php if ($end_page < $total_pages - 1): ?><span class="px-1 text-slate-400 dark:text-zinc-500">...</span><?php endif; ?>
+skip_post:
                                 <a href="<?= buildPaginationUrl($total_pages) ?>" class="px-3 py-1.5 rounded-md text-sm text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"><?= $total_pages ?></a>
+skip_post:
                                 <?php endif; ?>
 
                                 <!-- Next & Last -->
+skip_post:
                                 <?php if ($page < $total_pages): ?>
+skip_post:
                                 <a href="<?= buildPaginationUrl($page + 1) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Next">
                                     <i class="fas fa-angle-right text-xs"></i>
                                 </a>
+skip_post:
                                 <a href="<?= buildPaginationUrl($total_pages) ?>" class="p-2 rounded-md text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors" title="Last">
                                     <i class="fas fa-angles-right text-xs"></i>
                                 </a>
+skip_post:
                                 <?php else: ?>
                                 <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angle-right text-xs"></i></span>
                                 <span class="p-2 text-slate-300 dark:text-zinc-700"><i class="fas fa-angles-right text-xs"></i></span>
+skip_post:
                                 <?php endif; ?>
                             </nav>
+skip_post:
                             <?php endif; ?>
                         </div>
+skip_post:
                     <?php endif; ?>
                 </div>
             </div>
@@ -972,6 +1082,7 @@ $role = $_SESSION['role'] ?? 'user';
             </div>
             
             <form method="POST" enctype="multipart/form-data" id="addPesertaForm" class="flex flex-col flex-1 overflow-hidden">
+skip_post:
                 <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="create">
                 <input type="hidden" id="peserta_id_existing" name="peserta_id_existing" value="0">
@@ -984,8 +1095,11 @@ $role = $_SESSION['role'] ?? 'user';
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Nama Club <span class="text-red-500">*</span></label>
                             <select id="add_nama_club" name="nama_club" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500" onchange="loadPesertaByClub('add')" required>
                                 <option value="">-- Pilih Club --</option>
+skip_post:
                                 <?php foreach ($clubList as $club): ?>
+skip_post:
                                     <option value="<?= htmlspecialchars($club) ?>"><?= htmlspecialchars($club) ?></option>
+skip_post:
                                 <?php endforeach; ?>
                                 <option value="CLUB_BARU">+ Tambah Club Baru</option>
                             </select>
@@ -1024,8 +1138,11 @@ $role = $_SESSION['role'] ?? 'user';
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Kegiatan <span class="text-red-500">*</span></label>
                             <select name="kegiatan_id" id="add_kegiatan_id" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" onchange="loadKegiatanCategories()" required>
                                 <option value="">-- Pilih Kegiatan --</option>
+skip_post:
                                 <?php foreach ($kegiatanList as $keg): ?>
+skip_post:
                                     <option value="<?= $keg['id'] ?>"><?= htmlspecialchars($keg['nama_kegiatan']) ?></option>
+skip_post:
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1107,6 +1224,7 @@ $role = $_SESSION['role'] ?? 'user';
                 </button>
             </div>
             <form method="POST" class="flex flex-col flex-1 overflow-hidden">
+skip_post:
                 <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="update">
                 <input type="hidden" name="id" id="edit_id">
@@ -1120,16 +1238,22 @@ $role = $_SESSION['role'] ?? 'user';
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kategori <span class="text-red-500">*</span></label>
                             <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="category_id" id="edit_category_id" required>
+skip_post:
                                 <?php foreach ($kategoriList as $kat): ?>
+skip_post:
                                     <option value="<?= $kat['id'] ?>"><?= htmlspecialchars($kat['name']) ?></option>
+skip_post:
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Kegiatan <span class="text-red-500">*</span></label>
                             <select class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="kegiatan_id" id="edit_kegiatan_id" required>
+skip_post:
                                 <?php foreach ($kegiatanList as $keg): ?>
+skip_post:
                                     <option value="<?= $keg['id'] ?>"><?= htmlspecialchars($keg['nama_kegiatan']) ?></option>
+skip_post:
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1196,6 +1320,7 @@ $role = $_SESSION['role'] ?? 'user';
             <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex justify-end gap-2">
                 <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">Batal</button>
                 <form method="POST" class="inline">
+skip_post:
                     <?php csrf_field(); ?>
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="id" id="deleteIdInput">
@@ -1581,6 +1706,7 @@ $role = $_SESSION['role'] ?? 'user';
             }
         });
 
+skip_post:
         <?= getThemeToggleScript() ?>
     </script>
 </body>

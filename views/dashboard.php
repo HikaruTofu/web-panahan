@@ -13,6 +13,14 @@ include '../includes/check_access.php';
 include '../includes/theme.php';
 requireAdmin();
 
+if (!checkRateLimit('view_load', 60, 60)) {
+    header('HTTP/1.1 429 Too Many Requests');
+    die('Terlalu banyak permintaan. Silakan coba lagi nanti.');
+}
+
+$_GET = cleanInput($_GET);
+$_POST = cleanInput($_POST);
+
 if (!isset($_SESSION['login']) || $_SESSION['login'] !== true) {
     header('Location: ../index.php');
     exit;

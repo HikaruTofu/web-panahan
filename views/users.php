@@ -8,12 +8,24 @@ include '../includes/check_access.php';
 include '../includes/theme.php';
 requireAdmin();
 
+if (!checkRateLimit('view_load', 60, 60)) {
+    header('HTTP/1.1 429 Too Many Requests');
+    die('Terlalu banyak permintaan. Silakan coba lagi nanti.');
+}
+
+$_GET = cleanInput($_GET);
+
 // Toast message handling
 $toast_message = '';
 $toast_type = '';
 
 // Handle CRUD operations
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    if (!checkRateLimit('user_crud', 10, 60)) {
+        $toast_message = "Terlalu banyak permintaan. Silakan coba lagi nanti.";
+        $toast_type = 'error';
+        goto skip_post;
+    }
     verify_csrf();
     $_POST = cleanInput($_POST);
     switch ($_POST['action']) {
@@ -143,6 +155,7 @@ while ($row = $result->fetch_assoc()) {
 $username = $_SESSION['username'] ?? 'User';
 $name = $_SESSION['name'] ?? $username;
 $role = $_SESSION['role'] ?? 'user';
+skip_post:
 ?>
 <!DOCTYPE html>
 <html lang="id" class="h-full">
@@ -151,7 +164,9 @@ $role = $_SESSION['role'] ?? 'user';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manajemen User - Turnamen Panahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
+skip_post:
     <script><?= getThemeTailwindConfig() ?></script>
+skip_post:
     <script><?= getThemeInitScript() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -227,9 +242,12 @@ $role = $_SESSION['role'] ?? 'user';
                         <i class="fas fa-user text-zinc-400 text-sm"></i>
                     </div>
                     <div class="flex-1 min-w-0">
+skip_post:
                         <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
+skip_post:
                         <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
                     </div>
+skip_post:
                     <?= getThemeToggleButton() ?>
                 </div>
                 <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
@@ -248,16 +266,22 @@ $role = $_SESSION['role'] ?? 'user';
         <!-- Main Content -->
         <main class="flex-1 overflow-auto">
             <!-- Toast Notification -->
+skip_post:
             <?php if (!empty($toast_message)): ?>
             <div id="toast" class="fixed top-4 right-4 z-50 toast-enter">
+skip_post:
                 <div class="flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg <?= $toast_type === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800' ?>">
+skip_post:
                     <i class="fas <?= $toast_type === 'success' ? 'fa-check-circle text-emerald-500' : 'fa-exclamation-circle text-red-500' ?>"></i>
+skip_post:
                     <span class="text-sm font-medium"><?= htmlspecialchars($toast_message) ?></span>
+skip_post:
                     <button onclick="dismissToast()" class="ml-2 <?= $toast_type === 'success' ? 'text-emerald-500 hover:text-emerald-700' : 'text-red-500 hover:text-red-700' ?>">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
+skip_post:
             <?php endif; ?>
 
             <div class="px-6 lg:px-8 py-6">
@@ -284,32 +308,39 @@ $role = $_SESSION['role'] ?? 'user';
                     <!-- Metrics Bar -->
                     <div class="px-6 py-3 bg-slate-50 dark:bg-zinc-800/50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         <div class="flex items-center gap-2">
+skip_post:
                             <span class="text-2xl font-bold text-slate-900 dark:text-white"><?= count($users) ?></span>
                             <span class="text-slate-500 dark:text-zinc-400">Total User</span>
                         </div>
                         <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-shield-alt text-purple-500 text-xs"></i>
+skip_post:
                             <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $adminCount ?></span>
                             <span class="text-slate-400 dark:text-zinc-500">Admin</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-user text-blue-500 text-xs"></i>
+skip_post:
                             <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $userCount ?></span>
                             <span class="text-slate-400 dark:text-zinc-500">User</span>
                         </div>
                         <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-check-circle text-emerald-500 text-xs"></i>
+skip_post:
                             <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $activeCount ?></span>
                             <span class="text-slate-400 dark:text-zinc-500">Aktif</span>
                         </div>
+skip_post:
                         <?php if ($inactiveCount > 0): ?>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-pause-circle text-slate-400 dark:text-zinc-500 text-xs"></i>
+skip_post:
                             <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $inactiveCount ?></span>
                             <span class="text-slate-400 dark:text-zinc-500">Nonaktif</span>
                         </div>
+skip_post:
                         <?php endif; ?>
                     </div>
                 </div>
@@ -321,6 +352,7 @@ $role = $_SESSION['role'] ?? 'user';
                         <div class="relative flex-1">
                             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 text-xs"></i>
                             <!-- INPUT: name="q" (UNCHANGED) -->
+skip_post:
                             <input type="search" name="q" value="<?= htmlspecialchars($searchQuery) ?>"
                                    class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500 bg-slate-50 dark:bg-zinc-800 text-slate-900 dark:text-white"
                                    placeholder="Cari berdasarkan nama atau email...">
@@ -329,10 +361,12 @@ $role = $_SESSION['role'] ?? 'user';
                             <i class="fas fa-search sm:hidden"></i>
                             <span class="hidden sm:inline">Cari</span>
                         </button>
+skip_post:
                         <?php if (!empty($searchQuery)): ?>
                         <a href="?" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 text-sm hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
                             <i class="fas fa-times"></i>
                         </a>
+skip_post:
                         <?php endif; ?>
                     </form>
                 </div>
@@ -352,49 +386,63 @@ $role = $_SESSION['role'] ?? 'user';
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
+skip_post:
                                 <?php if (count($users) > 0): ?>
+skip_post:
                                     <?php $no = 1; foreach ($users as $row): ?>
                                         <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+skip_post:
                                             <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++ ?></td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center gap-3">
                                                     <div class="w-9 h-9 rounded-full bg-gradient-to-br from-archery-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+skip_post:
                                                         <?= strtoupper(substr($row['name'], 0, 1)) ?>
                                                     </div>
+skip_post:
                                                     <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($row['name']) ?></p>
                                                 </div>
                                             </td>
                                             <td class="px-4 py-3">
+skip_post:
                                                 <span class="text-sm text-slate-600 dark:text-zinc-400"><?= htmlspecialchars($row['email']) ?></span>
                                             </td>
                                             <td class="px-4 py-3 text-center">
+skip_post:
                                                 <?php if (strtolower($row['role']) === 'admin'): ?>
                                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
                                                         <i class="fas fa-shield-alt"></i> Admin
                                                     </span>
+skip_post:
                                                 <?php else: ?>
                                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400">
                                                         <i class="fas fa-user"></i> User
                                                     </span>
+skip_post:
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
+skip_post:
                                                 <?php if (strtolower($row['status'] ?? 'active') === 'active'): ?>
                                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
                                                         <i class="fas fa-check-circle"></i> Aktif
                                                     </span>
+skip_post:
                                                 <?php else: ?>
                                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-500 dark:text-zinc-400">
                                                         <i class="fas fa-pause-circle"></i> Nonaktif
                                                     </span>
+skip_post:
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center justify-center gap-1">
+skip_post:
                                                     <button onclick="editUser(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>', '<?= addslashes($row['email']) ?>', '<?= addslashes($row['role']) ?>', '<?= addslashes($row['status'] ?? 'active') ?>')"
                                                        class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit text-sm"></i>
                                                     </button>
+skip_post:
                                                     <button onclick="deleteUser(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>')"
                                                        class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                         <i class="fas fa-trash text-sm"></i>
@@ -402,7 +450,9 @@ $role = $_SESSION['role'] ?? 'user';
                                                 </div>
                                             </td>
                                         </tr>
+skip_post:
                                     <?php endforeach; ?>
+skip_post:
                                 <?php else: ?>
                                     <tr>
                                         <td colspan="6" class="px-4 py-12">
@@ -411,25 +461,32 @@ $role = $_SESSION['role'] ?? 'user';
                                                     <i class="fas fa-users text-slate-400 dark:text-zinc-500 text-2xl"></i>
                                                 </div>
                                                 <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada user ditemukan</p>
+skip_post:
                                                 <?php if (!empty($searchQuery)): ?>
                                                     <p class="text-slate-400 dark:text-zinc-500 text-sm mb-4">Ubah kata kunci pencarian</p>
+skip_post:
                                                 <?php else: ?>
                                                     <p class="text-slate-400 dark:text-zinc-500 text-sm mb-4">Tambahkan user baru untuk memulai</p>
                                                     <button onclick="openModal('addModal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                                         <i class="fas fa-plus"></i> Tambah User
                                                     </button>
+skip_post:
                                                 <?php endif; ?>
                                             </div>
                                         </td>
                                     </tr>
+skip_post:
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
+skip_post:
                     <?php if (count($users) > 0): ?>
                     <div class="px-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-100 dark:border-zinc-800 text-sm text-slate-500 dark:text-zinc-400">
+skip_post:
                         Menampilkan <?= count($users) ?> user<?php if (!empty($searchQuery)): ?> <span class="text-slate-400 dark:text-zinc-500">• filtered</span><?php endif; ?>
                     </div>
+skip_post:
                     <?php endif; ?>
                 </div>
             </div>
@@ -493,6 +550,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form method="POST">
                 <div class="p-6 space-y-4">
                     <input type="hidden" name="action" value="create">
+skip_post:
                     <?php csrf_field(); ?>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
@@ -549,6 +607,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form method="POST">
                 <div class="p-6 space-y-4">
                     <input type="hidden" name="action" value="update">
+skip_post:
                     <?php csrf_field(); ?>
                     <input type="hidden" name="id" id="edit_id">
                     <div>
@@ -610,6 +669,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form method="POST">
                 <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
                     <input type="hidden" name="action" value="delete">
+skip_post:
                     <?php csrf_field(); ?>
                     <input type="hidden" name="id" id="delete_id">
                     <button type="button" onclick="closeModal('deleteModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
@@ -689,6 +749,7 @@ $role = $_SESSION['role'] ?? 'user';
         });
 
         // Theme Toggle
+skip_post:
         <?= getThemeToggleScript() ?>
     </script>
 </body>

@@ -6,11 +6,17 @@
 include '../includes/check_access.php';
 requireAdmin();
 
+if (!checkRateLimit('view_load', 60, 60)) {
+    header('HTTP/1.1 429 Too Many Requests');
+    die('Terlalu banyak permintaan. Silakan coba lagi nanti.');
+}
+
 if (!file_exists('../config/panggil.php')) {
     die("Error: panggil.php file not found!");
 }
 
 include '../config/panggil.php';
+$_GET = cleanInput($_GET);
 
 if (!isset($conn) && !isset($connection)) {
     die("Error: Database connection failed. Please check your panggil.php file.");
@@ -20,6 +26,9 @@ $db = isset($conn) ? $conn : $connection;
 
 // Handle Excel Export (UNCHANGED)
 if (isset($_POST['export_excel'])) {
+    if (!checkRateLimit('export_action', 10, 60)) {
+        die('Terlalu banyak permintaan ekspor. Silakan coba lagi nanti.');
+    }
     verify_csrf();
     $participants = json_decode($_POST['participants'], true);
     $categories = json_decode($_POST['categories'], true);

@@ -4,6 +4,13 @@ include '../includes/check_access.php';
 include '../includes/theme.php';
 requireAdmin();
 
+if (!checkRateLimit('view_load', 60, 60)) {
+    header('HTTP/1.1 429 Too Many Requests');
+    die('Terlalu banyak permintaan. Silakan coba lagi nanti.');
+}
+
+$_GET = cleanInput($_GET);
+
 // Toast message handling
 $toast_message = '';
 $toast_type = '';
@@ -19,6 +26,11 @@ while ($row = $kategoriResult->fetch_assoc()) {
 
 // Proses tambah/edit data
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!checkRateLimit('kegiatan_crud', 20, 60)) {
+        $toast_message = "Terlalu banyak permintaan. Silakan coba lagi nanti.";
+        $toast_type = 'error';
+        goto skip_post;
+    }
     verify_csrf();
     $_POST = cleanInput($_POST);
 
@@ -144,6 +156,7 @@ $stats = $statsResult->fetch_assoc();
 $username = $_SESSION['username'] ?? 'User';
 $name = $_SESSION['name'] ?? $username;
 $role = $_SESSION['role'] ?? 'user';
+skip_post:
 ?>
 <!DOCTYPE html>
 <html lang="id" class="h-full">
@@ -152,7 +165,9 @@ $role = $_SESSION['role'] ?? 'user';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Kegiatan - Turnamen Panahan</title>
     <script src="https://cdn.tailwindcss.com"></script>
+skip_post:
     <script><?= getThemeTailwindConfig() ?></script>
+skip_post:
     <script><?= getThemeInitScript() ?></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -229,9 +244,12 @@ $role = $_SESSION['role'] ?? 'user';
                         <i class="fas fa-user text-zinc-400 text-sm"></i>
                     </div>
                     <div class="flex-1 min-w-0">
+skip_post:
                         <p class="text-sm font-medium truncate"><?= htmlspecialchars($name) ?></p>
+skip_post:
                         <p class="text-xs text-zinc-500 capitalize"><?= htmlspecialchars($role) ?></p>
                     </div>
+skip_post:
                     <?= getThemeToggleButton() ?>
                 </div>
                 <a href="../actions/logout.php" onclick="return confirm('Yakin ingin logout?')"
@@ -250,16 +268,22 @@ $role = $_SESSION['role'] ?? 'user';
         <!-- Main Content -->
         <main class="flex-1 overflow-auto">
             <!-- Toast Notification -->
+skip_post:
             <?php if (!empty($toast_message)): ?>
             <div id="toast" class="fixed top-4 right-4 z-50 toast-enter">
+skip_post:
                 <div class="flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg <?= $toast_type === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800' ?>">
+skip_post:
                     <i class="fas <?= $toast_type === 'success' ? 'fa-check-circle text-emerald-500' : 'fa-exclamation-circle text-red-500' ?>"></i>
+skip_post:
                     <span class="text-sm font-medium"><?= htmlspecialchars($toast_message) ?></span>
+skip_post:
                     <button onclick="dismissToast()" class="ml-2 <?= $toast_type === 'success' ? 'text-emerald-500 hover:text-emerald-700' : 'text-red-500 hover:text-red-700' ?>">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
+skip_post:
             <?php endif; ?>
 
             <div class="px-6 lg:px-8 py-6">
@@ -286,18 +310,21 @@ $role = $_SESSION['role'] ?? 'user';
                     <!-- Metrics Bar -->
                     <div class="px-6 py-3 bg-slate-50 dark:bg-zinc-800/50 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                         <div class="flex items-center gap-2">
+skip_post:
                             <span class="text-2xl font-bold text-slate-900 dark:text-white"><?= $stats['total_kegiatan'] ?? 0 ?></span>
                             <span class="text-slate-500 dark:text-zinc-400">Kegiatan</span>
                         </div>
                         <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-users text-archery-500 text-xs"></i>
+skip_post:
                             <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $stats['total_peserta'] ?? 0 ?></span>
                             <span class="text-slate-400 dark:text-zinc-500">Total Peserta</span>
                         </div>
                         <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-tags text-cyan-500 text-xs"></i>
+skip_post:
                             <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $stats['total_kategori_used'] ?? 0 ?></span>
                             <span class="text-slate-400 dark:text-zinc-500">Kategori Dipakai</span>
                         </div>
@@ -328,6 +355,7 @@ $role = $_SESSION['role'] ?? 'user';
                                 </tr>
                             </thead>
                             <tbody id="tableBody" class="divide-y divide-slate-100 dark:divide-zinc-800">
+skip_post:
                                 <?php if (empty($kegiatanData)): ?>
                                     <tr>
                                         <td colspan="5" class="px-4 py-12">
@@ -343,65 +371,89 @@ $role = $_SESSION['role'] ?? 'user';
                                             </div>
                                         </td>
                                     </tr>
+skip_post:
                                 <?php else: ?>
+skip_post:
                                     <?php foreach ($kegiatanData as $index => $item): ?>
                                         <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+skip_post:
                                             <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $index + 1 ?></td>
                                             <td class="px-4 py-3">
+skip_post:
                                                 <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($item['nama']) ?></p>
                                             </td>
                                             <td class="px-4 py-3">
+skip_post:
                                                 <?php if (empty($item['category_names'])): ?>
                                                     <span class="text-slate-400 dark:text-zinc-500 italic text-sm">Belum ada kategori</span>
+skip_post:
                                                 <?php else: ?>
                                                     <div class="flex flex-wrap gap-1">
+skip_post:
                                                         <?php foreach ($item['category_names'] as $categoryName): ?>
+skip_post:
                                                             <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400"><?= htmlspecialchars($categoryName) ?></span>
+skip_post:
                                                         <?php endforeach; ?>
                                                     </div>
+skip_post:
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
+skip_post:
                                                 <?php if ($item['peserta_count'] > 0): ?>
                                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-archery-50 dark:bg-archery-900/30 text-archery-700 dark:text-archery-400">
                                                         <i class="fas fa-users text-xs"></i>
+skip_post:
                                                         <?= $item['peserta_count'] ?>
                                                     </span>
+skip_post:
                                                 <?php else: ?>
                                                     <span class="text-slate-400 dark:text-zinc-500 text-sm">-</span>
+skip_post:
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center justify-center gap-1">
+skip_post:
                                                     <a href="peserta.view.php?add_peserta=1&kegiatan_id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors">
                                                         <i class="fas fa-user-plus text-xs"></i> Daftar
                                                     </a>
+skip_post:
                                                     <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
                                                         <i class="fas fa-eye text-xs"></i> Detail
                                                     </a>
+skip_post:
                                                     <button onclick="editData(<?= $item['id'] ?>)" class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit text-sm"></i>
                                                     </button>
+skip_post:
                                                     <button onclick="deleteData(<?= $item['id'] ?>, '<?= addslashes(htmlspecialchars($item['nama'])) ?>')" class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                         <i class="fas fa-trash text-sm"></i>
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
+skip_post:
                                     <?php endforeach; ?>
+skip_post:
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
+skip_post:
                     <?php if (!empty($kegiatanData)): ?>
                     <div class="px-4 py-3 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-100 dark:border-zinc-800 text-sm text-slate-500 dark:text-zinc-400">
+skip_post:
                         Menampilkan <?= count($kegiatanData) ?> kegiatan
                     </div>
+skip_post:
                     <?php endif; ?>
                 </div>
 
                 <!-- Mobile Cards -->
                 <div id="mobileCards" class="md:hidden space-y-3">
+skip_post:
                     <?php if (empty($kegiatanData)): ?>
                         <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-8 text-center">
                             <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
@@ -412,50 +464,70 @@ $role = $_SESSION['role'] ?? 'user';
                                 <i class="fas fa-plus"></i> Tambah Kegiatan
                             </button>
                         </div>
+skip_post:
                     <?php else: ?>
+skip_post:
                         <?php foreach ($kegiatanData as $index => $item): ?>
+skip_post:
                             <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm p-4" data-id="<?= $item['id'] ?>">
                                 <div class="flex items-start gap-3 mb-3">
+skip_post:
                                     <span class="text-sm text-slate-400 dark:text-zinc-500 font-medium w-6"><?= $index + 1 ?></span>
                                     <div class="flex-1 min-w-0">
+skip_post:
                                         <p class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($item['nama']) ?></p>
                                         <div class="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-zinc-400">
+skip_post:
                                             <?php if ($item['peserta_count'] > 0): ?>
                                                 <span class="inline-flex items-center gap-1">
                                                     <i class="fas fa-users text-archery-500"></i>
+skip_post:
                                                     <?= $item['peserta_count'] ?> peserta
                                                 </span>
+skip_post:
                                             <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="mb-3">
+skip_post:
                                     <?php if (empty($item['category_names'])): ?>
                                         <span class="text-slate-400 dark:text-zinc-500 italic text-sm">Belum ada kategori</span>
+skip_post:
                                     <?php else: ?>
                                         <div class="flex flex-wrap gap-1">
+skip_post:
                                             <?php foreach ($item['category_names'] as $categoryName): ?>
+skip_post:
                                                 <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400"><?= htmlspecialchars($categoryName) ?></span>
+skip_post:
                                             <?php endforeach; ?>
                                         </div>
+skip_post:
                                     <?php endif; ?>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
+skip_post:
                                     <a href="peserta.view.php?add_peserta=1&kegiatan_id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium">
                                         <i class="fas fa-user-plus"></i> Daftar
                                     </a>
+skip_post:
                                     <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium">
                                         <i class="fas fa-eye"></i> Detail
                                     </a>
+skip_post:
                                     <button onclick="editData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-medium">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
+skip_post:
                                     <button onclick="deleteData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium">
                                         <i class="fas fa-trash"></i> Hapus
                                     </button>
                                 </div>
                             </div>
+skip_post:
                         <?php endforeach; ?>
+skip_post:
                     <?php endif; ?>
                 </div>
             </div>
@@ -476,6 +548,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form id="kegiatanForm" method="POST" class="flex-1 overflow-y-auto">
                 <div class="p-6 space-y-4">
                     <input type="hidden" id="editId" name="editId" value="">
+skip_post:
                     <?php csrf_field(); ?>
 
                     <div>
@@ -492,20 +565,27 @@ $role = $_SESSION['role'] ?? 'user';
                             Pilih Kategori <span class="text-red-500">*</span>
                         </label>
                         <div class="border border-slate-200 dark:border-zinc-700 rounded-lg max-h-64 overflow-y-auto custom-scrollbar divide-y divide-slate-100 dark:divide-zinc-800">
+skip_post:
                             <?php foreach ($kategoriList as $kategori): ?>
+skip_post:
                                 <div class="p-3 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer" onclick="toggleCheckbox('kategori_<?= $kategori['id']; ?>')">
                                     <label class="flex items-start gap-3 cursor-pointer">
+skip_post:
                                         <input type="checkbox" name="kategori[]" value="<?= $kategori['id']; ?>" id="kategori_<?= $kategori['id']; ?>"
                                                class="mt-1 rounded text-archery-600 focus:ring-archery-500">
                                         <div class="flex-1">
+skip_post:
                                             <p class="font-medium text-slate-900 dark:text-white capitalize"><?= htmlspecialchars($kategori['name']); ?></p>
                                             <div class="flex items-center gap-2 mt-0.5">
+skip_post:
                                                 <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-700 text-slate-500 dark:text-zinc-400 font-medium">Lahir <?= date("Y") - $kategori['max_age']; ?> – <?= date("Y") - $kategori['min_age']; ?></span>
+skip_post:
                                                 <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium"><?= htmlspecialchars($kategori['gender']); ?></span>
                                             </div>
                                         </div>
                                     </label>
                                 </div>
+skip_post:
                             <?php endforeach; ?>
                         </div>
                     </div>
@@ -539,6 +619,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form method="POST">
                 <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
                     <input type="hidden" name="action" value="delete">
+skip_post:
                     <?php csrf_field(); ?>
                     <input type="hidden" name="id" id="delete_id">
                     <button type="button" onclick="closeModal('deleteModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
@@ -597,6 +678,7 @@ $role = $_SESSION['role'] ?? 'user';
 
 <script>
 // Data kegiatan dari PHP
+skip_post:
 const kegiatanData = <?= json_encode($kegiatanData) ?>;
 const allData = [...kegiatanData];
 
@@ -810,6 +892,7 @@ mobileOverlay?.addEventListener('click', toggleMobileMenu);
 closeMobileMenu?.addEventListener('click', toggleMobileMenu);
 
 // Theme Toggle
+skip_post:
 <?= getThemeToggleScript() ?>
 </script>
 </body>

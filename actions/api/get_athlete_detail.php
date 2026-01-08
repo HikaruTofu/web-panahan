@@ -6,6 +6,14 @@ requireAdmin();
 header('Content-Type: application/json');
 enforceAuth();
 
+if (!checkRateLimit('api_request', 30, 60)) {
+    header('HTTP/1.1 429 Too Many Requests');
+    echo json_encode(['success' => false, 'message' => 'Terlalu banyak permintaan. Silakan coba lagi nanti.']);
+    exit;
+}
+
+$_GET = cleanInput($_GET);
+
 if (!isset($_GET['nama'])) {
     echo json_encode(['success' => false, 'message' => 'Nama tidak ditemukan']);
     exit;

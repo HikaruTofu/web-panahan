@@ -7,6 +7,12 @@ include '../config/panggil.php';
 include '../includes/check_access.php';
 requireAdmin();
 
+if (!checkRateLimit('view_load', 60, 60)) {
+    header('HTTP/1.1 429 Too Many Requests');
+    die('Terlalu banyak permintaan. Silakan coba lagi nanti.');
+}
+
+$_GET = cleanInput($_GET);
 // Get tournament ID from URL
 $tournament_id = isset($_GET['tournament_id']) ? intval($_GET['tournament_id']) : 0;
 
@@ -27,6 +33,11 @@ $stmt->close();
 
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if (!checkRateLimit('peserta_lomba_crud', 30, 60)) {
+        header('HTTP/1.1 429 Too Many Requests');
+        echo json_encode(['success' => false, 'message' => 'Terlalu banyak permintaan.']);
+        exit;
+    }
     verify_csrf();
     $_POST = cleanInput($_POST);
     header('Content-Type: application/json');

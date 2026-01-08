@@ -2,12 +2,17 @@
 /**
  * Database Cleanup Script
  * Removes score records that don't match databaru.txt source
- *
- * WARNING: This will DELETE data. Review carefully before executing.
  */
-
 include '../config/panggil.php';
 enforceAdmin();
+
+if (!checkRateLimit('action_load', 60, 60)) {
+    header('HTTP/1.1 429 Too Many Requests');
+    die('Terlalu banyak permintaan. Silakan coba lagi nanti.');
+}
+
+$_GET = cleanInput($_GET);
+$_POST = cleanInput($_POST);
 
 $executeCleanup = isset($_GET['execute']) && $_GET['execute'] === 'yes';
 

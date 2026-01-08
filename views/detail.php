@@ -5,6 +5,15 @@ include '../includes/check_access.php';
 include '../includes/theme.php';
 requireLogin();
 
+include '../config/panggil.php';
+
+if (!checkRateLimit('view_load', 60, 60)) {
+    header('HTTP/1.1 429 Too Many Requests');
+    die('Terlalu banyak permintaan. Silakan coba lagi nanti.');
+}
+
+$_GET = cleanInput($_GET);
+
 // Mulai session jika belum
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
@@ -19,12 +28,6 @@ $role = $_SESSION['role'] ?? 'user';
 // HANDLER UNTUK BRACKET TOURNAMENT (ADUAN)
 // ============================================
 if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
-    try {
-        include '../config/panggil.php';
-    } catch (Exception $e) {
-        die("Error koneksi database: " . $e->getMessage());
-    }
-
     $kegiatan_id = isset($_GET['kegiatan_id']) ? intval($_GET['kegiatan_id']) : null;
     $category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : null;
     $scoreboard_id = isset($_GET['scoreboard']) ? intval($_GET['scoreboard']) : null;
@@ -35,6 +38,13 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 
     // Handler untuk menyimpan hasil match
     if (isset($_POST['save_match_result'])) {
+        if (!checkRateLimit('aduan_action', 30, 60)) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Terlalu banyak permintaan.']);
+            exit;
+        }
+        verify_csrf();
+        $_POST = cleanInput($_POST);
         header('Content-Type: application/json');
 
         $match_id = $_POST['match_id'] ?? '';
@@ -79,6 +89,13 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 
     // Handler untuk menyimpan champion
     if (isset($_POST['save_champion'])) {
+        if (!checkRateLimit('aduan_action', 30, 60)) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => 'Terlalu banyak permintaan.']);
+            exit;
+        }
+        verify_csrf();
+        $_POST = cleanInput($_POST);
         header('Content-Type: application/json');
 
         $champion_id = intval($_POST['champion_id'] ?? 0);

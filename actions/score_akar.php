@@ -6,6 +6,13 @@
     include '../config/panggil.php';
     enforceAdmin();
 
+    if (!checkRateLimit('view_load', 60, 60)) {
+        header('HTTP/1.1 429 Too Many Requests');
+        die('Terlalu banyak permintaan. Silakan coba lagi nanti.');
+    }
+
+    $_GET = cleanInput($_GET);
+
     $kegiatan_id = intval($_GET['kegiatan_id'] ?? 0);
     $category_id = intval($_GET['category_id'] ?? 0);
 

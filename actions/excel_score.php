@@ -3,6 +3,13 @@ require '../vendor/vendor/autoload.php';
 include '../config/panggil.php';
 enforceAdmin();
 
+if (!checkRateLimit('action_load', 30, 60)) {
+    header('HTTP/1.1 429 Too Many Requests');
+    die('Terlalu banyak permintaan. Silakan coba lagi nanti.');
+}
+
+$_GET = cleanInput($_GET);
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
