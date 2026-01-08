@@ -1204,6 +1204,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             $pesertaList[] = $row;
         }
 
+
+        if (isset($_GET['scoreboard'])) {
             $stmtTotal = $conn->prepare("SELECT * FROM score WHERE kegiatan_id=? AND category_id=? AND score_board_id =? AND peserta_id=?");
             foreach ($pesertaList as $a) {
                 $sb_id = intval($_GET['scoreboard']);
@@ -1225,6 +1227,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 $peserta_score[] = ['id' => $a['id'], 'total_score' => $score, 'total_x' => $x_score];
             }
             $stmtTotal->close();
+        }
 
             // Fetch all individual scores for detailed view (ranking mode)
             if (isset($_GET['rangking'])) {
