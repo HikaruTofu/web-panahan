@@ -1254,6 +1254,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
         }
 
         $stmtPeserta->close();
+}
     } catch (Exception $e) {
         die("Error mengambil data peserta: " . $e->getMessage());
     }
