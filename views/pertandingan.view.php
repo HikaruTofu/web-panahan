@@ -20,6 +20,7 @@ $db = isset($conn) ? $conn : $connection;
 
 // Handle Excel Export (UNCHANGED)
 if (isset($_POST['export_excel'])) {
+    verify_csrf();
     $participants = json_decode($_POST['participants'], true);
     $categories = json_decode($_POST['categories'], true);
     $kegiatan = json_decode($_POST['kegiatan'], true);
@@ -243,38 +244,32 @@ $categoriesData = [];
 $kegiatanData = [];
 
 try {
-    $query = "SELECT * FROM peserta WHERE category_id IS NOT NULL AND kegiatan_id IS NOT NULL";
-    $result = mysqli_query($db, $query);
+    $stmt = $db->prepare("SELECT * FROM peserta WHERE category_id IS NOT NULL AND kegiatan_id IS NOT NULL");
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-    if (!$result) {
-        throw new Exception("Error fetching peserta data: " . mysqli_error($db));
-    }
-
-    while ($row = mysqli_fetch_assoc($result)) {
+    while ($row = $result->fetch_assoc()) {
         $pesertaData[] = $row;
     }
+    $stmt->close();
 
-    $query = "SELECT * FROM categories";
-    $result = mysqli_query($db, $query);
+    $stmt = $db->prepare("SELECT * FROM categories");
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-    if (!$result) {
-        throw new Exception("Error fetching categories data: " . mysqli_error($db));
-    }
-
-    while ($row = mysqli_fetch_assoc($result)) {
+    while ($row = $result->fetch_assoc()) {
         $categoriesData[$row['id']] = $row['nama_kategori'] ?? $row['name'] ?? "Kategori {$row['id']}";
     }
+    $stmt->close();
 
-    $query = "SELECT * FROM kegiatan";
-    $result = mysqli_query($db, $query);
+    $stmt = $db->prepare("SELECT * FROM kegiatan");
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-    if (!$result) {
-        throw new Exception("Error fetching kegiatan data: " . mysqli_error($db));
-    }
-
-    while ($row = mysqli_fetch_assoc($result)) {
+    while ($row = $result->fetch_assoc()) {
         $kegiatanData[$row['id']] = $row['nama_kegiatan'] ?? $row['name'] ?? "Kegiatan {$row['id']}";
     }
+    $stmt->close();
 
 } catch(Exception $e) {
     die("Database Error: " . $e->getMessage());
@@ -446,6 +441,7 @@ $role = $_SESSION['role'] ?? 'user';
                             <?php if (count($filteredParticipants) > 0): ?>
                             <!-- FORM: method=POST (UNCHANGED) -->
                             <form method="POST" class="inline">
+                                <?php csrf_field(); ?>
                                 <!-- INPUT: name="participants" (UNCHANGED) -->
                                 <input type="hidden" name="participants" value="<?php echo htmlspecialchars(json_encode($filteredParticipants)); ?>">
                                 <!-- INPUT: name="categories" (UNCHANGED) -->

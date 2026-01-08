@@ -5,14 +5,19 @@
  */
 
 include '../config/panggil.php';
+include '../includes/check_access.php';
+requireAdmin();
 
 echo "<h1>Debug: Siko Data Investigation</h1>";
 echo "<style>table{border-collapse:collapse;margin:20px 0;}th,td{border:1px solid #333;padding:8px;text-align:left;}th{background:#f0f0f0;}</style>";
 
 // 1. Check peserta table for Siko
 echo "<h2>1. Peserta Records for 'Siko'</h2>";
-$query1 = "SELECT * FROM peserta WHERE nama_peserta LIKE '%Siko%'";
-$result1 = $conn->query($query1);
+$stmt = $conn->prepare("SELECT * FROM peserta WHERE nama_peserta LIKE ?");
+$searchLike = '%Siko%';
+$stmt->bind_param("s", $searchLike);
+$stmt->execute();
+$result1 = $stmt->get_result();
 echo "<table><tr><th>ID</th><th>Nama</th><th>Club</th><th>Gender</th></tr>";
 while ($row = $result1->fetch_assoc()) {
     echo "<tr><td>{$row['id']}</td><td>{$row['nama_peserta']}</td><td>{$row['nama_club']}</td><td>{$row['jenis_kelamin']}</td></tr>";
@@ -21,15 +26,18 @@ echo "</table>";
 
 // 2. Check score records for Siko's peserta IDs
 echo "<h2>2. Score Records linked to 'Siko'</h2>";
-$query2 = "
+$stmt = $conn->prepare("
     SELECT s.*, p.nama_peserta, sb.id as scoreboard_id
     FROM score s
     JOIN peserta p ON s.peserta_id = p.id
     JOIN score_boards sb ON s.score_board_id = sb.id
-    WHERE p.nama_peserta LIKE '%Siko%'
+    WHERE p.nama_peserta LIKE ?
     LIMIT 50
-";
-$result2 = $conn->query($query2);
+");
+$searchLike = '%Siko%';
+$stmt->bind_param("s", $searchLike);
+$stmt->execute();
+$result2 = $stmt->get_result();
 if ($result2 && $result2->num_rows > 0) {
     echo "<table><tr><th>Score ID</th><th>Peserta ID</th><th>Nama</th><th>Scoreboard ID</th><th>Score</th></tr>";
     while ($row = $result2->fetch_assoc()) {
@@ -42,7 +50,7 @@ if ($result2 && $result2->num_rows > 0) {
 
 // 3. Dashboard Query Result for Siko
 echo "<h2>3. Dashboard Query Result (current logic)</h2>";
-$queryDashboard = "
+$stmt = $conn->prepare("
     WITH ScoreStats AS (
         SELECT
             s.score_board_id,
@@ -78,10 +86,13 @@ $queryDashboard = "
         GROUP_CONCAT(rs.board_participants) as all_participants
     FROM RankedScores rs
     JOIN peserta p ON rs.peserta_id = p.id
-    WHERE p.nama_peserta LIKE '%Siko%'
+    WHERE p.nama_peserta LIKE ?
     GROUP BY p.nama_peserta
-";
-$result3 = $conn->query($queryDashboard);
+");
+$searchLike = '%Siko%';
+$stmt->bind_param("s", $searchLike);
+$stmt->execute();
+$result3 = $stmt->get_result();
 if ($result3 && $result3->num_rows > 0) {
     echo "<table><tr><th>Nama</th><th>Total Turnamen</th><th>Avg Rank</th><th>Juara1</th><th>Juara2</th><th>Juara3</th><th>All Ranks</th></tr>";
     while ($row = $result3->fetch_assoc()) {
@@ -94,7 +105,7 @@ if ($result3 && $result3->num_rows > 0) {
 
 // 4. Statistik Query Result for Siko
 echo "<h2>4. Statistik Query Result (source of truth)</h2>";
-$queryStatistik = "
+$stmt = $conn->prepare("
     WITH ScoreStats AS (
         SELECT
             s.score_board_id,
@@ -121,10 +132,13 @@ $queryStatistik = "
         rs.score_board_id
     FROM RankedScores rs
     JOIN peserta p ON rs.peserta_id = p.id
-    WHERE p.nama_peserta LIKE '%Siko%'
+    WHERE p.nama_peserta LIKE ?
     ORDER BY rs.score_board_id DESC
-";
-$result4 = $conn->query($queryStatistik);
+");
+$searchLike = '%Siko%';
+$stmt->bind_param("s", $searchLike);
+$stmt->execute();
+$result4 = $stmt->get_result();
 if ($result4 && $result4->num_rows > 0) {
     echo "<table><tr><th>Peserta ID</th><th>Nama</th><th>Scoreboard</th><th>Rank</th><th>Total Participants</th></tr>";
     $juara1Count = 0;

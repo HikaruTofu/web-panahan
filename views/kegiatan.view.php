@@ -2,7 +2,7 @@
 include '../config/panggil.php';
 include '../includes/check_access.php';
 include '../includes/theme.php';
-requireLogin();
+requireAdmin();
 
 // Toast message handling
 $toast_message = '';
@@ -15,30 +15,43 @@ while ($row = $kategoriResult->fetch_assoc()) {
     $kategoriList[] = $row;
 }
 
-// Proses hapus data
-if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
-    $kegiatanId = intval($_GET['id']);
-
-    // Get name for toast
-    $nameResult = $conn->query("SELECT nama_kegiatan FROM kegiatan WHERE id = $kegiatanId");
-    $kegiatanName = $nameResult->fetch_assoc()['nama_kegiatan'] ?? 'Kegiatan';
-
-    // Hapus dari kegiatan_kategori dulu (foreign key)
-    $conn->query("DELETE FROM kegiatan_kategori WHERE kegiatan_id = $kegiatanId");
-
-    // Kemudian hapus dari kegiatan
-    if ($conn->query("DELETE FROM kegiatan WHERE id = $kegiatanId")) {
-        $toast_message = "Kegiatan '$kegiatanName' berhasil dihapus!";
-        $toast_type = 'success';
-    } else {
-        $toast_message = "Gagal menghapus kegiatan!";
-        $toast_type = 'error';
-    }
-}
+// Note: DELETE is now handled via POST for security
 
 // Proses tambah/edit data
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nama = $_POST['namaKegiatan'];
+    verify_csrf();
+    $_POST = cleanInput($_POST);
+
+    if (isset($_POST['action']) && $_POST['action'] === 'delete') {
+        $kegiatanId = intval($_POST['id']);
+
+        // Get name for toast - Prepared Statement
+        $stmt = $conn->prepare("SELECT nama_kegiatan FROM kegiatan WHERE id = ?");
+        $stmt->bind_param("i", $kegiatanId);
+        $stmt->execute();
+        $nameResult = $stmt->get_result();
+        $kegiatanName = $nameResult->fetch_assoc()['nama_kegiatan'] ?? 'Kegiatan';
+        $stmt->close();
+
+        // Hapus dari kegiatan_kategori (foreign key)
+        $stmt = $conn->prepare("DELETE FROM kegiatan_kategori WHERE kegiatan_id = ?");
+        $stmt->bind_param("i", $kegiatanId);
+        $stmt->execute();
+        $stmt->close();
+
+        // Kemudian hapus dari kegiatan
+        $stmt = $conn->prepare("DELETE FROM kegiatan WHERE id = ?");
+        $stmt->bind_param("i", $kegiatanId);
+        if ($stmt->execute()) {
+            $toast_message = "Kegiatan '$kegiatanName' berhasil dihapus!";
+            $toast_type = 'success';
+        } else {
+            $toast_message = "Gagal menghapus kegiatan!";
+            $toast_type = 'error';
+        }
+        $stmt->close();
+    } else {
+        $nama = $_POST['namaKegiatan'];
     $kategoriDipilih = isset($_POST['kategori']) ? $_POST['kategori'] : [];
     $editId = isset($_POST['editId']) ? intval($_POST['editId']) : null;
 
@@ -100,7 +113,9 @@ $query = "
     ORDER BY k.id DESC
 ";
 
-$result = $conn->query($query);
+$stmt = $conn->prepare($query);
+$stmt->execute();
+$result = $stmt->get_result();
 $kegiatanData = [];
 while ($row = $result->fetch_assoc()) {
     $categoryIds = $row['category_ids'] ? explode(',', $row['category_ids']) : [];
@@ -121,7 +136,9 @@ $statsQuery = "SELECT
     (SELECT COUNT(*) FROM peserta) as total_peserta,
     (SELECT COUNT(DISTINCT category_id) FROM kegiatan_kategori) as total_kategori_used
     FROM kegiatan";
-$statsResult = $conn->query($statsQuery);
+$stmt = $conn->prepare($statsQuery);
+$stmt->execute();
+$statsResult = $stmt->get_result();
 $stats = $statsResult->fetch_assoc();
 
 $username = $_SESSION['username'] ?? 'User';
@@ -365,7 +382,7 @@ $role = $_SESSION['role'] ?? 'user';
                                                     <button onclick="editData(<?= $item['id'] ?>)" class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit text-sm"></i>
                                                     </button>
-                                                    <button onclick="deleteData(<?= $item['id'] ?>)" class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
+                                                    <button onclick="deleteData(<?= $item['id'] ?>, '<?= addslashes(htmlspecialchars($item['nama'])) ?>')" class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                         <i class="fas fa-trash text-sm"></i>
                                                     </button>
                                                 </div>
@@ -459,6 +476,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form id="kegiatanForm" method="POST" class="flex-1 overflow-y-auto">
                 <div class="p-6 space-y-4">
                     <input type="hidden" id="editId" name="editId" value="">
+                    <?php csrf_field(); ?>
 
                     <div>
                         <label for="namaKegiatan" class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">
@@ -498,6 +516,36 @@ $role = $_SESSION['role'] ?? 'user';
                     </button>
                     <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                         <i class="fas fa-save mr-1"></i> Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Delete Modal -->
+    <div id="deleteModal" class="modal-backdrop">
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="bg-gradient-to-br from-red-600 to-red-800 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="font-semibold text-lg flex items-center gap-2">
+                    <i class="fas fa-trash"></i> Hapus Kegiatan
+                </h3>
+                <button onclick="closeModal('deleteModal')" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <p class="text-slate-700 dark:text-zinc-300">Apakah Anda yakin ingin menghapus kegiatan <strong id="delete_name_val" class="text-red-600 dark:text-red-400"></strong>?</p>
+                <p class="text-sm text-slate-500 dark:text-zinc-400 mt-2">Tindakan ini tidak dapat dibatalkan!</p>
+            </div>
+            <form method="POST">
+                <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
+                    <input type="hidden" name="action" value="delete">
+                    <?php csrf_field(); ?>
+                    <input type="hidden" name="id" id="delete_id">
+                    <button type="button" onclick="closeModal('deleteModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">
+                        <i class="fas fa-trash mr-1"></i> Hapus
                     </button>
                 </div>
             </form>
@@ -581,8 +629,9 @@ function openModal() {
     checkboxes.forEach(checkbox => checkbox.checked = false);
 }
 
-function closeModal() {
-    document.getElementById('myModal').classList.remove('active');
+function closeModal(id) {
+    const modalId = id || 'myModal';
+    document.getElementById(modalId).classList.remove('active');
     document.body.style.overflow = '';
 }
 
@@ -609,10 +658,10 @@ function editData(id) {
     }
 }
 
-function deleteData(id) {
-    if (confirm('Yakin ingin menghapus data ini?')) {
-        window.location.href = `?action=delete&id=${id}`;
-    }
+function deleteData(id, name) {
+    document.getElementById('delete_id').value = id;
+    document.getElementById('delete_name_val').textContent = name;
+    openModal('deleteModal');
 }
 
 function searchData() {

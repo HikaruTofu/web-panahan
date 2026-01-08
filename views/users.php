@@ -14,6 +14,8 @@ $toast_type = '';
 
 // Handle CRUD operations
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    verify_csrf();
+    $_POST = cleanInput($_POST);
     switch ($_POST['action']) {
         case 'create':
             $name = mysqli_real_escape_string($conn, $_POST['name']);
@@ -114,7 +116,9 @@ if (!empty($searchQuery)) {
     $stmt->execute();
     $result = $stmt->get_result();
 } else {
-    $result = $conn->query("SELECT * FROM users ORDER BY id ASC");
+    $stmt = $conn->prepare("SELECT * FROM users ORDER BY id ASC");
+    $stmt->execute();
+    $result = $stmt->get_result();
 }
 
 if($_SESSION['role'] != 'admin') {
@@ -489,6 +493,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form method="POST">
                 <div class="p-6 space-y-4">
                     <input type="hidden" name="action" value="create">
+                    <?php csrf_field(); ?>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
                         <input type="text" name="name" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" placeholder="Masukkan nama" required>
@@ -544,6 +549,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form method="POST">
                 <div class="p-6 space-y-4">
                     <input type="hidden" name="action" value="update">
+                    <?php csrf_field(); ?>
                     <input type="hidden" name="id" id="edit_id">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
@@ -604,6 +610,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form method="POST">
                 <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
                     <input type="hidden" name="action" value="delete">
+                    <?php csrf_field(); ?>
                     <input type="hidden" name="id" id="delete_id">
                     <button type="button" onclick="closeModal('deleteModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
                         Batal

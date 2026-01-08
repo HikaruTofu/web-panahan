@@ -5,7 +5,7 @@
  */
 include '../config/panggil.php';
 include '../includes/check_access.php';
-requireLogin();
+requireAdmin();
 
 // Get tournament ID from URL
 $tournament_id = isset($_GET['tournament_id']) ? intval($_GET['tournament_id']) : 0;
@@ -15,14 +15,20 @@ if (!$tournament_id) {
 }
 
 // Get tournament information
-$tournament_result = $conn->query("SELECT * FROM tournaments WHERE id = $tournament_id");
+$stmt = $conn->prepare("SELECT * FROM tournaments WHERE id = ?");
+$stmt->bind_param("i", $tournament_id);
+$stmt->execute();
+$tournament_result = $stmt->get_result();
 if (!$tournament_result || $tournament_result->num_rows == 0) {
     die("Tournament tidak ditemukan!");
 }
 $tournament = $tournament_result->fetch_assoc();
+$stmt->close();
 
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    verify_csrf();
+    $_POST = cleanInput($_POST);
     header('Content-Type: application/json');
 
     if ($_POST['action'] === 'add_participant') {
@@ -108,11 +114,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 
 // Get available participants (not yet registered in this tournament)
-$available_participants_sql = "SELECT p.* FROM participants p
-                              WHERE p.status = 'active'
-                              AND p.id NOT IN (SELECT participant_id FROM tournament_participants WHERE tournament_id = $tournament_id)
-                              ORDER BY p.name";
-$available_participants = $conn->query($available_participants_sql);
+$stmt = $conn->prepare("SELECT p.* FROM participants p
+                      WHERE p.status = 'active'
+                      AND p.id NOT IN (SELECT participant_id FROM tournament_participants WHERE tournament_id = ?)
+                      ORDER BY p.name");
+$stmt->bind_param("i", $tournament_id);
+$stmt->execute();
+$available_participants = $stmt->get_result();
+$stmt->close();
 
 // Get available categories
 $categories = $conn->query("SELECT * FROM categories WHERE status = 'active' ORDER BY name");
@@ -127,33 +136,34 @@ $offset = ($page - 1) * $limit;
 // Get registered participants
 $search = isset($_GET['q']) ? $_GET['q'] : '';
 
-// Build WHERE clause
-$where_clause = "tp.tournament_id = $tournament_id";
-if ($search) {
-    $search_escaped = $conn->real_escape_string($search);
-    $where_clause .= " AND (p.name LIKE '%$search_escaped%' OR c.name LIKE '%$search_escaped%')";
-}
+// Build search criteria
+$search_like = $search ? "%$search%" : "%";
 
 // Count total for pagination
-$count_sql = "SELECT COUNT(*) as total
+$count_stmt = $conn->prepare("SELECT COUNT(*) as total
               FROM tournament_participants tp
               LEFT JOIN participants p ON tp.participant_id = p.id
               LEFT JOIN categories c ON tp.category_id = c.id
-              WHERE $where_clause";
-$count_result = $conn->query($count_sql);
-$total_rows = $count_result->fetch_assoc()['total'];
+              WHERE tp.tournament_id = ? AND (p.name LIKE ? OR c.name LIKE ?)");
+$count_stmt->bind_param("iss", $tournament_id, $search_like, $search_like);
+$count_stmt->execute();
+$total_rows = $count_stmt->get_result()->fetch_assoc()['total'];
+$count_stmt->close();
 $total_pages = ceil($total_rows / $limit);
 
 // Main query with LIMIT
-$participants_sql = "SELECT tp.*, p.name as participant_name, p.birthdate, p.gender, p.phone,
+$participants_stmt = $conn->prepare("SELECT tp.*, p.name as participant_name, p.birthdate, p.gender, p.phone,
                     c.name as category_name, YEAR(CURDATE()) - YEAR(p.birthdate) as age
                     FROM tournament_participants tp
                     LEFT JOIN participants p ON tp.participant_id = p.id
                     LEFT JOIN categories c ON tp.category_id = c.id
-                    WHERE $where_clause
+                    WHERE tp.tournament_id = ? AND (p.name LIKE ? OR c.name LIKE ?)
                     ORDER BY tp.registration_date DESC
-                    LIMIT $limit OFFSET $offset";
-$participants_result = $conn->query($participants_sql);
+                    LIMIT ? OFFSET ?");
+$participants_stmt->bind_param("issii", $tournament_id, $search_like, $search_like, $limit, $offset);
+$participants_stmt->execute();
+$participants_result = $participants_stmt->get_result();
+$participants_stmt->close();
 
 // Helper function to build pagination URL preserving GET params
 function buildPaginationUrl($page, $params = []) {
@@ -166,7 +176,7 @@ function buildPaginationUrl($page, $params = []) {
 }
 
 // Calculate statistics for metrics bar
-$stats_sql = "SELECT
+$stats_stmt = $conn->prepare("SELECT
     COUNT(*) as total,
     SUM(CASE WHEN p.gender = 'Laki-laki' THEN 1 ELSE 0 END) as putra,
     SUM(CASE WHEN p.gender = 'Perempuan' THEN 1 ELSE 0 END) as putri,
@@ -176,9 +186,11 @@ $stats_sql = "SELECT
     COUNT(DISTINCT tp.category_id) as kategori_count
     FROM tournament_participants tp
     LEFT JOIN participants p ON tp.participant_id = p.id
-    WHERE tp.tournament_id = $tournament_id";
-$stats_result = $conn->query($stats_sql);
-$stats = $stats_result->fetch_assoc();
+    WHERE tp.tournament_id = ?");
+$stats_stmt->bind_param("i", $tournament_id);
+$stats_stmt->execute();
+$stats = $stats_stmt->get_result()->fetch_assoc();
+$stats_stmt->close();
 
 $username = $_SESSION['username'] ?? 'User';
 $name = $_SESSION['name'] ?? $username;
@@ -498,10 +510,10 @@ $role = $_SESSION['role'] ?? 'user';
                                             $statusColor = $statusColors[$row['status']] ?? 'bg-slate-100 text-slate-600';
                                             ?>
                                             <span class="px-2 py-0.5 rounded text-xs font-medium <?= $statusColor ?>">
-                                                <?= ucfirst($row['status']); ?>
+                                                <?= htmlspecialchars(ucfirst($row['status'])); ?>
                                             </span>
                                         </td>
-                                        <td class="px-3 py-2.5 text-center text-sm text-slate-600"><?= $row['seed_number'] ?? '-'; ?></td>
+                                        <td class="px-3 py-2.5 text-center text-sm text-slate-600"><?= htmlspecialchars($row['seed_number'] ?? '-'); ?></td>
                                         <td class="px-3 py-2.5 text-sm text-slate-500"><?= date('d/m/Y', strtotime($row['registration_date'])); ?></td>
                                         <td class="px-3 py-2.5">
                                             <div class="flex items-center justify-center gap-1">
@@ -709,6 +721,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form id="addParticipantForm" class="flex-1 overflow-y-auto">
                 <div class="p-6 space-y-4">
                     <input type="hidden" name="action" value="add_participant">
+                    <?php csrf_field(); ?>
 
                     <div>
                         <label for="participant_id" class="block text-sm font-medium text-slate-700 mb-1">
@@ -798,6 +811,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form id="editParticipantForm" class="flex-1 overflow-y-auto">
                 <div class="p-6 space-y-4">
                     <input type="hidden" name="action" value="update_participant">
+                    <?php csrf_field(); ?>
                     <input type="hidden" id="edit_tp_id" name="tp_id">
 
                     <div>

@@ -10,6 +10,8 @@ $toast_type = '';
 
 // Handle CRUD operations
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    verify_csrf();
+    $_POST = cleanInput($_POST);
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
             case 'create':
@@ -53,9 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             case 'delete':
                 $id = (int)$_POST['id'];
-                // Get name first for toast
-                $nameResult = $conn->query("SELECT name FROM categories WHERE id = $id");
+                // Get name first for toast - Use Prepared Statement
+                $stmt = $conn->prepare("SELECT name FROM categories WHERE id = ?");
+                $stmt->bind_param("i", $id);
+                $stmt->execute();
+                $nameResult = $stmt->get_result();
                 $catName = $nameResult->fetch_assoc()['name'] ?? 'Kategori';
+                $stmt->close();
 
                 $stmt = $conn->prepare("DELETE FROM categories WHERE id=?");
                 $stmt->bind_param("i", $id);
@@ -72,17 +78,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Search functionality
-$search = '';
-$sql = "SELECT c.*,
-        COALESCE((SELECT COUNT(*) FROM peserta p WHERE p.category_id = c.id), 0) as registered_count
+// Search functionality - Use Prepared Statement
+$search = isset($_GET['q']) ? $_GET['q'] : '';
+$sql = "SELECT c.*, 
+        COALESCE((SELECT COUNT(*) FROM peserta p WHERE p.category_id = c.id), 0) as registered_count 
         FROM categories c";
-if (isset($_GET['q']) && !empty($_GET['q'])) {
-    $search = mysqli_real_escape_string($conn, $_GET['q']);
-    $sql .= " WHERE c.name LIKE '%$search%' OR c.min_age LIKE '%$search%' OR c.max_age LIKE '%$search%'";
+
+if (!empty($search)) {
+    $stmt = $conn->prepare($sql . " WHERE c.name LIKE ? OR c.min_age LIKE ? OR c.max_age LIKE ? ORDER BY c.min_age ASC, c.name ASC");
+    $searchLike = "%$search%";
+    $stmt->bind_param("sss", $searchLike, $searchLike, $searchLike);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $result = $conn->query($sql . " ORDER BY c.min_age ASC, c.name ASC");
 }
-$sql .= " ORDER BY c.min_age ASC, c.name ASC";
-$result = $conn->query($sql);
 
 // Calculate statistics for metrics bar
 $statsQuery = "SELECT
@@ -436,6 +446,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form method="POST">
                 <div class="p-6 space-y-4">
                     <input type="hidden" name="action" value="create">
+                    <?php csrf_field(); ?>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Kategori <span class="text-red-500">*</span></label>
                         <input type="text" name="name" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500" placeholder="Contoh: Junior A" required>
@@ -490,6 +501,7 @@ $role = $_SESSION['role'] ?? 'user';
             <form method="POST">
                 <div class="p-6 space-y-4">
                     <input type="hidden" name="action" value="update">
+                    <?php csrf_field(); ?>
                     <input type="hidden" name="id" id="edit_id">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Kategori <span class="text-red-500">*</span></label>
@@ -549,6 +561,7 @@ $role = $_SESSION['role'] ?? 'user';
             </div>
             <form method="POST">
                 <input type="hidden" name="action" value="delete">
+                <?php csrf_field(); ?>
                 <input type="hidden" name="id" id="delete_id">
                 <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex gap-3">
                     <button type="button" onclick="closeModal('deleteModal')" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">
