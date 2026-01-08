@@ -15,12 +15,19 @@ if (isset($_SESSION['login']) && $_SESSION['login'] === true) {
 $error_message = '';
 
 if (isset($_POST['submit'])) {
-    $name = trim($_POST['name']);
-    $password = trim($_POST['password']);
-
-    if (empty($name) || empty($password)) {
-        $error_message = 'Harap isi nama dan password';
+    verify_csrf();
+    
+    if (!checkRateLimit('login', 5, 300)) {
+        $error_message = 'Terlalu banyak percobaan login. Silakan coba lagi dalam 5 menit.';
+        security_log("Brute-force attempt detected for user: " . ($_POST['name'] ?? 'unknown'), 'WARNING');
     } else {
+        $_POST = cleanInput($_POST);
+        $name = $_POST['name'] ?? '';
+        $password = $_POST['password'] ?? '';
+
+        if (empty($name) || empty($password)) {
+            $error_message = 'Harap isi nama dan password';
+        } else {
         $sql = "SELECT * FROM users WHERE name = ?";
         $stmt = $conn->prepare($sql);
 
@@ -143,6 +150,7 @@ if (isset($_POST['submit'])) {
             <?php endif; ?>
 
             <form method="POST" id="loginForm" class="space-y-5">
+                <?php csrf_field(); ?>
                 <!-- Username Field -->
                 <div>
                     <label for="name" class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Nama Pengguna</label>

@@ -1,8 +1,6 @@
 <?php
 // Aktifkan error reporting untuk debuggin
 session_start();
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 include '../includes/check_access.php';
 include '../includes/theme.php';
 requireLogin();
@@ -1055,6 +1053,8 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 // HANDLER UNTUK SCORECARD SETUP
 // ============================================
 if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
+    verify_csrf();
+    $_POST = cleanInput($_POST);
     try {
         include '../config/panggil.php';
     } catch (Exception $e) {
@@ -1067,6 +1067,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
     if (!$kegiatan_id || !$category_id) {
         die("Parameter kegiatan_id dan category_id harus diisi.");
     }
+    // ... (rest of the logic remains valid as I've already refactored some parts above)
+    // Wait, I need to be careful with the lines I'm replacing.
 
     // Handler untuk get scores via AJAX
     if (isset($_GET['action']) && $_GET['action'] == 'get_scores') {
@@ -1108,9 +1110,19 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
         exit;
     }
 
-    $mysql_table_score_board = mysqli_query($conn, "SELECT * FROM score_boards WHERE kegiatan_id=" . $kegiatan_id . " AND category_id=" . $category_id . " ORDER BY created DESC");
+    $stmtSb = $conn->prepare("SELECT * FROM score_boards WHERE kegiatan_id=? AND category_id=? ORDER BY created DESC");
+    $stmtSb->bind_param("ii", $kegiatan_id, $category_id);
+    $stmtSb->execute();
+    $mysql_table_score_board = $stmtSb->get_result();
+    $stmtSb->close();
+
     if (isset($_GET['scoreboard'])) {
-        $mysql_data_score = mysqli_query($conn, "SELECT * FROM score WHERE kegiatan_id=" . $kegiatan_id . " AND category_id=" . $category_id . " AND score_board_id=" . $_GET['scoreboard'] . " ");
+        $sb_id = intval($_GET['scoreboard']);
+        $stmtDs = $conn->prepare("SELECT * FROM score WHERE kegiatan_id=? AND category_id=? AND score_board_id=? ");
+        $stmtDs->bind_param("iii", $kegiatan_id, $category_id, $sb_id);
+        $stmtDs->execute();
+        $mysql_data_score = $stmtDs->get_result();
+        $stmtDs->close();
     }
 
     // Ambil data kegiatan
@@ -1175,12 +1187,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             $pesertaList[] = $row;
         }
 
-        if (isset($_GET['scoreboard'])) {
+            $stmtTotal = $conn->prepare("SELECT * FROM score WHERE kegiatan_id=? AND category_id=? AND score_board_id =? AND peserta_id=?");
             foreach ($pesertaList as $a) {
-                $mysql_score_total = mysqli_query($conn, "SELECT * FROM score WHERE kegiatan_id=" . $kegiatan_id . " AND category_id=" . $category_id . " AND score_board_id =" . $_GET['scoreboard'] . " AND peserta_id=" . $a['id']);
+                $sb_id = intval($_GET['scoreboard']);
+                $stmtTotal->bind_param("iiii", $kegiatan_id, $category_id, $sb_id, $a['id']);
+                $stmtTotal->execute();
+                $mysql_score_total = $stmtTotal->get_result();
                 $score = 0;
                 $x_score = 0;
-                while ($b = mysqli_fetch_array($mysql_score_total)) {
+                while ($b = $mysql_score_total->fetch_assoc()) {
                     if ($b['score'] == 'm') {
                         $score = $score + 0;
                     } else if ($b['score'] == 'x') {
@@ -1192,6 +1207,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 }
                 $peserta_score[] = ['id' => $a['id'], 'total_score' => $score, 'total_x' => $x_score];
             }
+            $stmtTotal->close();
 
             // Fetch all individual scores for detailed view (ranking mode)
             if (isset($_GET['rangking'])) {
@@ -1225,61 +1241,75 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
     }
 
     if (isset($_POST['create'])) {
-        $create_score_board = mysqli_query($conn, "INSERT INTO `score_boards` 
-                                                    (`kegiatan_id`, `category_id`, `jumlah_sesi`, `jumlah_anak_panah`, `created`) 
-                                                    VALUES 
-                                                    ('" . $kegiatan_id . "', '" . $category_id . "', '" . $_POST['jumlahSesi'] . "', '" . $_POST['jumlahPanah'] . "', '" . $_POST['local_time'] . "');");
+        enforceAdmin();
+        security_log("New score board created for activity $kegiatan_id, category $category_id");
+        $stmtC = $conn->prepare("INSERT INTO `score_boards` (`kegiatan_id`, `category_id`, `jumlah_sesi`, `jumlah_anak_panah`, `created`) VALUES (?, ?, ?, ?, ?)");
+        $stmtC->bind_param("iiiis", $kegiatan_id, $category_id, $_POST['jumlahSesi'], $_POST['jumlahPanah'], $_POST['local_time']);
+        $stmtC->execute();
+        $stmtC->close();
         header("Location: detail.php?action=scorecard&resource=index&kegiatan_id=" . $kegiatan_id . "&category_id=" . $category_id);
     }
 
     if (isset($_POST['save_score'])) {
         header("Content-Type: application/json; charset=UTF-8");
+        $sb_id = intval($_GET['scoreboard'] ?? 0);
+        $peserta_id = intval($_POST['peserta_id'] ?? 0);
+        $arrow = intval($_POST['arrow'] ?? 0);
+        $session = intval($_POST['session'] ?? 0);
+        $score_val = $_POST['score'] ?? '';
 
-        $nama = !empty($_POST['nama']) ? $_POST['nama'] : "Anonim";
-        $checkScore = mysqli_query($conn, "SELECT * FROM score WHERE kegiatan_id='" . $kegiatan_id . "' AND category_id='" . $category_id . "' AND score_board_id='" . $_GET['scoreboard'] . "' AND peserta_id='" . $_POST['peserta_id'] . "' AND arrow='" . $_POST['arrow'] . "' AND session='" . $_POST['session'] . "'");
-        if (!$checkScore) {
-            echo json_encode([
-                "status" => "error",
-                "message" => "Query Error: " . mysqli_error($conn)
-            ]);
-            exit;
-        }
-        $fetch_checkScore = mysqli_fetch_assoc($checkScore);
+        $stmtCheck = $conn->prepare("SELECT * FROM score WHERE kegiatan_id=? AND category_id=? AND score_board_id=? AND peserta_id=? AND arrow=? AND session=?");
+        $stmtCheck->bind_param("iiiiii", $kegiatan_id, $category_id, $sb_id, $peserta_id, $arrow, $session);
+        $stmtCheck->execute();
+        $fetch_checkScore = $stmtCheck->get_result()->fetch_assoc();
+        $stmtCheck->close();
 
         if ($fetch_checkScore) {
             $message = "Score updated";
-            if (empty($_POST['score'])) {
-                $score = mysqli_query($conn, "DELETE FROM score WHERE id='" . $fetch_checkScore['id'] . "'");
+            if (empty($score_val)) {
+                $stmtOp = $conn->prepare("DELETE FROM score WHERE id=?");
+                $stmtOp->bind_param("i", $fetch_checkScore['id']);
             } else {
-                $score = mysqli_query($conn, "UPDATE score SET score='" . $_POST['score'] . "' WHERE id='" . $fetch_checkScore['id'] . "'");
+                $stmtOp = $conn->prepare("UPDATE score SET score=? WHERE id=?");
+                $stmtOp->bind_param("si", $score_val, $fetch_checkScore['id']);
             }
         } else {
-            if (!empty($_POST['score'])) {
-                $score = mysqli_query($conn, "INSERT INTO `score` 
-                                                    (`kegiatan_id`, `category_id`, `score_board_id`, `peserta_id`, `arrow`, `session`, `score`) 
-                                                    VALUES 
-                                                    ('" . $kegiatan_id . "', '" . $category_id . "', '" . $_GET['scoreboard'] . "', '" . $_POST['peserta_id'] . "', '" . $_POST['arrow'] . "','" . $_POST['session'] . "','" . $_POST['score'] . "');");
+            if (!empty($score_val)) {
+                $stmtOp = $conn->prepare("INSERT INTO `score` (`kegiatan_id`, `category_id`, `score_board_id`, `peserta_id`, `arrow`, `session`, `score`) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmtOp->bind_param("iiiiiii", $kegiatan_id, $category_id, $sb_id, $peserta_id, $arrow, $session, $score_val);
                 $message = "Score added";
             } else {
                 $message = "Empty score - no action";
             }
         }
+        
+        if (isset($stmtOp)) {
+            $stmtOp->execute();
+            $stmtOp->close();
+        }
 
-        echo json_encode([
-            "status" => "success",
-            "message" => $message
-        ]);
+        echo json_encode(["status" => "success", "message" => $message]);
         exit;
     }
 
     if (isset($_GET['delete_score_board'])) {
-        $delete_score_board = mysqli_query($conn, 'DELETE FROM `score_boards` WHERE `score_boards`.`id` =' . $_GET['delete_score_board']);
+        enforceAdmin();
+        $stmtDel = $conn->prepare("DELETE FROM `score_boards` WHERE `id` = ?");
+        $ds_id = intval($_GET['delete_score_board']);
+        security_log("Score board $ds_id deleted", 'WARNING');
+        $stmtDel->bind_param("i", $ds_id);
+        $stmtDel->execute();
+        $stmtDel->close();
         header("Location: detail.php?action=scorecard&resource=index&kegiatan_id=" . $kegiatan_id . "&category_id=" . $category_id);
     }
 
     if (isset($_GET['scoreboard'])) {
-        $sql_show_score_board = mysqli_query($conn, 'SELECT * FROM `score_boards` WHERE `score_boards`.`id` =' . $_GET['scoreboard']);
-        $show_score_board = mysqli_fetch_assoc($sql_show_score_board);
+        $sb_id = intval($_GET['scoreboard']);
+        $stmtShow = $conn->prepare("SELECT * FROM `score_boards` WHERE `id` = ?");
+        $stmtShow->bind_param("i", $sb_id);
+        $stmtShow->execute();
+        $show_score_board = $stmtShow->get_result()->fetch_assoc();
+        $stmtShow->close();
     }
 
     $conn->close();
@@ -1429,6 +1459,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         </div>
 
                         <form action="" method="post" class="p-6">
+                            <?php csrf_field(); ?>
                             <input type="hidden" id="local_time" name="local_time">
 
                             <div class="bg-archery-50 dark:bg-archery-900/30 border border-archery-200 dark:border-archery-800 rounded-xl p-4 mb-6 text-center">

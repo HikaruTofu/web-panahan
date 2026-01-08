@@ -7,6 +7,7 @@
  */
 
 include '../config/panggil.php';
+enforceAdmin();
 
 $executeCleanup = isset($_GET['execute']) && $_GET['execute'] === 'yes';
 
@@ -145,15 +146,17 @@ if ($executeCleanup && !empty($invalidAthletes)) {
     echo "<h2>Executing Cleanup...</h2>";
 
     $deletedScores = 0;
+    $stmtDel = $conn->prepare("DELETE FROM score WHERE peserta_id = ?");
     foreach ($invalidAthletes as $athlete) {
-        $deleteQuery = "DELETE FROM score WHERE peserta_id = " . (int)$athlete['peserta_id'];
-        if ($conn->query($deleteQuery)) {
+        $stmtDel->bind_param("i", $athlete['peserta_id']);
+        if ($stmtDel->execute()) {
             $deletedScores += $conn->affected_rows;
-            echo "<p>✓ Deleted scores for: {$athlete['nama_peserta']} ({$conn->affected_rows} records)</p>";
+            echo "<p>✓ Deleted scores for: " . s($athlete['nama_peserta']) . " ({$conn->affected_rows} records)</p>";
         } else {
-            echo "<p style='color:red;'>✗ Failed to delete scores for: {$athlete['nama_peserta']}</p>";
+            echo "<p style='color:red;'>✗ Failed to delete scores for: " . s($athlete['nama_peserta']) . "</p>";
         }
     }
+    $stmtDel->close();
 
     echo "<div class='success'>";
     echo "<strong>Cleanup Complete!</strong><br>";

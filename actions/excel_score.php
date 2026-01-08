@@ -1,6 +1,7 @@
 <?php
 require '../vendor/vendor/autoload.php';
 include '../config/panggil.php';
+enforceAdmin();
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -9,16 +10,34 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Color;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-$category = mysqli_query($conn, "SELECT * FROM `categories` WHERE id = " . $_GET['category_id']);
-$category_fetch = mysqli_fetch_assoc($category);
+$category_id = intval($_GET['category_id'] ?? 0);
+$kegiatan_id = intval($_GET['kegiatan_id'] ?? 0);
+$scoreboard_id = intval($_GET['scoreboard'] ?? 0);
 
-$kegiatan = mysqli_query($conn, "SELECT * FROM `kegiatan` WHERE id = " . $_GET['kegiatan_id']);
-$kegiatan_fetch = mysqli_fetch_assoc($kegiatan);
+// Prepared Statements for metadata
+$stmtCat = $conn->prepare("SELECT * FROM `categories` WHERE id = ?");
+$stmtCat->bind_param("i", $category_id);
+$stmtCat->execute();
+$category_fetch = $stmtCat->get_result()->fetch_assoc();
+$stmtCat->close();
 
-$scoreboard = mysqli_query($conn, "SELECT * FROM `score_boards` WHERE id = " . $_GET['scoreboard']);
-$scoreboard_fetch = mysqli_fetch_assoc($scoreboard);
+$stmtKeg = $conn->prepare("SELECT * FROM `kegiatan` WHERE id = ?");
+$stmtKeg->bind_param("i", $kegiatan_id);
+$stmtKeg->execute();
+$kegiatan_fetch = $stmtKeg->get_result()->fetch_assoc();
+$stmtKeg->close();
 
-$peserta_query_value = mysqli_query($conn, "
+$stmtSb = $conn->prepare("SELECT * FROM `score_boards` WHERE id = ?");
+$stmtSb->bind_param("i", $scoreboard_id);
+$stmtSb->execute();
+$scoreboard_fetch = $stmtSb->get_result()->fetch_assoc();
+$stmtSb->close();
+
+if (!$category_fetch || !$kegiatan_fetch || !$scoreboard_fetch) {
+    die("Data tidak ditemukan.");
+}
+
+$peserta_query = "
     SELECT 
         p.id AS peserta_id,
         p.nama_peserta,
@@ -36,25 +55,35 @@ $peserta_query_value = mysqli_query($conn, "
     FROM peserta p
     LEFT JOIN score s 
         ON p.id = s.peserta_id 
-        WHERE s.kegiatan_id = " . $_GET['kegiatan_id'] . "
-        AND s.category_id = " . $_GET['category_id'] . "
-        AND s.score_board_id = " . $_GET['scoreboard'] . "
-    GROUP BY p.id, p.nama_peserta
+        AND s.kegiatan_id = ?
+        AND s.category_id = ?
+        AND s.score_board_id = ?
+    WHERE p.kegiatan_id = ? AND p.category_id = ?
+    GROUP BY p.id, p.nama_peserta, p.jenis_kelamin, p.kegiatan_id, p.category_id
     ORDER BY total_score DESC, jumlah_x DESC;
-");
+";
+
+$stmtPeserta = $conn->prepare($peserta_query);
+$stmtPeserta->bind_param("iiiii", $kegiatan_id, $category_id, $scoreboard_id, $kegiatan_id, $category_id);
+$stmtPeserta->execute();
+$peserta_result = $stmtPeserta->get_result();
 
 $peserta = [];
-
-while ($b = mysqli_fetch_array($peserta_query_value)) {
+while ($b = $peserta_result->fetch_assoc()) {
     $peserta[] = $b;
 }
+$stmtPeserta->close();
 
 // OPTIMIZATION: Pre-fetch all scores for this scoreboard
 $allScores = [];
-$scoreQueryAll = mysqli_query($conn, "SELECT peserta_id, session, arrow, score FROM score WHERE score_board_id = " . intval($_GET['scoreboard']));
-while ($sc = mysqli_fetch_assoc($scoreQueryAll)) {
+$stmtScores = $conn->prepare("SELECT peserta_id, session, arrow, score FROM score WHERE score_board_id = ?");
+$stmtScores->bind_param("i", $scoreboard_id);
+$stmtScores->execute();
+$scoreResult = $stmtScores->get_result();
+while ($sc = $scoreResult->fetch_assoc()) {
     $allScores[$sc['peserta_id']][$sc['session']][$sc['arrow']] = $sc['score'];
 }
+$stmtScores->close();
 
 $total_score_peserta = [];
 

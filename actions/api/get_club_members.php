@@ -1,5 +1,6 @@
 <?php
 header('Content-Type: application/json');
+enforceAuth();
 include '../../config/panggil.php';
 
 if (!isset($_GET['club']) || empty($_GET['club'])) {

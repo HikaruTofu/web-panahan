@@ -1,26 +1,32 @@
-<?php 
-    // Aktifkan error reporting untuk debugging
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
-
-    // Mulai session jika belum
+<?php
     if (session_status() == PHP_SESSION_NONE) {
         session_start();
     }
 
     include '../config/panggil.php';
+    enforceAdmin();
 
+    $kegiatan_id = intval($_GET['kegiatan_id'] ?? 0);
+    $category_id = intval($_GET['category_id'] ?? 0);
 
-
-    $mysql_table_score_board = mysqli_query($conn, "SELECT * FROM score_boards WHERE kegiatan_id=".$_GET['kegiatan_id']." AND category_id=".$_GET['category_id']." ORDER BY created ASC");
+    $stmtSb = $conn->prepare("SELECT * FROM score_boards WHERE kegiatan_id = ? AND category_id = ? ORDER BY created ASC");
+    $stmtSb->bind_param("ii", $kegiatan_id, $category_id);
+    $stmtSb->execute();
+    $mysql_table_score_board = $stmtSb->get_result();
+    
     $data = [];
     $loop = 0;
-    while($a = mysqli_fetch_assoc($mysql_table_score_board)) {
+    while($a = $mysql_table_score_board->fetch_assoc()) {
         $data[] = ['score' => $a, 'peserta' => []];
-        $peserta_query = mysqli_query($conn, "SELECT * FROM peserta INNER JOIN peserta_rounds ON peserta_rounds.peserta_id = peserta.id WHERE peserta_rounds.score_board_id = ".$a['id']."  ");
+        
+        $stmtPeserta = $conn->prepare("SELECT p.*, pr.* FROM peserta p INNER JOIN peserta_rounds pr ON pr.peserta_id = p.id WHERE pr.score_board_id = ?");
+        $stmtPeserta->bind_param("i", $a['id']);
+        $stmtPeserta->execute();
+        $peserta_result = $stmtPeserta->get_result();
+        
         $loop_lawan = 0;
         $loop_isi = 0;
-        while($b = mysqli_fetch_assoc($peserta_query)) {
+        while($b = $peserta_result->fetch_assoc()) {
             if($loop_isi == 0) {
                 $data[$loop]['peserta'][] = [[],[]];
             }
@@ -32,10 +38,10 @@
                 $loop_isi = 0;
             }
         }
-
+        $stmtPeserta->close();
         $loop = $loop + 1;
     }
-
+    $stmtSb->close();
 ?>
 
 

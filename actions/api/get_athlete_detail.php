@@ -4,6 +4,7 @@ include '../../includes/check_access.php';
 requireAdmin();
 
 header('Content-Type: application/json');
+enforceAuth();
 
 if (!isset($_GET['nama'])) {
     echo json_encode(['success' => false, 'message' => 'Nama tidak ditemukan']);

@@ -3,7 +3,7 @@
  * Athlete Statistics API - Dynamic calculation from score table
  */
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
+enforceAuth();
 
 include '../../config/panggil.php';
 

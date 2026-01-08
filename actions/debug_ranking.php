@@ -1,5 +1,6 @@
 <?php
-include '/var/www/html/config/panggil.php';
+include '../config/panggil.php';
+enforceAdmin();
 
 $kegiatan_id = 11;
 $category_id = 4;
@@ -33,11 +34,14 @@ echo "pesertaList count: " . count($pesertaList) . "\n";
 
 // Now calculate scores like in line 1751
 $scoreboard_id = 53;
+$stmtScore = $conn->prepare("SELECT * FROM score WHERE kegiatan_id=? AND category_id=? AND score_board_id =? AND peserta_id=?");
 foreach ($pesertaList as $a) {
-    $mysql_score_total = mysqli_query($conn, "SELECT * FROM score WHERE kegiatan_id=" . $kegiatan_id . " AND category_id=" . $category_id . " AND score_board_id =" . $scoreboard_id . " AND peserta_id=" . $a['id']);
+    $stmtScore->bind_param("iiii", $kegiatan_id, $category_id, $scoreboard_id, $a['id']);
+    $stmtScore->execute();
+    $mysql_score_total = $stmtScore->get_result();
     $score = 0;
     $x_score = 0;
-    while ($b = mysqli_fetch_array($mysql_score_total)) {
+    while ($b = $mysql_score_total->fetch_assoc()) {
         if ($b['score'] == 'm' || $b['score'] == 'M') {
             $score = $score + 0;
         } else if ($b['score'] == 'x' || $b['score'] == 'X') {
@@ -49,6 +53,7 @@ foreach ($pesertaList as $a) {
     }
     $peserta_score[] = ['id' => $a['id'], 'total_score' => $score, 'total_x' => $x_score];
 }
+$stmtScore->close();
 
 echo "peserta_score count: " . count($peserta_score) . "\n\n";
 echo "Top 5 scores:\n";

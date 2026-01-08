@@ -15,4 +15,7 @@ $conn = new mysqli($sname, $uname, $pwd, $database);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
+
+// Include Security Helpers
+include __DIR__ . '/../includes/security.php';
 ?>

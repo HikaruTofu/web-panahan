@@ -1,40 +1,55 @@
-<?php include '../config/panggil.php'; ?>
-<?php   
-    $scoreboard = mysqli_query($conn, "SELECT * FROM `score_boards` WHERE id = ".$_GET['scoreboard']);
-    $scoreboard_fetch = mysqli_fetch_assoc($scoreboard);
-    
-    $peserta_query_value = mysqli_query($conn, "
-        SELECT 
-            p.id AS peserta_id,
-            p.nama_peserta,
-            p.jenis_kelamin,
-            p.kegiatan_id,
-            p.category_id,
-            COALESCE(SUM(
-                CASE 
-                    WHEN s.score = 'm' THEN 0
-                    WHEN s.score = 'x' THEN 10
-                    ELSE CAST(s.score AS UNSIGNED)
-                END
-            ), 0) AS total_score,
-            COALESCE(SUM(CASE WHEN s.score = 'x' THEN 1 ELSE 0 END), 0) AS jumlah_x
-        FROM peserta p
-        LEFT JOIN score s 
-            ON p.id = s.peserta_id 
-            WHERE s.kegiatan_id = ".$_GET['kegiatan_id']."
-            AND s.category_id = ".$_GET['category_id']."
-            AND s.score_board_id = ".$_GET['scoreboard']."
-        GROUP BY p.id, p.nama_peserta
-        ORDER BY total_score DESC, jumlah_x DESC;
-    ");
+<?php 
+include '../config/panggil.php'; 
+enforceAdmin();
 
-    $peserta = [];
+$kegiatan_id = intval($_GET['kegiatan_id'] ?? 0);
+$category_id = intval($_GET['category_id'] ?? 0);
+$scoreboard_id = intval($_GET['scoreboard'] ?? 0);
 
-    while($b = mysqli_fetch_array($peserta_query_value)) {
-        $peserta[] = $b;
-    }
+$stmtSb = $conn->prepare("SELECT * FROM `score_boards` WHERE id = ?");
+$stmtSb->bind_param("i", $scoreboard_id);
+$stmtSb->execute();
+$scoreboard_fetch = $stmtSb->get_result()->fetch_assoc();
+$stmtSb->close();
 
-    $total_score_peserta = [];
+$peserta_query = "
+    SELECT 
+        p.id AS peserta_id,
+        p.nama_peserta,
+        p.jenis_kelamin,
+        p.kegiatan_id,
+        p.category_id,
+        COALESCE(SUM(
+            CASE 
+                WHEN s.score = 'm' THEN 0
+                WHEN s.score = 'x' THEN 10
+                ELSE CAST(s.score AS UNSIGNED)
+            END
+        ), 0) AS total_score,
+        COALESCE(SUM(CASE WHEN s.score = 'x' THEN 1 ELSE 0 END), 0) AS jumlah_x
+    FROM peserta p
+    LEFT JOIN score s 
+        ON p.id = s.peserta_id 
+        AND s.kegiatan_id = ?
+        AND s.category_id = ?
+        AND s.score_board_id = ?
+    WHERE p.kegiatan_id = ? AND p.category_id = ?
+    GROUP BY p.id, p.nama_peserta, p.jenis_kelamin, p.kegiatan_id, p.category_id
+    ORDER BY total_score DESC, jumlah_x DESC;
+";
+
+$stmtPeserta = $conn->prepare($peserta_query);
+$stmtPeserta->bind_param("iiiii", $kegiatan_id, $category_id, $scoreboard_id, $kegiatan_id, $category_id);
+$stmtPeserta->execute();
+$peserta_result = $stmtPeserta->get_result();
+
+$peserta = [];
+while($b = $peserta_result->fetch_assoc()) {
+    $peserta[] = $b;
+}
+$stmtPeserta->close();
+
+$total_score_peserta = [];
 ?>
 
 
@@ -61,10 +76,14 @@
                     <td><?= $s ?></td>
                     <?php for($a = 1; $a <= $scoreboard_fetch['jumlah_anak_panah']; $a++) { ?>
                         <?php 
-                            $score_query = mysqli_query($conn, "SELECT * FROM score WHERE category_id=".$_GET['category_id']." AND kegiatan_id =".$_GET['kegiatan_id']." AND score_board_id=".$_GET['scoreboard']." AND peserta_id=".$p['peserta_id']." AND session=".$s." AND arrow=".$a);    
-                            $score_fetch = mysqli_fetch_assoc($score_query);
+                            $stmtS = $conn->prepare("SELECT * FROM score WHERE category_id=? AND kegiatan_id =? AND score_board_id=? AND peserta_id=? AND session=? AND arrow=?");
+                            $stmtS->bind_param("iiiiii", $category_id, $kegiatan_id, $scoreboard_id, $p['peserta_id'], $s, $a);
+                            $stmtS->execute();
+                            $score_fetch = $stmtS->get_result()->fetch_assoc();
+                            $stmtS->close();
+
                             $score_value = 0;
-                            if(isset( $score_fetch)) {
+                            if(isset($score_fetch)) {
                                 if($score_fetch['score'] == "x") {
                                     $score_value = 10;
                                 } else if($score_fetch['score'] == "m") {

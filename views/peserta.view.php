@@ -84,33 +84,61 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_categories') {
 
 // Handle CRUD Operations
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    verify_csrf();
+    $_POST = cleanInput($_POST);
     $action = $_POST['action'];
     
     switch ($action) {
         case 'create':
-            $nama_peserta = trim($_POST['nama_peserta']);
-            $tanggal_lahir = $_POST['tanggal_lahir'];
-            $jenis_kelamin = $_POST['jenis_kelamin'];
-            $asal_kota = trim($_POST['asal_kota']);
-            $nama_club = trim($_POST['nama_club']);
+            $nama_peserta = $_POST['nama_peserta'] ?? '';
+            $tanggal_lahir = $_POST['tanggal_lahir'] ?? '';
+            $jenis_kelamin = $_POST['jenis_kelamin'] ?? '';
+            $asal_kota = $_POST['asal_kota'] ?? '';
+            $nama_club = $_POST['nama_club'] ?? '';
             if ($nama_club === 'CLUB_BARU' && !empty($_POST['club_baru'])) {
-                $nama_club = trim($_POST['club_baru']);
+                $nama_club = $_POST['club_baru'];
             }
-            $sekolah = trim($_POST['sekolah']);
-            $kelas = trim($_POST['kelas']);
-            $nomor_hp = trim($_POST['nomor_hp']);
-            $category_ids = isset($_POST['category_ids']) ? $_POST['category_ids'] : [];
-            $kegiatan_id = intval($_POST['kegiatan_id']);
+            $sekolah = $_POST['sekolah'] ?? '';
+            $kelas = $_POST['kelas'] ?? '';
+            $nomor_hp = $_POST['nomor_hp'] ?? '';
+            $category_ids = isset($_POST['category_ids']) ? (is_array($_POST['category_ids']) ? $_POST['category_ids'] : [$_POST['category_ids']]) : [];
+            $kegiatan_id = intval($_POST['kegiatan_id'] ?? 0);
 
             // Handle file upload
             $bukti_pembayaran = '';
             if (isset($_FILES['bukti_pembayaran']) && $_FILES['bukti_pembayaran']['error'] === UPLOAD_ERR_OK) {
+                // Validate File Size (2MB)
+                if ($_FILES['bukti_pembayaran']['size'] > 2 * 1024 * 1024) {
+                    $toast_message = "File bukti pembayaran terlalu besar! Maksimal 2MB.";
+                    $toast_type = 'error';
+                    break;
+                }
+
+                // Validate MIME type
+                $finfo = new finfo(FILEINFO_MIME_TYPE);
+                $mime = $finfo->file($_FILES['bukti_pembayaran']['tmp_name']);
+                $allowed_mimes = ['image/jpeg', 'image/png', 'application/pdf'];
+                
+                if (!in_array($mime, $allowed_mimes)) {
+                    $toast_message = "Format file tidak didukung! Gunakan JPG, PNG, atau PDF.";
+                    $toast_type = 'error';
+                    break;
+                }
+
                 $upload_dir = '../assets/uploads/pembayaran/';
                 if (!file_exists($upload_dir)) mkdir($upload_dir, 0755, true);
                 
                 $file_name = $_FILES['bukti_pembayaran']['name'];
-                $file_extension = pathinfo($file_name, PATHINFO_EXTENSION);
-                $unique_name = date('YmdHis') . '_' . uniqid() . '.' . $file_extension;
+                $file_extension = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+                $allowed_extensions = ['jpg', 'jpeg', 'png', 'pdf'];
+
+                if (!in_array($file_extension, $allowed_extensions)) {
+                    $toast_message = "Ekstensi file tidak didukung!";
+                    $toast_type = 'error';
+                    break;
+                }
+
+                $unique_name = date('YmdHis') . '_' . bin2hex(random_bytes(8)) . '.' . $file_extension;
                 
                 if (move_uploaded_file($_FILES['bukti_pembayaran']['tmp_name'], $upload_dir . $unique_name)) {
                     $bukti_pembayaran = 'pembayaran/' . $unique_name;
@@ -944,6 +972,7 @@ $role = $_SESSION['role'] ?? 'user';
             </div>
             
             <form method="POST" enctype="multipart/form-data" id="addPesertaForm" class="flex flex-col flex-1 overflow-hidden">
+                <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="create">
                 <input type="hidden" id="peserta_id_existing" name="peserta_id_existing" value="0">
                 <input type="hidden" id="nama_peserta_hidden" name="nama_peserta">
@@ -1078,6 +1107,7 @@ $role = $_SESSION['role'] ?? 'user';
                 </button>
             </div>
             <form method="POST" class="flex flex-col flex-1 overflow-hidden">
+                <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="update">
                 <input type="hidden" name="id" id="edit_id">
 
@@ -1166,6 +1196,7 @@ $role = $_SESSION['role'] ?? 'user';
             <div class="px-6 py-4 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-700 flex justify-end gap-2">
                 <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-600 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors">Batal</button>
                 <form method="POST" class="inline">
+                    <?php csrf_field(); ?>
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="id" id="deleteIdInput">
                     <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">Hapus</button>
