@@ -4,6 +4,7 @@
  * Removes score records that don't match databaru.txt source
  */
 include '../config/panggil.php';
+include_once '../includes/theme.php';
 enforceAdmin();
 
 if (!checkRateLimit('action_load', 60, 60)) {
@@ -29,7 +30,10 @@ echo "<style>
     .btn { padding: 10px 20px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; font-size: 14px; }
     .btn-danger { background: #dc3545; color: white; }
     .btn-secondary { background: #6c757d; color: white; }
-</style>";
+</style>
+<script src="https://cdn.tailwindcss.com"></script>
+<script><?= getThemeTailwindConfig() ?></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">";
 
 // Step 1: Get list of athletes NOT in databaru.txt but have scores in DB
 echo "<h2>Step 1: Identify Athletes with Scores NOT in databaru.txt</h2>";
@@ -176,7 +180,7 @@ if ($executeCleanup && !empty($invalidAthletes)) {
     if (!empty($invalidAthletes)) {
         echo "<div class='danger'>";
         echo "<strong>⚠️ WARNING:</strong> Clicking 'Execute Cleanup' will permanently delete $totalScoresToDelete score records for " . count($invalidAthletes) . " athletes who are NOT in databaru.txt.<br><br>";
-        echo "<a href='cleanup_scores.php?execute=yes' class='btn btn-danger' onclick=\"return confirm('Are you sure? This will DELETE $totalScoresToDelete score records!');\">🗑️ Execute Cleanup</a>";
+        echo "<a href='cleanup_scores.php?execute=yes' class='btn btn-danger' onclick=\"const url=this.href; showConfirmModal('Hapus Data', 'Are you sure? This will DELETE $totalScoresToDelete score records!', () => window.location.href = url, 'danger'); return false;\">🗑️ Execute Cleanup</a>";
         echo "<a href='../views/dashboard.php' class='btn btn-secondary'>Cancel</a>";
         echo "</div>";
     } else {
@@ -185,4 +189,8 @@ if ($executeCleanup && !empty($invalidAthletes)) {
 }
 
 $conn->close();
+$conn->close();
+
+echo getConfirmationModal();
+echo getUiScripts();
 ?>

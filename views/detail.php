@@ -2735,6 +2735,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             // Theme Toggle
             <?= getThemeToggleScript() ?>
         </script>
+    <?= getConfirmationModal() ?>
+    <?= getUiScripts() ?>
     </body>
     </html>
     <?php

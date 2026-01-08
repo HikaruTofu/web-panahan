@@ -752,7 +752,6 @@ $role = $_SESSION['role'] ?? 'user';
         // Theme Toggle
 
         <?= getThemeToggleScript() ?>
-        <?= getThemeToggleScript() ?>
     </script>
     <?= getConfirmationModal() ?>
     <?= getUiScripts() ?>
