@@ -134,7 +134,12 @@ try {
 
     // 3. DYNAMIC RANKING: Hybrid system with Activity Filtering
     $keg_filter_scores = ($kegiatan_id !== 'all') ? " AND s.kegiatan_id = $kegiatan_id" : "";
-    $keg_filter_official = ($kegiatan_id !== 'all') ? " WHERE kegiatan_id = $kegiatan_id" : "";
+    $keg_filter_official = "";
+    if ($kegiatan_id !== 'all' && $kegiatan_id != 11) {
+        // rankings_source table has no kegiatan_id column and covers only Activity 11
+        // If filtering for another specific activity, official ranks should be empty
+        $keg_filter_official = " WHERE 1=0 ";
+    }
     $keg_filter_peserta = ($kegiatan_id !== 'all') ? " WHERE kegiatan_id = $kegiatan_id" : "";
 
     $queryDynamicRanking = "
