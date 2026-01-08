@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
-enforceAuth();
 include '../../config/panggil.php';
+enforceAuth();
 
 if (!checkRateLimit('api_request', 30, 60)) {
     header('HTTP/1.1 429 Too Many Requests');

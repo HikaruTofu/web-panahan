@@ -53,8 +53,27 @@ function getThemeInitScript() {
 
     // Apply theme immediately to prevent flash
     const theme = getTheme();
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
+    const html = document.documentElement;
+    html.classList.remove('light', 'dark');
+    html.classList.add(theme);
+
+    // Make app feel native (non-selectable)
+    const style = document.createElement('style');
+    style.innerHTML = `
+        body { 
+            -webkit-user-select: none; 
+            -moz-user-select: none; 
+            -ms-user-select: none; 
+            user-select: none; 
+        }
+        input, textarea, [contenteditable="true"], .selectable { 
+            -webkit-user-select: text; 
+            -moz-user-select: text; 
+            -ms-user-select: text; 
+            user-select: text; 
+        }
+    `;
+    document.head.appendChild(style);
 
     // Store for consistency
     if (!localStorage.getItem('theme')) {
