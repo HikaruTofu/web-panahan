@@ -1,6 +1,12 @@
 <?php
 // Mulai session hanya jika belum ada
 if (session_status() === PHP_SESSION_NONE) {
+    // Pastikan session cookie bisa dibaca di semua direktori
+    session_set_cookie_params([
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
     session_start();
 }
 

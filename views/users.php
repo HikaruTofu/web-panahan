@@ -135,7 +135,8 @@ if (!empty($searchQuery)) {
 }
 
 if($_SESSION['role'] != 'admin') {
-    header('Location: kegiatan.view.php');
+    session_write_close();
+    header('Location: /views/kegiatan.view.php');
     exit;
 }
 
@@ -569,8 +570,10 @@ $role = $_SESSION['role'] ?? 'user';
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Role <span class="text-red-500">*</span></label>
                             <select name="role" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500" required>
-                                <option value="user">User</option>
                                 <option value="admin">Admin</option>
+                                <option value="operator">Operator</option>
+                                <option value="petugas">Petugas</option>
+                                <option value="viewer">Viewer</option>
                             </select>
                         </div>
                         <div>
@@ -627,8 +630,10 @@ $role = $_SESSION['role'] ?? 'user';
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Role <span class="text-red-500">*</span></label>
                             <select name="role" id="edit_role" class="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500" required>
-                                <option value="user">User</option>
                                 <option value="admin">Admin</option>
+                                <option value="operator">Operator</option>
+                                <option value="petugas">Petugas</option>
+                                <option value="viewer">Viewer</option>
                             </select>
                         </div>
                         <div>

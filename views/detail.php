@@ -1,14 +1,9 @@
 <?php
 // Aktifkan error reporting untuk debuggin
-session_start();
+include '../config/panggil.php';
 include '../includes/check_access.php';
 include '../includes/theme.php';
-requireAdmin();
-
-
-
-
-include '../config/panggil.php';
+requireLogin();
 
 // Handle export to Excel
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
@@ -158,7 +153,7 @@ $_GET = cleanInput($_GET);
 
 // Mulai session jika belum
 if (session_status() == PHP_SESSION_NONE) {
-    session_start();
+    // session_start();
 }
 
 // Get user info from session
@@ -800,7 +795,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     <div class="flex gap-6 min-w-fit py-4">
                         <div class="flex flex-col justify-around flex-1 min-w-[160px]">
                             <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Round of 32</div>
-                            ${generateMatches(0, 32, 1, 'r32')}
+                            ${generateMatches(16, 1, 'r32')}
                         </div>
                         <div class="flex flex-col justify-around flex-1 min-w-[160px]">
                             <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3 text-center">Round of 16</div>
@@ -1213,6 +1208,10 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 // HANDLER UNTUK SCORECARD SETUP
 // ============================================
 if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
+    if (!canInputScore()) {
+        header("Location: detail.php?id=" . intval($_GET['kegiatan_id'] ?? 0));
+        exit;
+    }
     verify_csrf();
     $_POST = cleanInput($_POST);
     try {
@@ -3232,10 +3231,12 @@ function buildPaginationUrl($page, $params = []) {
                             <button type="submit" class="px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                 <i class="fas fa-search mr-1.5"></i> Filter
                             </button>
+                            <?php if (canInputScore()): ?>
                             <a href="#" id="inputBtn" class="btn-input <?= $filter_kategori > 0 ? 'show' : '' ?> px-3 py-2 rounded-lg border border-amber-400 dark:border-amber-600 text-amber-600 dark:text-amber-400 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
                                 onclick="goToInput(event)">
                                 <i class="fas fa-edit mr-1"></i> Input
                             </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </form>

@@ -7,7 +7,7 @@ include '../config/panggil.php';
 include '../includes/check_access.php';
 include '../includes/theme.php';
 require_once '../includes/security.php';
-requireAdmin();
+requireLogin(); // Ganti dari requireAdmin agar user biasa bisa melihat statistik
 
 if (!checkRateLimit('view_load', 60, 60)) {
     header('HTTP/1.1 429 Too Many Requests');

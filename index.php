@@ -1,13 +1,13 @@
 <?php
-session_start();
 include 'config/panggil.php';
 include 'includes/theme.php';
 // Cek jika sudah login
 if (isset($_SESSION['login']) && $_SESSION['login'] === true) {
+    session_write_close(); // Pastikan session tersimpan sebelum redirect
     if ($_SESSION['role'] === 'admin') {
-        header('Location: views/dashboard.php');
+        header('Location: /views/dashboard.php');
     } else {
-        header('Location: views/kegiatan.view.php');
+        header('Location: /views/kegiatan.view.php');
     }
     exit;
 }
@@ -44,14 +44,15 @@ if (isset($_POST['submit'])) {
                 $_SESSION['username'] = $user['name'];
                 $_SESSION['role'] = $user['role'] ?? 'user';
 
-                // PENTING: Regenerate session ID untuk keamanan
-                session_regenerate_id(true);
+                 // PENTING: Regenerate session ID untuk keamanan
+                // session_regenerate_id(true); 
+                session_write_close(); // Simpan session data sebelum redirect
 
                 // Redirect berdasarkan role
                 if ($_SESSION['role'] === 'admin') {
-                    header('Location: views/dashboard.php');
+                    header('Location: /views/dashboard.php');
                 } else {
-                    header('Location: views/kegiatan.view.php');
+                    header('Location: /views/kegiatan.view.php');
                 }
                 exit;
             } else {

@@ -7,7 +7,7 @@ include '../config/panggil.php';
 include '../includes/check_access.php';
 include '../includes/theme.php';
 require_once '../includes/security.php';
-requireAdmin();
+requireLogin(); // Ganti dari requireAdmin agar user biasa bisa masuk
 
 if (!checkRateLimit('view_load', 60, 60)) {
     header('HTTP/1.1 429 Too Many Requests');
@@ -129,6 +129,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'search_peserta') {
 
 // Handle CRUD Operations
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    if (!isAdmin()) {
+        $_SESSION['toast_message'] = "Akses ditolak. Anda tidak memiliki izin untuk melakukan tindakan ini.";
+        $_SESSION['toast_type'] = 'error';
+        header("Location: ?" . http_build_query($_GET));
+        exit;
+    }
     if (!checkRateLimit('peserta_crud', 10, 60)) {
         $toast_message = "Terlalu banyak permintaan. Silakan coba lagi dalam satu menit.";
         $toast_type = 'error';
@@ -691,7 +697,7 @@ $totalBayar = 0;
 while ($row = $result->fetch_assoc()) {
     $totalPeserta++;
     if ($row['jenis_kelamin'] == 'Laki-laki') $totalLaki++;
-    if ($row['jenis_kelamin'] == 'Perempuan') $totalPerempuan++;
+    if (!empty($row['jenis_kelamin']) && $row['jenis_kelamin'] == 'Perempuan') $totalPerempuan++;
     if (!empty($row['bukti_pembayaran'])) $totalBayar++;
 
     $nama_display = $row['nama_peserta'];
@@ -895,11 +901,13 @@ $role = $_SESSION['role'] ?? 'user';
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
+                                <?php if (isAdmin()): ?>
                                 <button onclick="openAddModal()"
                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors shadow-sm">
                                     <i class="fas fa-user-plus"></i>
                                     <span class="hidden sm:inline">Tambah Peserta</span>
                                 </button>
+                                <?php endif; ?>
                                 <?php
                                 $exportParams = [];
                                 if (!empty($category_id)) $exportParams['category_id'] = $category_id;
@@ -1200,13 +1208,14 @@ $role = $_SESSION['role'] ?? 'user';
 
                                                     <?php endif; ?>
 
-                                                    <?php if (count($group['ids']) > 1): ?>
+                                                    <?php if (isAdmin() && count($group['ids']) > 1): ?>
                                                         <button type="button" onclick="openMergeModal(<?= htmlspecialchars(json_encode($group)) ?>)"
                                                                 class="p-1.5 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors" title="Gabungkan Duplikat">
                                                             <i class="fas fa-compress-alt"></i>
                                                         </button>
                                                     <?php endif; ?>
 
+                                                    <?php if (isAdmin()): ?>
                                                     <button type="button" onclick="editPeserta(<?= htmlspecialchars(json_encode($group)) ?>)"
                                                             class="p-1.5 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit"></i>
@@ -1216,6 +1225,7 @@ $role = $_SESSION['role'] ?? 'user';
                                                             class="p-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                         <i class="fas fa-trash-alt"></i>
                                                     </button>
+                                                    <?php endif; ?>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1783,6 +1793,10 @@ $role = $_SESSION['role'] ?? 'user';
                 nameHidden.value = data.nama_peserta;
                 
                 document.getElementById(prefix + '_tanggal_lahir').value = data.tanggal_lahir;
+                // Sync flatpickr if available
+                if (document.getElementById(prefix + '_tanggal_lahir')._flatpickr) {
+                    document.getElementById(prefix + '_tanggal_lahir')._flatpickr.setDate(data.tanggal_lahir);
+                }
                 const genderRadio = document.querySelector(`input[name="jenis_kelamin"][value="${data.jenis_kelamin}"]`);
                 if (genderRadio) genderRadio.checked = true;
                 document.getElementById(prefix + '_nomor_hp').value = data.nomor_hp || '';
@@ -1804,14 +1818,22 @@ $role = $_SESSION['role'] ?? 'user';
                 gender = document.getElementById('edit_jenis_kelamin').value;
             }
 
+            // Fallback for flatpickr value if needed (get directly from input or flatpickr instance)
+            const birthDateValue = dob || document.getElementById(prefix + '_tanggal_lahir')._flatpickr?.input.value;
             const container = document.getElementById(prefix + '_categories_list');
             
-            if (!dob || !gender || allCategories.length === 0) {
+            if (!birthDateValue || !gender || allCategories.length === 0) {
                 if (container) container.innerHTML = '<div class="col-span-2 text-center py-4 text-slate-400 dark:text-zinc-500 text-sm">Silakan pilih kegiatan, tanggal lahir, dan jenis kelamin dahulu.</div>';
                 return;
             }
 
-            const birthYear = new Date(dob).getFullYear();
+            const birthDate = new Date(birthDateValue);
+            if (isNaN(birthDate.getTime())) {
+                if (container) container.innerHTML = '<div class="col-span-2 text-center py-4 text-red-400 text-sm italic">Format tanggal lahir tidak valid.</div>';
+                return;
+            }
+
+            const birthYear = birthDate.getFullYear();
             const currentYear = new Date().getFullYear();
             const age = currentYear - birthYear;
 
@@ -1916,6 +1938,10 @@ $role = $_SESSION['role'] ?? 'user';
             document.getElementById('edit_nama_peserta').value = mainData.nama_peserta || '';
             document.getElementById('edit_kegiatan_id').value = mainData.kegiatan_id || '';
             document.getElementById('edit_tanggal_lahir').value = mainData.tanggal_lahir || '';
+            // Sync flatpickr if available
+            if (document.getElementById('edit_tanggal_lahir')._flatpickr) {
+                document.getElementById('edit_tanggal_lahir')._flatpickr.setDate(mainData.tanggal_lahir || '');
+            }
             document.getElementById('edit_jenis_kelamin').value = mainData.jenis_kelamin || '';
             document.getElementById('edit_asal_kota').value = mainData.asal_kota || '';
             document.getElementById('edit_nama_club').value = mainData.nama_club || '';

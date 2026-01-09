@@ -3,7 +3,7 @@ include '../config/panggil.php';
 include '../includes/check_access.php';
 include '../includes/theme.php';
 require_once '../includes/security.php';
-requireAdmin();
+requireLogin(); // Ganti dari requireAdmin agar user biasa bisa masuk
 
 if (!checkRateLimit('view_load', 60, 60)) {
     header('HTTP/1.1 429 Too Many Requests');
@@ -28,6 +28,11 @@ while ($row = $kategoriResult->fetch_assoc()) {
 
 // Proses tambah/edit data
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isAdmin()) {
+        $toast_message = "Akses ditolak. Anda tidak memiliki izin untuk melakukan tindakan ini.";
+        $toast_type = 'error';
+        goto skip_post;
+    }
     if (!checkRateLimit('kegiatan_crud', 20, 60)) {
         $toast_message = "Terlalu banyak permintaan. Silakan coba lagi nanti.";
         $toast_type = 'error';
@@ -346,10 +351,12 @@ $role = $_SESSION['role'] ?? 'user';
                                     <p class="text-sm text-slate-500 dark:text-zinc-400">Kelola turnamen dan event panahan</p>
                                 </div>
                             </div>
+                            <?php if (isAdmin()): ?>
                             <button onclick="openModal()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                 <i class="fas fa-plus"></i>
                                 <span class="hidden sm:inline">Tambah Kegiatan</span>
                             </button>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -477,6 +484,7 @@ $role = $_SESSION['role'] ?? 'user';
                                                         <i class="fas fa-eye text-xs"></i> Detail
                                                     </a>
 
+                                                    <?php if (isAdmin()): ?>
                                                     <button onclick="editData(<?= $item['id'] ?>)" class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit text-sm"></i>
                                                     </button>
@@ -484,6 +492,7 @@ $role = $_SESSION['role'] ?? 'user';
                                                     <button onclick="deleteData(<?= $item['id'] ?>, '<?= addslashes(htmlspecialchars($item['nama'])) ?>')" class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                         <i class="fas fa-trash text-sm"></i>
                                                     </button>
+                                                    <?php endif; ?>
                                                 </div>
                                             </td>
                                         </tr>
@@ -569,6 +578,7 @@ $role = $_SESSION['role'] ?? 'user';
                                         <i class="fas fa-eye"></i> Detail
                                     </a>
 
+                                    <?php if (isAdmin()): ?>
                                     <button onclick="editData(<?= $item['id'] ?>)" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-medium">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
@@ -576,6 +586,7 @@ $role = $_SESSION['role'] ?? 'user';
                                     <button onclick="deleteData(<?= $item['id'] ?>, '<?= addslashes(htmlspecialchars($item['nama'] ?? '')) ?>')" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium">
                                         <i class="fas fa-trash"></i> Hapus
                                     </button>
+                                    <?php endif; ?>
                                 </div>
                             </div>
 

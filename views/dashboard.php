@@ -24,7 +24,8 @@ $_GET = cleanInput($_GET);
 $_POST = cleanInput($_POST);
 
 if (!isset($_SESSION['login']) || $_SESSION['login'] !== true) {
-    header('Location: ../index.php');
+    session_write_close();
+    header('Location: /index.php');
     exit;
 }
 

@@ -14,10 +14,26 @@ function isAdmin() {
     return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 }
 
-    // Fungsi untuk redirect jika belum login
+// Fungsi untuk cek apakah user adalah operator
+function isOperator() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'operator';
+}
+
+// Fungsi untuk cek apakah user adalah petugas
+function isPetugas() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'petugas';
+}
+
+// Fungsi untuk cek apakah user bisa input score (admin, operator, petugas)
+function canInputScore() {
+    $allowedRoles = ['admin', 'operator', 'petugas'];
+    return isset($_SESSION['role']) && in_array($_SESSION['role'], $allowedRoles);
+}
+
     function requireLogin() {
         if (!isLoggedIn()) {
-            header('Location: ../index.php');
+            session_write_close();
+            header('Location: /index.php');
             exit;
         }
     }
@@ -28,7 +44,8 @@ function requireAdmin() {
     
     if (!isAdmin()) {
         // Redirect ke halaman yang diizinkan untuk non-admin
-        header('Location: ../views/kegiatan.view.php');
+        session_write_close();
+        header('Location: /views/kegiatan.view.php');
         exit;
     }
 }
@@ -40,6 +57,9 @@ function checkPageAccess($currentPage) {
     // Daftar halaman yang bisa diakses semua user
     $allowedForAll = [
         'kegiatan.view.php',
+        'peserta.view.php',
+        'statistik.php',
+        'detail.php',
         'logout.php',
         'profile.php' // jika ada halaman profile
     ];
@@ -51,7 +71,8 @@ function checkPageAccess($currentPage) {
     
     // Jika bukan admin, cek apakah halaman diizinkan
     if (!in_array($currentPage, $allowedForAll)) {
-        header('Location: ../views/kegiatan.view.php');
+        session_write_close();
+        header('Location: /views/kegiatan.view.php');
         exit;
     }
     

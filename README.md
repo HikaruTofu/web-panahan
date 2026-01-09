@@ -30,6 +30,14 @@ Sistem telah di-harden sesuai standar **OWASP Top 10:2025**:
 - **Frontend**: Tailwind CSS + Chart.js
 - **DevOps**: Docker & Docker Compose
 
+## 📋 SQL Migration (PENTING)
+
+Jika melakukan update dari versi lama, jalankan perintah ini di database server untuk mendukung role baru:
+
+```sql
+ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'operator', 'viewer', 'petugas') DEFAULT 'operator';
+```
+
 ## 👤 Login Default
 
 *Silakan cek database/setup awal untuk detail kredensial admin.*
