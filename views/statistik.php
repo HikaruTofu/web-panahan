@@ -716,7 +716,7 @@ $role = $_SESSION['role'] ?? 'user';
                                 </form>
                                 <a href="?export=excel<?= !empty($gender) ? '&gender=' . $gender : '' ?><?= !empty($nama) ? '&nama=' . $nama : '' ?><?= !empty($club) ? '&club=' . $club : '' ?><?= !empty($kategori_filter) ? '&kategori=' . $kategori_filter : '' ?>"
                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
-                                   onclick="const url=this.href; showConfirmModal('Export Data', 'Apakah Anda yakin ingin mengekspor data statistik ke Excel?', () => window.location.href = url, 'info'); return false;">
+                                   onclick="const url=this.href; showConfirmModal('Export Data', 'Download data statistik ke Excel (.xlsx)?', () => window.location.href = url, 'info'); return false;">
                                     <i class="fas fa-file-excel"></i>
                                     <span class="hidden sm:inline">Export</span>
                                 </a>

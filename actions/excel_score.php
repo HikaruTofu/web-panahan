@@ -61,7 +61,8 @@ $peserta_query = "
                 ELSE CAST(s.score AS UNSIGNED)
             END
         ) AS total_score,
-        SUM(CASE WHEN LOWER(s.score) = 'x' THEN 1 ELSE 0 END) AS jumlah_x
+        SUM(CASE WHEN LOWER(s.score) = 'x' THEN 1 ELSE 0 END) AS jumlah_x,
+        SUM(CASE WHEN LOWER(s.score) = 'x' OR s.score = '10' THEN 1 ELSE 0 END) AS jumlah_10_plus_x
     FROM score s
     JOIN peserta p ON s.peserta_id = p.id
     WHERE s.kegiatan_id = ? 
@@ -69,7 +70,7 @@ $peserta_query = "
       AND s.score_board_id = ?
     GROUP BY p.nama_peserta, p.jenis_kelamin
     HAVING total_score > 0
-    ORDER BY total_score DESC, jumlah_x DESC, p.nama_peserta ASC;
+    ORDER BY total_score DESC, jumlah_10_plus_x DESC, jumlah_x DESC, p.nama_peserta ASC;
 ";
 
 $stmtPeserta = $conn->prepare($peserta_query);
@@ -214,7 +215,7 @@ foreach ($peserta as $p) {
     $sheetRanking->getStyle($colRanking . $rowRanking)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     $sheetRanking->setCellValue($colRanking++ . $rowRanking, $end_value_total);
     $sheetRanking->setCellValue($colRanking++ . $rowRanking, $p['jumlah_x'] ?? 0);
-    $sheetRanking->setCellValue($colRanking . $rowRanking, 0);
+    $sheetRanking->setCellValue($colRanking . $rowRanking, $p['jumlah_10_plus_x'] ?? 0);
 
     $rowRanking++;
     $no_rank++;

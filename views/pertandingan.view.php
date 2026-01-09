@@ -452,7 +452,7 @@ $role = $_SESSION['role'] ?? 'user';
                             <!-- Export Excel Button -->
                             <?php if (count($filteredParticipants) > 0): ?>
                             <!-- FORM: method=POST (UNCHANGED) -->
-                            <form method="POST" class="inline">
+                            <form method="POST" class="inline" onsubmit="event.preventDefault(); showConfirmModal('Export Data', 'Download daftar bantalan ke Excel (.xlsx)?', () => { const h = document.createElement('input'); h.type='hidden'; h.name='export_excel'; h.value='1'; this.appendChild(h); this.submit(); }, 'info')">
                                 <?php csrf_field(); ?>
                                 <!-- INPUT: name="participants" (UNCHANGED) -->
                                 <input type="hidden" name="participants" value="<?php echo htmlspecialchars(json_encode($filteredParticipants)); ?>">
@@ -466,8 +466,8 @@ $role = $_SESSION['role'] ?? 'user';
                                 <input type="hidden" name="selected_category" value="<?php echo htmlspecialchars($selectedCategory); ?>">
                                 <!-- INPUT: name="is_shuffled" (UNCHANGED) -->
                                 <input type="hidden" name="is_shuffled" value="<?php echo $isShuffled ? '1' : '0'; ?>">
-                                <!-- BUTTON: name="export_excel" (UNCHANGED) -->
-                                <button type="submit" name="export_excel"
+                                <!-- BUTTON: (Changed to show modal) -->
+                                <button type="submit"
                                         class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors">
                                     <i class="fas fa-file-excel"></i>
                                     <span class="hidden sm:inline">Export Excel</span>

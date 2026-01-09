@@ -344,7 +344,8 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                         ELSE CAST(s.score AS UNSIGNED) 
                     END
                 ), 0) as total_score,
-                COUNT(CASE WHEN LOWER(s.score) = 'x' THEN 1 END) as total_x
+                COUNT(CASE WHEN LOWER(s.score) = 'x' THEN 1 END) as total_x,
+                COUNT(CASE WHEN LOWER(s.score) = 'x' OR s.score = '10' THEN 1 END) as total_10_plus_x
             FROM peserta p
             LEFT JOIN score s ON p.id = s.peserta_id 
                 AND s.kegiatan_id = ? 
@@ -352,7 +353,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 AND s.score_board_id = ?
             WHERE p.category_id = ? AND p.nama_peserta IN (SELECT nama_peserta FROM peserta WHERE kegiatan_id = ?)
             GROUP BY p.nama_peserta, p.jenis_kelamin
-            ORDER BY total_score DESC, total_x DESC, p.nama_peserta ASC
+            ORDER BY total_score DESC, total_10_plus_x DESC, total_x DESC, p.nama_peserta ASC
         ";
             $stmtPeserta = $conn->prepare($queryPeserta);
             // Bind params: kegiatan_id, category_id, scoreboard_id (for JOIN), then category_id, kegiatan_id (for inclusive WHERE)
@@ -1944,6 +1945,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 for (let i = 0; i < peserta_score.length; i++) {
                     tambahAtributById(peserta_score[i]['id'], "total_score", peserta_score[i]['total_score']);
                     tambahAtributById(peserta_score[i]['id'], "x_score", peserta_score[i]['total_x']);
+                    tambahAtributById(peserta_score[i]['id'], "ten_plus_x_score", peserta_score[i]['total_10_plus_x']);
                 }
 
                 pesertaData.sort((a, b) => {
@@ -1952,11 +1954,22 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     const scoreB = b.total_score || 0;
                     const xA = a.x_score || 0;
                     const xB = b.x_score || 0;
+                    const tenPlusXA = a.ten_plus_x_score || 0;
+                    const tenPlusXB = b.ten_plus_x_score || 0;
 
                     if (scoreB !== scoreA) {
                         return scoreB - scoreA;
                     }
-                    return xB - xA;
+                    if (tenPlusXB !== tenPlusXA) {
+                        return tenPlusXB - tenPlusXA;
+                    }
+                    if (xB !== xA) {
+                        return xB - xA;
+                    }
+                    // Final stable tie-break by name
+                    const nameA = a.nama_peserta || "";
+                    const nameB = b.nama_peserta || "";
+                    return nameA.localeCompare(nameB);
                 });
 
                 console.log('pesertaData after merge:', pesertaData);
@@ -2014,7 +2027,10 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                         <span class="font-semibold">${peserta.nama_peserta}</span>
                                     </div>
                                     <div class="flex items-center gap-4 text-sm">
-                                        <span class="opacity-75">${peserta.x_score || 0}× X</span>
+                                        <div class="flex flex-col items-end opacity-75">
+                                            <span>${peserta.ten_plus_x_score || 0}× 10+X</span>
+                                            <span>${peserta.x_score || 0}× X</span>
+                                        </div>
                                         <span class="font-bold text-lg">${peserta.total_score || 0} pts</span>
                                     </div>
                                 </div>
@@ -2300,7 +2316,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                 <div class="text-3xl mb-2">${medals[index]}</div>
                                 <p class="font-bold text-lg text-slate-900 dark:text-white mb-1">${peserta.nama_peserta}</p>
                                 <p class="text-3xl font-bold ${textColors[index]}">${peserta.total_score || 0}</p>
-                                <p class="text-xs text-slate-500 dark:text-zinc-400 mt-1">${peserta.x_score || 0} × X</p>
+                                <div class="flex items-center justify-center gap-2 mt-1">
+                                    <span class="text-xs text-slate-500 dark:text-zinc-400">10+X: ${peserta.ten_plus_x_score || 0}</span>
+                                    <span class="text-xs text-slate-500 dark:text-zinc-400">•</span>
+                                    <span class="text-xs text-slate-500 dark:text-zinc-400">X: ${peserta.x_score || 0}</span>
+                                </div>
                             </div>
                         `;
                     });
@@ -2321,7 +2341,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                 <tr>
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16">#</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-20">X</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-20">10+X</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-16">X</th>
                                     <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-24">Total</th>
                                 </tr>
                             </thead>
@@ -2342,6 +2363,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                 <td class="px-4 py-3">
                                     <span class="${nameWeight} text-slate-900 dark:text-white">${peserta.nama_peserta}</span>
                                 </td>
+                                <td class="px-4 py-3 text-right text-slate-500 dark:text-zinc-400 text-sm">${peserta.ten_plus_x_score || 0}</td>
                                 <td class="px-4 py-3 text-right text-slate-500 dark:text-zinc-400 text-sm">${peserta.x_score || 0}</td>
                                 <td class="px-4 py-3 text-right ${scoreWeight} ${scoreColor}">${peserta.total_score || 0}</td>
                             </tr>
@@ -2614,14 +2636,18 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             }
 
             // Updated: Use backend export instead of Client-side HTML blob
+            // Updated: Use backend export and showConfirmModal
             function exportTableToExcel() {
-                // Redirect to the same page with export=excel param
-                // We need to construct the URL with current filters if possible, or just usage basic params
-                // But typically the Main Export Button (Link) is enough. 
-                // If this is called from a button that doesn't have the href, we redirect.
                 const urlParams = new URLSearchParams(window.location.search);
                 urlParams.set('export', 'excel');
-                window.location.href = '?' + urlParams.toString();
+                const url = '?' + urlParams.toString();
+                
+                showConfirmModal(
+                    'Export Data', 
+                    'Download data ke Excel (.xlsx)?', 
+                    () => window.location.href = url, 
+                    'info'
+                );
             }
 
             // Updated: Use actions/excel_score.php and showConfirmModal
@@ -3127,7 +3153,8 @@ function buildPaginationUrl($page, $params = []) {
                     </div>
                     <?php if ($totalPeserta > 0): ?>
                     <a href="?export=excel&kegiatan_id=<?= $kegiatan_id ?>&search=<?= urlencode($search) ?>&filter_kategori=<?= $filter_kategori ?>&filter_gender=<?= urlencode($filter_gender) ?>"
-                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors" target="_blank">
+                       onclick="event.preventDefault(); const url = this.href; showConfirmModal('Export Data', 'Download daftar peserta ke Excel (.xlsx)?', () => window.location.href = url, 'info')"
+                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
                         <i class="fas fa-file-excel text-emerald-600 dark:text-emerald-400"></i> Export Excel
                     </a>
                     <?php endif; ?>

@@ -914,7 +914,7 @@ $role = $_SESSION['role'] ?? 'user';
 
                                 <a href="<?= $exportUrl ?>"
                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
-                                   onclick="event.preventDefault(); const url = this.href; showConfirmModal('Export Data', 'Export data peserta ke Excel?', () => window.location.href = url, 'info')">
+                                   onclick="event.preventDefault(); const url = this.href; showConfirmModal('Export Data', 'Download data peserta ke Excel (.xlsx)?', () => window.location.href = url, 'info')">
                                     <i class="fas fa-file-excel text-emerald-600"></i>
                                     <span class="hidden sm:inline">Export</span>
                                 </a>
