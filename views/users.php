@@ -136,7 +136,7 @@ if (!empty($searchQuery)) {
 
 if($_SESSION['role'] != 'admin') {
     session_write_close();
-    header('Location: /views/kegiatan.view.php');
+    header('Location: kegiatan.view.php');
     exit;
 }
 

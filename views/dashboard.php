@@ -25,7 +25,7 @@ $_POST = cleanInput($_POST);
 
 if (!isset($_SESSION['login']) || $_SESSION['login'] !== true) {
     session_write_close();
-    header('Location: /index.php');
+    header('Location: ../index.php');
     exit;
 }
 

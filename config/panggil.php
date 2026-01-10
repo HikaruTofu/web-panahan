@@ -1,10 +1,10 @@
 <?php
 // Mulai session hanya jika belum ada
+// Mulai session dengan konfigurasi standar yang aman
 if (session_status() === PHP_SESSION_NONE) {
-    // Pastikan session cookie bisa dibaca di semua direktori
+    // Session cookie configurasi (Samesite Lax untuk kompatibilitas redirect)
     session_set_cookie_params([
         'path' => '/',
-        'httponly' => true,
         'samesite' => 'Lax'
     ]);
     session_start();

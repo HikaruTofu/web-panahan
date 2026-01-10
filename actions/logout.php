@@ -18,6 +18,6 @@ session_destroy();
 
 // Redirect ke halaman login dengan pesan sukses
 session_write_close();
-header('Location: /index.php?message=logout_success');
+header('Location: ../index.php?message=logout_success');
 exit;
 ?>

@@ -32,7 +32,6 @@ function canInputScore() {
 
     function requireLogin() {
         if (!isLoggedIn()) {
-            session_write_close();
             header('Location: ../index.php');
             exit;
         }
@@ -44,7 +43,6 @@ function requireAdmin() {
     
     if (!isAdmin()) {
         // Redirect ke halaman yang diizinkan untuk non-admin
-        session_write_close();
         header('Location: kegiatan.view.php');
         exit;
     }
@@ -71,7 +69,6 @@ function checkPageAccess($currentPage) {
     
     // Jika bukan admin, cek apakah halaman diizinkan
     if (!in_array($currentPage, $allowedForAll)) {
-        session_write_close();
         header('Location: kegiatan.view.php');
         exit;
     }
