@@ -17,11 +17,11 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Koneksi database
-$sname    = "db";
-$uname    = "panahan_app";
-$pwd      = "s3cur3_v4ult_P@nahan";
-$database = "panahan_turnament_new";
+// Koneksi database - Mendukung Environment Variables untuk Cloud Deployment (Hugging Face / Zeabur / Render)
+$sname    = getenv('DB_HOST') ?: "db";
+$uname    = getenv('DB_USER') ?: "panahan_app";
+$pwd      = getenv('DB_PASS') ?: "s3cur3_v4ult_P@nahan";
+$database = getenv('DB_NAME') ?: "panahan_turnament_new";
 
 $conn = new mysqli($sname, $uname, $pwd, $database);
 // Cek koneksi
