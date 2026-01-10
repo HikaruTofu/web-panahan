@@ -1,30 +1,19 @@
 <?php
 // Mulai session hanya jika belum ada
 if (session_status() === PHP_SESSION_NONE) {
-    // Gunakan nama session khusus
-    session_name('PANAHAN_TERM_SESS');
-    
-    // Deteksi domain dan protokol
-    $domain = explode(':', $_SERVER['HTTP_HOST'])[0];
-    $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || 
-              (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
-
-    // Set parameters (Metode paling kuat untuk shared hosting)
-    session_set_cookie_params([
-        'lifetime' => 86400,
-        'path' => '/',
-        'domain' => $domain,
-        'secure' => $secure,
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
-    
-    // Fallback redundansi dengan ini_set
-    ini_set('session.cookie_path', '/');
-    ini_set('session.cookie_domain', $domain);
-    ini_set('session.cookie_httponly', 1);
-    if ($secure) ini_set('session.cookie_secure', 1);
-    
+    // Gunakan pengaturan paling standar tapi pastikan path ke root (/)
+    if (!headers_sent()) {
+        session_set_cookie_params([
+            'path' => '/',
+            'samesite' => 'Lax'
+        ]);
+        
+        // Cek jika HTTPS untuk secure cookie
+        if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || 
+            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
+            ini_set('session.cookie_secure', 1);
+        }
+    }
     session_start();
 }
 
