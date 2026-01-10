@@ -4,7 +4,9 @@ include 'includes/theme.php';
 // Cek jika sudah login
 if (isset($_SESSION['login']) && $_SESSION['login'] === true) {
     // Redirect berdasarkan role
-    if ($_SESSION['role'] === 'admin') {
+    $role = strtolower($_SESSION['role'] ?? '');
+    session_write_close();
+    if ($role === 'admin') {
         header('Location: views/dashboard.php');
     } else {
         header('Location: views/kegiatan.view.php');
@@ -42,7 +44,7 @@ if (isset($_POST['submit'])) {
                 $_SESSION['login'] = true;
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['name'];
-                $_SESSION['role'] = $user['role'] ?? 'user';
+                $_SESSION['role'] = strtolower($user['role'] ?? 'user');
 
                 // PENTING: Regenerate session ID untuk keamanan
                 // session_regenerate_id(true); 
@@ -50,7 +52,9 @@ if (isset($_POST['submit'])) {
                 // Redirect berdasarkan role
 
                 // Redirect berdasarkan role
-                if ($_SESSION['role'] === 'admin') {
+                $role = strtolower($_SESSION['role'] ?? 'user');
+                session_write_close();
+                if ($role === 'admin') {
                     header('Location: views/dashboard.php');
                 } else {
                     header('Location: views/kegiatan.view.php');

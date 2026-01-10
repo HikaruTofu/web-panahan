@@ -1,12 +1,13 @@
 <?php
 // Mulai session hanya jika belum ada
-// Mulai session dengan konfigurasi standar yang aman
+// Mulai session dengan konfigurasi standar
 if (session_status() === PHP_SESSION_NONE) {
-    // Session cookie configurasi (Samesite Lax untuk kompatibilitas redirect)
-    session_set_cookie_params([
-        'path' => '/',
-        'samesite' => 'Lax'
-    ]);
+    if (!headers_sent()) {
+        session_set_cookie_params([
+            'path' => '/',
+            'samesite' => 'Lax'
+        ]);
+    }
     session_start();
 }
 

@@ -111,6 +111,7 @@ function enforceAuth() {
             echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
             exit;
         }
+        session_write_close();
         header('Location: ../index.php');
         exit;
     }
@@ -128,6 +129,7 @@ function enforceAdmin() {
             echo json_encode(['success' => false, 'message' => 'Forbidden: Admin access required.']);
             exit;
         }
+        session_write_close();
         header('Location: kegiatan.view.php');
         exit;
     }
@@ -146,6 +148,7 @@ function enforceCanInputScore() {
             echo json_encode(['success' => false, 'message' => 'Forbidden: Staff access required.']);
             exit;
         }
+        session_write_close();
         header('Location: kegiatan.view.php');
         exit;
     }
