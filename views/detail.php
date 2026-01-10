@@ -1406,7 +1406,12 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
     }
 
     if (isset($_POST['create'])) {
-        enforceAdmin();
+        // Izinkan admin, operator, dan petugas untuk membuat scorecard
+        $allowedRoles = ['admin', 'operator', 'petugas'];
+        if (!in_array($_SESSION['role'], $allowedRoles)) {
+            enforceAdmin(); // Fallback to enforceAdmin which will handle the redirect
+        }
+        
         if (!checkRateLimit('create_scoreboard', 10, 60)) {
             die('Terlalu banyak permintaan.');
         }
@@ -1475,7 +1480,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
     }
 
     if (isset($_GET['delete_score_board'])) {
-        enforceAdmin();
+        // Izinkan admin, operator, dan petugas untuk menghapus scorecard
+        $allowedRoles = ['admin', 'operator', 'petugas'];
+        if (!in_array($_SESSION['role'], $allowedRoles)) {
+            enforceAdmin(); 
+        }
         $stmtDel = $conn->prepare("DELETE FROM `score_boards` WHERE `id` = ?");
         $ds_id = intval($_GET['delete_score_board']);
         security_log("Score board $ds_id deleted", 'WARNING');
@@ -1694,11 +1703,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                         <p class="text-sm text-slate-500 dark:text-zinc-400"><?= htmlspecialchars($kategoriData['name']) ?> - <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
                                     </div>
                                 </div>
+                                <?php if (canInputScore()): ?>
                                 <div class="flex gap-2 no-print">
                                     <a href="detail.php?action=scorecard&resource=form&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                         <i class="fas fa-plus"></i> Tambah
                                     </a>
+                                <?php else: ?>
+                                <div class="flex gap-2 no-print">
+                                <?php endif; ?>
                                     <button onclick="exportTableToExcel()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors">
                                         <i class="fas fa-file-excel"></i> Export
                                     </button>
@@ -1750,10 +1763,12 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors">
                                                             <i class="fas fa-sitemap text-xs"></i> Aduan
                                                         </a>
+                                                        <?php if (canInputScore()): ?>
                                                         <button onclick="delete_score_board('<?= $kegiatan_id ?>', '<?= $category_id ?>', '<?= $a['id'] ?>')"
                                                                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 text-xs font-medium transition-colors">
                                                             <i class="fas fa-trash text-xs"></i>
                                                         </button>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </td>
                                             </tr>
