@@ -1,27 +1,38 @@
 <?php
 // Mulai session hanya jika belum ada
 if (session_status() === PHP_SESSION_NONE) {
-    // Gunakan nama session khusus agar tidak bentrok dengan app lain
+    // Gunakan nama session khusus
     session_name('PANAHAN_TERM_SESS');
     
-    // Set parameters
-    ini_set('session.cookie_path', '/');
-    ini_set('session.cookie_httponly', 1);
-    ini_set('session.use_only_cookies', 1);
-    ini_set('session.gc_maxlifetime', 86400); 
+    // Deteksi domain dan protokol
+    $domain = explode(':', $_SERVER['HTTP_HOST'])[0];
+    $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || 
+              (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
+    // Set parameters (Metode paling kuat untuk shared hosting)
+    session_set_cookie_params([
+        'lifetime' => 86400,
+        'path' => '/',
+        'domain' => $domain,
+        'secure' => $secure,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
     
-    if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
-        ini_set('session.cookie_secure', 1);
-    }
+    // Fallback redundansi dengan ini_set
+    ini_set('session.cookie_path', '/');
+    ini_set('session.cookie_domain', $domain);
+    ini_set('session.cookie_httponly', 1);
+    if ($secure) ini_set('session.cookie_secure', 1);
     
     session_start();
 }
 
-// Koneksi database - Mendukung Environment Variables untuk Cloud Deployment (Hugging Face / Zeabur / Render)
-$sname    = getenv('DB_HOST') ?: "db";
-$uname    = getenv('DB_USER') ?: "panahan_app";
-$pwd      = getenv('DB_PASS') ?: "s3cur3_v4ult_P@nahan";
-$database = getenv('DB_NAME') ?: "panahan_turnament_new";
+// Koneksi database
+$sname    = "db";
+$uname    = "panahan_app";
+$pwd      = "s3cur3_v4ult_P@nahan";
+$database = "panahan_turnament_new";
 
 $conn = new mysqli($sname, $uname, $pwd, $database);
 // Cek koneksi
