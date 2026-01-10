@@ -243,6 +243,8 @@ $queryAllRanks = "
             k.nama_kegiatan,
             COALESCE(c.name, c2.name) as category_name,
             ss.kegiatan_id,
+            ss.category_id,
+            ss.score_board_id,
             RANK() OVER (PARTITION BY ss.kegiatan_id, ss.score_board_id ORDER BY ss.total_score DESC, ss.total_x DESC) as ranking,
             COUNT(*) OVER (PARTITION BY ss.kegiatan_id, ss.score_board_id) as board_participants
         FROM ScoreStats ss
@@ -258,15 +260,18 @@ $queryAllRanks = "
             'Turnamen' as nama_kegiatan,
             category as category_name,
             ranking, 
-            total_participants as board_participants
+            total_participants as board_participants,
+            11 as kegiatan_id,
+            0 as category_id,
+            0 as score_board_id
         FROM rankings_source
         $keg_filter_official
     ),
     -- 3. Unified dataset: Merge Official (Act 11) + Calculated (Others + Missing Act 11)
     UnifiedRankings AS (
-        SELECT nama_peserta, nama_kegiatan, category_name, ranking as rank_pos, board_participants FROM OfficialRanks
+        SELECT nama_peserta, nama_kegiatan, category_name, ranking as rank_pos, board_participants, kegiatan_id, category_id, score_board_id FROM OfficialRanks
         UNION ALL
-        SELECT cr.nama_peserta COLLATE utf8mb4_general_ci as nama_peserta, cr.nama_kegiatan, cr.category_name, cr.ranking as rank_pos, cr.board_participants 
+        SELECT cr.nama_peserta COLLATE utf8mb4_general_ci as nama_peserta, cr.nama_kegiatan, cr.category_name, cr.ranking as rank_pos, cr.board_participants, cr.kegiatan_id, cr.category_id, cr.score_board_id
         FROM CalculatedRanks cr
         WHERE cr.kegiatan_id != 11 
         OR NOT EXISTS (
@@ -280,6 +285,9 @@ $queryAllRanks = "
         ur.board_participants as total_participants,
         ur.nama_kegiatan,
         ur.category_name,
+        ur.kegiatan_id,
+        ur.category_id,
+        ur.score_board_id,
         NOW() as tanggal
     FROM UnifiedRankings ur
     ORDER BY ur.rank_pos ASC
@@ -293,6 +301,9 @@ if ($resultAllRanks) {
             'turnamen' => $row['nama_kegiatan'],
             'kategori' => $row['category_name'],
             'tanggal' => $row['tanggal'],
+            'kegiatan_id' => $row['kegiatan_id'],
+            'category_id' => $row['category_id'],
+            'score_board_id' => $row['score_board_id'],
             'kategori_ranking' => getKategoriFromRanking($row['rank_pos'], $row['total_participants']),
             'total_peserta' => $row['total_participants']
         ];
@@ -1213,15 +1224,27 @@ $role = $_SESSION['role'] ?? 'user';
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 dark:divide-zinc-700">
-                                    ${data.rankings.map((r, i) => `
-                                        <tr>
+                                    ${data.rankings.map((r, i) => {
+                                        const isClickable = r.kegiatan_id && r.category_id && r.score_board_id && r.kegiatan_id != 11;
+                                        const link = isClickable ? `detail.php?action=scorecard&resource=index&kegiatan_id=${r.kegiatan_id}&category_id=${r.category_id}&scoreboard=${r.score_board_id}&rangking=true` : '#';
+                                        
+                                        return `
+                                        <tr class="${isClickable ? 'hover:bg-slate-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors' : ''}" 
+                                            onclick="${isClickable ? `window.location.href='${link}'` : ''}">
                                             <td class="px-3 py-2 text-slate-500 dark:text-zinc-400">${i + 1}</td>
-                                            <td class="px-3 py-2 font-medium text-slate-900 dark:text-white">${r.turnamen}</td>
+                                            <td class="px-3 py-2 font-medium text-slate-900 dark:text-white">
+                                                ${isClickable ? `<a href="${link}" class="text-archery-600 dark:text-archery-400 hover:underline">${r.turnamen}</a>` : r.turnamen}
+                                            </td>
                                             <td class="px-3 py-2 text-slate-600 dark:text-zinc-400">${r.kategori}</td>
-                                            <td class="px-3 py-2 text-center"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full ${r.ranking <= 3 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : 'bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400'} text-xs font-bold">${r.ranking}</span></td>
+                                            <td class="px-3 py-2 text-center">
+                                                <span class="inline-flex items-center justify-center w-6 h-6 rounded-full ${r.ranking <= 3 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : 'bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400'} text-xs font-bold">
+                                                    ${r.ranking}
+                                                </span>
+                                            </td>
                                             <td class="px-3 py-2 text-center text-slate-500 dark:text-zinc-400">${r.total_peserta}</td>
                                         </tr>
-                                    `).join('')}
+                                        `;
+                                    }).join('')}
                                 </tbody>
                             </table>
                         </div>
