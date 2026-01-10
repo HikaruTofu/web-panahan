@@ -502,7 +502,13 @@ while ($peserta = $result->fetch_assoc()) {
         if ($r['ranking'] <= 10) $top10++;
     }
 
-    $bracketStats = getBracketStatistics($conn, $peserta['nama_peserta']);
+    // Lazy Load: Placeholder bracket stats (calculated via AJAX in modal)
+    $bracketStats = [
+        'total_bracket' => 0,
+        'bracket_champion' => 0,
+        'bracket_runner_up' => 0,
+        'bracket_third_place' => 0
+    ];
 
     $kategoriDominan = getKategoriDominan($rankings);
 
@@ -810,8 +816,9 @@ $role = $_SESSION['role'] ?? 'user';
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Nama Peserta</label>
-                                <!-- INPUT: name="nama" (UNCHANGED) -->
-                                <input type="text" name="nama" value="<?= htmlspecialchars($nama) ?>"
+                                <!-- INPUT: name="nama" with Debounce -->
+                                <input type="text" name="nama" id="searchInput" value="<?= htmlspecialchars($nama) ?>"
+                                       oninput="debounceSubmit()"
                                        class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-archery-500 focus:border-archery-500"
                                        placeholder="Cari nama...">
                             </div>
@@ -1138,7 +1145,7 @@ $role = $_SESSION['role'] ?? 'user';
         closeMobileMenu?.addEventListener('click', toggleMobileMenu);
 
         // Detail Modal
-        function showDetail(data) {
+        async function showDetail(data) {
             const modal = document.getElementById('detailModal');
             const content = document.getElementById('modalContent');
             document.getElementById('modalNama').textContent = data.nama;
@@ -1196,17 +1203,12 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
                 </div>
 
-                <!-- Bracket Stats -->
-                ${data.bracket_stats.total_bracket > 0 ? `
-                    <div class="mt-6 bg-amber-50 dark:bg-amber-900/30 rounded-xl p-4">
-                        <h4 class="font-semibold text-slate-900 dark:text-white mb-3">Statistik Bracket</h4>
-                        <div class="grid grid-cols-3 gap-4 text-center">
-                            <div><p class="text-xl font-bold text-yellow-600 dark:text-yellow-400">${data.bracket_stats.bracket_champion}</p><p class="text-xs text-slate-500 dark:text-zinc-400">Champion</p></div>
-                            <div><p class="text-xl font-bold text-slate-600 dark:text-zinc-300">${data.bracket_stats.bracket_runner_up}</p><p class="text-xs text-slate-500 dark:text-zinc-400">Runner Up</p></div>
-                            <div><p class="text-xl font-bold text-amber-600 dark:text-amber-400">${data.bracket_stats.bracket_third_place}</p><p class="text-xs text-slate-500 dark:text-zinc-400">3rd Place</p></div>
-                        </div>
+                <!-- Bracket Stats (Lazy Loaded) -->
+                <div id="${bracketSectionId}" class="mt-6 opacity-50">
+                    <div class="bg-slate-50 dark:bg-zinc-800/30 rounded-xl p-4 animate-pulse">
+                        <p class="text-sm text-center text-slate-500 italic">Memuat statistik bracket...</p>
                     </div>
-                ` : ''}
+                </div>
 
                 <!-- Tournament History -->
                 <div class="mt-6">
@@ -1254,6 +1256,34 @@ $role = $_SESSION['role'] ?? 'user';
 
             content.innerHTML = html;
             modal.classList.remove('hidden');
+
+            // Fetch Bracket Stats via AJAX
+            try {
+                const response = await fetch(`../actions/get_bracket_stats.php?nama=${encodeURIComponent(data.nama)}`);
+                const bStats = await response.json();
+                
+                const bracketEl = document.getElementById(bracketSectionId);
+                if (bStats.total_bracket > 0) {
+                    bracketEl.innerHTML = `
+                        <div class="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-4 border border-amber-200/50 dark:border-amber-900/50">
+                            <h4 class="font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                                <i class="fas fa-sitemap text-amber-500"></i> Statistik Bracket
+                            </h4>
+                            <div class="grid grid-cols-3 gap-4 text-center">
+                                <div><p class="text-xl font-bold text-yellow-600 dark:text-yellow-400">${bStats.bracket_champion}</p><p class="text-xs text-slate-500 dark:text-zinc-400">Champion</p></div>
+                                <div><p class="text-xl font-bold text-slate-600 dark:text-zinc-300">${bStats.bracket_runner_up}</p><p class="text-xs text-slate-500 dark:text-zinc-400">Runner Up</p></div>
+                                <div><p class="text-xl font-bold text-amber-600 dark:text-amber-400">${bStats.bracket_third_place}</p><p class="text-xs text-slate-500 dark:text-zinc-400">3rd Place</p></div>
+                            </div>
+                        </div>
+                    `;
+                    bracketEl.classList.remove('opacity-50');
+                } else {
+                    bracketEl.remove(); // Hide if no bracket stats
+                }
+            } catch (e) {
+                console.error("Gagal memuat statistik bracket:", e);
+                document.getElementById(bracketSectionId).remove();
+            }
         }
 
         function closeModal() {
@@ -1265,6 +1295,15 @@ $role = $_SESSION['role'] ?? 'user';
             if (e.key === 'Escape') closeModal();
         });
 
+        // Debounce Search
+        let debounceTimer;
+        function debounceSubmit() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                document.getElementById('searchInput').form.submit();
+            }, 600); // Wait 600ms after last keystroke
+        }
+
         // Auto-submit on select change
         document.querySelectorAll('select[name="gender"], select[name="kategori"]').forEach(select => {
             select.addEventListener('change', function() {
@@ -1274,7 +1313,6 @@ $role = $_SESSION['role'] ?? 'user';
 
         // Theme Toggle
         <?= getThemeToggleScript() ?>
-    </script>
     </script>
     <?= getConfirmationModal() ?>
 </body>
