@@ -156,6 +156,7 @@ try {
                 SUM(CASE WHEN LOWER(s.score) = 'x' THEN 1 ELSE 0 END) as total_x
             FROM score s
             JOIN peserta p ON s.peserta_id = p.id
+            INNER JOIN score_boards sb ON s.score_board_id = sb.id -- Filter ghost data (orphaned scores)
             WHERE 1=1 $keg_filter_scores
             GROUP BY s.kegiatan_id, s.score_board_id, s.peserta_id
         ),

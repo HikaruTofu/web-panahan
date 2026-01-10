@@ -1489,8 +1489,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
         if (!in_array($_SESSION['role'], $allowedRoles)) {
             enforceAdmin(); 
         }
-        $stmtDel = $conn->prepare("DELETE FROM `score_boards` WHERE `id` = ?");
         $ds_id = intval($_GET['delete_score_board']);
+        
+        // Hapus score terkait dulu (mencegah data ghoib)
+        $stmtDelScores = $conn->prepare("DELETE FROM `score` WHERE `score_board_id` = ?");
+        $stmtDelScores->bind_param("i", $ds_id);
+        $stmtDelScores->execute();
+        $stmtDelScores->close();
+
+        $stmtDel = $conn->prepare("DELETE FROM `score_boards` WHERE `id` = ?");
         security_log("Score board $ds_id deleted", 'WARNING');
         $stmtDel->bind_param("i", $ds_id);
         $stmtDel->execute();
