@@ -78,4 +78,3 @@ function checkPageAccess($currentPage) {
     
     return true;
 }
-?>
