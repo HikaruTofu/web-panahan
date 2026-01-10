@@ -134,6 +134,25 @@ function enforceAdmin() {
         exit;
     }
 }
+
+/**
+ * Enforce staff roles (admin, operator, petugas)
+ */
+function enforceCanInputScore() {
+    enforceAuth();
+    $allowedRoles = ['admin', 'operator', 'petugas'];
+    if (!in_array($_SESSION['role'], $allowedRoles)) {
+        security_log("Unauthorized staff access attempted on " . $_SERVER['REQUEST_URI'], 'WARNING');
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+            header('HTTP/1.1 403 Forbidden');
+            echo json_encode(['success' => false, 'message' => 'Forbidden: Staff access required.']);
+            exit;
+        }
+        session_write_close();
+        header('Location: /views/kegiatan.view.php');
+        exit;
+    }
+}
 /**
  * Log security-related events
  */
