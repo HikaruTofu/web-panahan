@@ -142,14 +142,20 @@ if($_SESSION['role'] != 'admin') {
 
 // Count by role
 $adminCount = 0;
-$userCount = 0;
+$operatorCount = 0;
+$petugasCount = 0;
+$viewerCount = 0;
 $activeCount = 0;
 $inactiveCount = 0;
 $users = [];
 while ($row = $result->fetch_assoc()) {
     $users[] = $row;
-    if (strtolower($row['role']) === 'admin') $adminCount++;
-    else $userCount++;
+    $rowRole = strtolower($row['role']);
+    if ($rowRole === 'admin') $adminCount++;
+    elseif ($rowRole === 'operator') $operatorCount++;
+    elseif ($rowRole === 'petugas') $petugasCount++;
+    elseif ($rowRole === 'viewer') $viewerCount++;
+    
     if (strtolower($row['status'] ?? 'active') === 'active') $activeCount++;
     else $inactiveCount++;
 }
@@ -317,15 +323,23 @@ $role = $_SESSION['role'] ?? 'user';
                         <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
                             <i class="fas fa-shield-alt text-purple-500 text-xs"></i>
-
                             <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $adminCount ?></span>
                             <span class="text-slate-400 dark:text-zinc-500">Admin</span>
                         </div>
                         <div class="flex items-center gap-1.5">
-                            <i class="fas fa-user text-blue-500 text-xs"></i>
-
-                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $userCount ?></span>
-                            <span class="text-slate-400 dark:text-zinc-500">User</span>
+                            <i class="fas fa-user-cog text-blue-500 text-xs"></i>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $operatorCount ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Operator</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-user-tie text-amber-500 text-xs"></i>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $petugasCount ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Petugas</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i class="fas fa-eye text-slate-400 text-xs"></i>
+                            <span class="font-medium text-slate-700 dark:text-zinc-300"><?= $viewerCount ?></span>
+                            <span class="text-slate-400 dark:text-zinc-500">Viewer</span>
                         </div>
                         <span class="text-slate-300 dark:text-zinc-600 hidden sm:inline">|</span>
                         <div class="flex items-center gap-1.5">
@@ -411,16 +425,24 @@ $role = $_SESSION['role'] ?? 'user';
                                             </td>
                                             <td class="px-4 py-3 text-center">
 
-                                                <?php if (strtolower($row['role']) === 'admin'): ?>
+                                                <?php 
+                                                $roleLower = strtolower($row['role']);
+                                                if ($roleLower === 'admin'): ?>
                                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
                                                         <i class="fas fa-shield-alt"></i> Admin
                                                     </span>
-
+                                                <?php elseif ($roleLower === 'operator'): ?>
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                                                        <i class="fas fa-user-cog"></i> Operator
+                                                    </span>
+                                                <?php elseif ($roleLower === 'petugas'): ?>
+                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                                        <i class="fas fa-user-tie"></i> Petugas
+                                                    </span>
                                                 <?php else: ?>
                                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400">
-                                                        <i class="fas fa-user"></i> User
+                                                        <i class="fas fa-eye"></i> <?= ucfirst($row['role']) ?>
                                                     </span>
-
                                                 <?php endif; ?>
                                             </td>
                                             <td class="px-4 py-3 text-center">
