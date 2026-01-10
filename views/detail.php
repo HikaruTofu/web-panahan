@@ -7,6 +7,10 @@ requireLogin();
 
 // Handle export to Excel
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
+    // Izinkan petugas/operator untu export
+    if (!canInputScore()) {
+       enforceAdmin();
+    }
     require '../vendor/vendor/autoload.php';
     
     // use PhpOffice\PhpSpreadsheet\Spreadsheet;

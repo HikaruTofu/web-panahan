@@ -1,7 +1,10 @@
 <?php
 require '../vendor/vendor/autoload.php';
 include '../config/panggil.php';
-enforceAdmin();
+$allowedRoles = ['admin', 'operator', 'petugas'];
+if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowedRoles)) {
+    enforceAdmin(); 
+}
 
 if (!checkRateLimit('action_load', 30, 60)) {
     header('HTTP/1.1 429 Too Many Requests');
