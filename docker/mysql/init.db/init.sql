@@ -34806,7 +34806,7 @@ CREATE TABLE `users` (
   `name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `role` enum('admin','operator','viewer') DEFAULT 'operator',
+  `role` enum('admin','operator','viewer','petugas') DEFAULT 'operator',
   `status` enum('active','inactive') DEFAULT 'active',
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
