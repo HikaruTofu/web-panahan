@@ -5,9 +5,9 @@ include 'includes/theme.php';
 if (isset($_SESSION['login']) && $_SESSION['login'] === true) {
     session_write_close(); // Pastikan session tersimpan sebelum redirect
     if ($_SESSION['role'] === 'admin') {
-        header('Location: /views/dashboard.php');
+        header('Location: views/dashboard.php');
     } else {
-        header('Location: /views/kegiatan.view.php');
+        header('Location: views/kegiatan.view.php');
     }
     exit;
 }
@@ -50,9 +50,9 @@ if (isset($_POST['submit'])) {
 
                 // Redirect berdasarkan role
                 if ($_SESSION['role'] === 'admin') {
-                    header('Location: /views/dashboard.php');
+                    header('Location: views/dashboard.php');
                 } else {
-                    header('Location: /views/kegiatan.view.php');
+                    header('Location: views/kegiatan.view.php');
                 }
                 exit;
             } else {

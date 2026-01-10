@@ -112,7 +112,7 @@ function enforceAuth() {
             exit;
         }
         session_write_close();
-        header('Location: /index.php');
+        header('Location: ../index.php');
         exit;
     }
 }
@@ -130,7 +130,7 @@ function enforceAdmin() {
             exit;
         }
         session_write_close();
-        header('Location: /views/kegiatan.view.php');
+        header('Location: kegiatan.view.php');
         exit;
     }
 }
@@ -149,7 +149,7 @@ function enforceCanInputScore() {
             exit;
         }
         session_write_close();
-        header('Location: /views/kegiatan.view.php');
+        header('Location: kegiatan.view.php');
         exit;
     }
 }
