@@ -161,9 +161,9 @@ if ($executeCleanup && !empty($invalidAthletes)) {
         $stmtDel->bind_param("i", $athlete['peserta_id']);
         if ($stmtDel->execute()) {
             $deletedScores += $conn->affected_rows;
-            echo "<p>✓ Deleted scores for: " . s($athlete['nama_peserta']) . " ({$conn->affected_rows} records)</p>";
+            echo "<p>✓ Deleted scores for: " . htmlspecialchars($athlete['nama_peserta']) . " ({$conn->affected_rows} records)</p>";
         } else {
-            echo "<p style='color:red;'>✗ Failed to delete scores for: " . s($athlete['nama_peserta']) . "</p>";
+            echo "<p style='color:red;'>✗ Failed to delete scores for: " . htmlspecialchars($athlete['nama_peserta']) . "</p>";
         }
     }
     $stmtDel->close();
@@ -189,7 +189,6 @@ if ($executeCleanup && !empty($invalidAthletes)) {
     }
 }
 
-$conn->close();
 $conn->close();
 
 echo getConfirmationModal();

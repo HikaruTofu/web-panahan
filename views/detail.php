@@ -432,7 +432,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     </div>
                     <div class="pt-4">
                         <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
-                        <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
+                        <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30 transition-colors">
                             <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
                         </a>
                         <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
@@ -442,6 +442,16 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                             <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
                         </a>
                     </div>
+
+                    <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                    <div class="pt-4">
+                        <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">System</p>
+                        <a href="recovery.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                            <i class="fas fa-trash-restore w-5"></i>
+                            <span class="text-sm">Data Recovery</span>
+                        </a>
+                    </div>
+                    <?php endif; ?>
                 </nav>
                 <div class="px-4 py-4 border-t border-zinc-800">
                     <div class="flex items-center gap-3 px-2">
@@ -559,25 +569,43 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <nav class="flex-1 px-4 py-6 space-y-1">
-                <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+            <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+                <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
                 </a>
-                <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                    <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
-                </a>
-                <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                    <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
-                </a>
-                <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
-                    <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
-                </a>
-                <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                    <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
-                </a>
-                <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                    <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
-                </a>
+
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
+                    <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
+                    </a>
+                    <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
+                    </a>
+                </div>
+
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
+                    <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30 transition-colors">
+                        <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
+                    </a>
+                    <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+                    </a>
+                    <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+                    </a>
+                </div>
+
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">System</p>
+                    <a href="recovery.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-trash-restore w-5"></i>
+                        <span class="text-sm">Data Recovery</span>
+                    </a>
+                </div>
+                <?php endif; ?>
             </nav>
             <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
                 <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"
@@ -1491,6 +1519,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
         }
         $ds_id = intval($_GET['delete_score_board']);
         
+        // Backup before deletion (Recover Mode)
+        backup_deleted_record($conn, 'score_boards', $ds_id);
+        
         // Hapus score terkait dulu (mencegah data ghoib)
         $stmtDelScores = $conn->prepare("DELETE FROM `score` WHERE `score_board_id` = ?");
         $stmtDelScores->bind_param("i", $ds_id);
@@ -1595,7 +1626,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     </div>
                     <div class="pt-4">
                         <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
-                        <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
+                        <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30 transition-colors">
                             <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
                         </a>
                         <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
@@ -1605,6 +1636,16 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                             <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
                         </a>
                     </div>
+
+                    <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                    <div class="pt-4">
+                        <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">System</p>
+                        <a href="recovery.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                            <i class="fas fa-trash-restore w-5"></i>
+                            <span class="text-sm">Data Recovery</span>
+                        </a>
+                    </div>
+                    <?php endif; ?>
                 </nav>
                 <div class="px-4 py-4 border-t border-zinc-800">
                     <div class="flex items-center gap-3 px-2">
@@ -2332,15 +2373,21 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     let heroHTML = '<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">';
 
                     top3.forEach((peserta, index) => {
+                        const hasScore = (peserta.total_score || 0) > 0;
                         const medals = ['🥇', '🥈', '🥉'];
                         const bgColors = ['bg-archery-50 dark:bg-archery-900/30 border-archery-200 dark:border-archery-700', 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700', 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700'];
                         const textColors = ['text-archery-700 dark:text-archery-400', 'text-slate-700 dark:text-zinc-300', 'text-amber-700 dark:text-amber-400'];
+                        
+                        // Use neutral styling if no score
+                        const bgColor = hasScore ? bgColors[index] : 'bg-slate-50 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700';
+                        const textColor = hasScore ? textColors[index] : 'text-slate-400 dark:text-zinc-500';
+                        const medalDisplay = hasScore ? medals[index] : `<div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-700 mx-auto flex items-center justify-center text-xs font-bold text-slate-500">${index + 1}</div>`;
 
                         heroHTML += `
-                            <div class="border ${bgColors[index]} rounded-xl p-4 text-center ${index === 0 ? 'ring-2 ring-archery-500 ring-offset-2 dark:ring-offset-zinc-900' : ''}">
-                                <div class="text-3xl mb-2">${medals[index]}</div>
-                                <p class="font-bold text-lg text-slate-900 dark:text-white mb-1">${peserta.nama_peserta}</p>
-                                <p class="text-3xl font-bold ${textColors[index]}">${peserta.total_score || 0}</p>
+                            <div class="border ${bgColor} rounded-xl p-4 text-center ${hasScore && index === 0 ? 'ring-2 ring-archery-500 ring-offset-2 dark:ring-offset-zinc-900' : ''}">
+                                <div class="text-3xl mb-2">${medalDisplay}</div>
+                                <p class="font-bold text-lg text-slate-900 dark:text-white mb-1 overflow-hidden text-ellipsis whitespace-nowrap">${peserta.nama_peserta}</p>
+                                <p class="text-3xl font-bold ${textColor}">${peserta.total_score || 0}</p>
                                 <div class="flex items-center justify-center gap-2 mt-1">
                                     <span class="text-xs text-slate-500 dark:text-zinc-400">10+X: ${peserta.ten_plus_x_score || 0}</span>
                                     <span class="text-xs text-slate-500 dark:text-zinc-400">•</span>
@@ -2377,7 +2424,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     pesertaData.forEach((peserta, index) => {
                         const isTop3 = index < 3;
                         const rowClass = index === 0 ? 'bg-archery-50 dark:bg-archery-900/20' : (isTop3 ? 'bg-slate-50 dark:bg-zinc-800' : 'bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800');
-                        const rankDisplay = isTop3 ? ['🥇', '🥈', '🥉'][index] : (index + 1);
+                        const hasScore = (peserta.total_score || 0) > 0;
+                        const rankDisplay = (hasScore && isTop3) ? ['🥇', '🥈', '🥉'][index] : (index + 1);
                         const nameWeight = isTop3 ? 'font-semibold' : 'font-medium';
                         const scoreWeight = isTop3 ? 'font-bold text-lg' : 'font-semibold';
                         const scoreColor = index === 0 ? 'text-archery-700 dark:text-archery-400' : 'text-slate-900 dark:text-white';
@@ -3112,7 +3160,7 @@ function buildPaginationUrl($page, $params = []) {
 
                 <div class="pt-4">
                     <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
-                    <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
+                    <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30 transition-colors">
                         <i class="fas fa-calendar w-5"></i>
                         <span class="text-sm font-medium">Kegiatan</span>
                     </a>
@@ -3125,6 +3173,16 @@ function buildPaginationUrl($page, $params = []) {
                         <span class="text-sm">Statistik</span>
                     </a>
                 </div>
+
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">System</p>
+                    <a href="recovery.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-trash-restore w-5"></i>
+                        <span class="text-sm">Data Recovery</span>
+                    </a>
+                </div>
+                <?php endif; ?>
             </nav>
 
             <div class="px-4 py-4 border-t border-zinc-800">
@@ -3538,25 +3596,43 @@ function buildPaginationUrl($page, $params = []) {
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <nav class="flex-1 px-4 py-6 space-y-1">
-            <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+        <nav class="px-4 py-6 space-y-1 overflow-y-auto">
+            <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                 <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
             </a>
-            <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
-            </a>
-            <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
-            </a>
-            <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
-                <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
-            </a>
-            <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
-            </a>
-            <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
-            </a>
+
+            <div class="pt-4">
+                <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
+                <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
+                </a>
+                <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
+                </a>
+            </div>
+
+            <div class="pt-4">
+                <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
+                <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30 transition-colors">
+                    <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
+                </a>
+                <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+                </a>
+                <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+                </a>
+            </div>
+
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+            <div class="pt-4">
+                <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">System</p>
+                <a href="recovery.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-trash-restore w-5"></i>
+                    <span class="text-sm">Data Recovery</span>
+                </a>
+            </div>
+            <?php endif; ?>
         </nav>
         <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
             <div class="flex items-center gap-3 px-2">

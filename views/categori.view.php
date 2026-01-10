@@ -81,6 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $catName = $nameResult->fetch_assoc()['name'] ?? 'Kategori';
                 $stmt->close();
 
+                // Backup before delete
+                backup_deleted_record($conn, 'categories', $id);
+
                 $stmt = $conn->prepare("DELETE FROM categories WHERE id=?");
                 $stmt->bind_param("i", $id);
                 if ($stmt->execute()) {
@@ -206,6 +209,16 @@ $role = $_SESSION['role'] ?? 'user';
                         <span class="text-sm">Statistik</span>
                     </a>
                 </div>
+
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">System</p>
+                    <a href="recovery.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-trash-restore w-5"></i>
+                        <span class="text-sm">Data Recovery</span>
+                    </a>
+                </div>
+                <?php endif; ?>
             </nav>
 
             <div class="px-4 py-4 border-t border-zinc-800">
@@ -638,25 +651,43 @@ $role = $_SESSION['role'] ?? 'user';
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <nav class="px-4 py-6 space-y-1">
-            <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+        <nav class="px-4 py-6 space-y-1 overflow-y-auto">
+            <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                 <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
             </a>
-            <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
-            </a>
-            <a href="categori.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
-                <i class="fas fa-tags w-5"></i><span class="text-sm font-medium">Kategori</span>
-            </a>
-            <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-calendar w-5"></i><span class="text-sm">Kegiatan</span>
-            </a>
-            <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
-            </a>
-            <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
-            </a>
+
+            <div class="pt-4">
+                <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
+                <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
+                </a>
+                <a href="categori.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
+                    <i class="fas fa-tags w-5"></i><span class="text-sm font-medium">Kategori</span>
+                </a>
+            </div>
+
+            <div class="pt-4">
+                <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
+                <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-calendar w-5"></i><span class="text-sm">Kegiatan</span>
+                </a>
+                <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
+                </a>
+                <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+                </a>
+            </div>
+
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+            <div class="pt-4">
+                <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">System</p>
+                <a href="recovery.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-trash-restore w-5"></i>
+                    <span class="text-sm">Data Recovery</span>
+                </a>
+            </div>
+            <?php endif; ?>
         </nav>
         <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
             <a href="../actions/logout.php" onclick="const url=this.href; showConfirmModal('Konfirmasi Logout', 'Apakah Anda yakin ingin keluar dari sistem?', () => window.location.href = url, 'danger'); return false;"

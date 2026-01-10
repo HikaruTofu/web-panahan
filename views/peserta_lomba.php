@@ -96,6 +96,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     if ($_POST['action'] === 'remove_participant') {
         $tp_id = $_POST['tp_id'];
+        
+        // Backup before delete
+        backup_deleted_record($conn, 'tournament_participants', $tp_id);
+
         $sql = "DELETE FROM tournament_participants WHERE id = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("i", $tp_id);

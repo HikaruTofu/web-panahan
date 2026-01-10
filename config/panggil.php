@@ -38,3 +38,11 @@ if ($conn->connect_error) {
 
 // Include Security Helpers
 require_once __DIR__ . '/../includes/security.php';
+
+// Include Data Recovery Logic
+require_once __DIR__ . '/../includes/recovery.php';
+
+// Auto-cleanup old backups (10% chance to run on page load to save resources)
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin' && rand(1, 100) <= 10) {
+    cleanup_old_backups();
+}

@@ -310,6 +310,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                         $check_score->close();
 
                         if (!$has_score) {
+                            // Backup before deletion (Recover Mode)
+                            backup_deleted_record($conn, 'peserta', $row_id);
                             $conn->query("DELETE FROM peserta WHERE id = $row_id");
                         }
                     }
@@ -346,6 +348,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                     $file_path = '../assets/uploads/' . $peserta_data['bukti_pembayaran'];
                     if (file_exists($file_path)) unlink($file_path);
                 }
+                // Backup before deletion (Recover Mode)
+                backup_deleted_record($conn, 'peserta', $id);
                 $stmt = $conn->prepare("DELETE FROM peserta WHERE id = ?");
                 $stmt->bind_param("i", $id);
                 if ($stmt->execute()) {
@@ -422,6 +426,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                         $stmtScore->close();
 
                         // Delete the duplicate row
+                        // Backup before deletion (Recover Mode)
+                        backup_deleted_record($conn, 'peserta', $dupId);
                         $stmtDel = $conn->prepare("DELETE FROM peserta WHERE id = ?");
                         $stmtDel->bind_param("i", $dupId);
                         $stmtDel->execute();
@@ -847,6 +853,16 @@ $role = $_SESSION['role'] ?? 'user';
                         <span class="text-sm">Statistik</span>
                     </a>
                 </div>
+
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                <div class="pt-4">
+                    <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">System</p>
+                    <a href="recovery.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="fas fa-trash-restore w-5"></i>
+                        <span class="text-sm">Data Recovery</span>
+                    </a>
+                </div>
+                <?php endif; ?>
             </nav>
 
             <div class="px-4 py-4 border-t border-zinc-800">
@@ -1658,24 +1674,42 @@ $role = $_SESSION['role'] ?? 'user';
             </button>
         </div>
         <nav class="px-4 py-6 space-y-1">
-            <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
+            <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                 <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
             </a>
-            <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
-            </a>
-            <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
-            </a>
-            <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-calendar w-5"></i><span class="text-sm">Kegiatan</span>
-            </a>
-            <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
-                <i class="fas fa-user-friends w-5"></i><span class="text-sm font-medium">Peserta</span>
-            </a>
-            <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
-                <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
-            </a>
+
+            <div class="pt-4">
+                <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
+                <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-users w-5"></i><span class="text-sm">Users</span>
+                </a>
+                <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
+                </a>
+            </div>
+
+            <div class="pt-4">
+                <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
+                <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-calendar w-5"></i><span class="text-sm">Kegiatan</span>
+                </a>
+                <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
+                    <i class="fas fa-user-friends w-5"></i><span class="text-sm font-medium">Peserta</span>
+                </a>
+                <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
+                </a>
+            </div>
+
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+            <div class="pt-4">
+                <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">System</p>
+                <a href="recovery.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <i class="fas fa-trash-restore w-5"></i>
+                    <span class="text-sm">Data Recovery</span>
+                </a>
+            </div>
+            <?php endif; ?>
         </nav>
         <div class="px-4 py-4 border-t border-zinc-800 mt-auto">
             <a href="../actions/logout.php" onclick="event.preventDefault(); const url = this.href; showConfirmModal('Logout', 'Yakin ingin logout?', () => window.location.href = url, 'danger')"

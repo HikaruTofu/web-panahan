@@ -38,12 +38,17 @@ Jika melakukan update dari versi lama ke versi terbaru, Anda **WAJIB** menjalank
 1. Masuk ke **phpMyAdmin** server Anda.
 2. Pilih database yang digunakan (`panahan_turnament_new`).
 3. Klik tab **"SQL"** di bagian atas.
-4. Copy-paste perintah di bawah ini ke dalam kotak teks:
-   ```sql
-   ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'operator', 'viewer', 'petugas') DEFAULT 'operator';
-   ```
-5. Klik tombol **"Go"** atau **"Kirim"** di pojok kanan bawah.
-6. **Selesai!** Sekarang Anda bisa mengubah role user menjadi "petugas" di menu Manajemen User.
+4. Copy-paste perintah di bawah ini (pilih yang sesuai kebutuhan Anda):
+
+**A. Update Role & Performance (WAJIB):**
+```sql
+ALTER TABLE score ADD INDEX idx_kb (score_board_id), ADD INDEX idx_ps (peserta_id), ADD INDEX idx_kg (kegiatan_id);
+ALTER TABLE peserta ADD INDEX idx_kg (kegiatan_id);
+ALTER TABLE score_boards ADD INDEX idx_kg (kegiatan_id);
+```
+
+5. Klik tombol **"Go"** atau **"Kirim"**.
+6. **Selesai!** Aplikasi sekarang lebih cepat dan mendukung role baru.
 
 ## 👤 Login Default
 
