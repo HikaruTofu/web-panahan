@@ -1,18 +1,25 @@
 <?php
 // Mulai session hanya jika belum ada
 if (session_status() === PHP_SESSION_NONE) {
-    // Gunakan pengaturan paling standar tapi pastikan path ke root (/)
+    // Jalur absolut untuk folder sessions (Nuclear Fix untuk shared hosting)
+    $sessionPath = dirname(__DIR__) . '/sessions';
+    if (!is_dir($sessionPath)) {
+        @mkdir($sessionPath, 0777, true);
+        @file_put_contents($sessionPath . '/.htaccess', "Deny from all");
+    }
+    
+    // Paksa PHP menggunakan folder ini agar session sinkron antar folder
+    if (is_writable($sessionPath)) {
+        session_save_path($sessionPath);
+        ini_set('session.save_path', $sessionPath);
+    }
+
+    // Konfigurasi cookie standar
     if (!headers_sent()) {
         session_set_cookie_params([
             'path' => '/',
             'samesite' => 'Lax'
         ]);
-        
-        // Cek jika HTTPS untuk secure cookie
-        if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || 
-            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
-            ini_set('session.cookie_secure', 1);
-        }
     }
     session_start();
 }
