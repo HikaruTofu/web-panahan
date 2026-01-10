@@ -129,11 +129,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'search_peserta') {
 
 // Handle CRUD Operations
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
-    if (!isAdmin()) {
-        $_SESSION['toast_message'] = "Akses ditolak. Anda tidak memiliki izin untuk melakukan tindakan ini.";
-        $_SESSION['toast_type'] = 'error';
-        header("Location: ?" . http_build_query($_GET));
-        exit;
+    $action = $_POST['action'];
+    $staffActions = ['create', 'update'];
+    
+    if (in_array($action, $staffActions)) {
+        if (!canInputScore()) {
+            $_SESSION['toast_message'] = "Akses ditolak. Staf tidak memiliki izin untuk melakukan tindakan ini.";
+            $_SESSION['toast_type'] = 'error';
+            header("Location: ?" . http_build_query($_GET));
+            exit;
+        }
+    } else {
+        if (!isAdmin()) {
+            $_SESSION['toast_message'] = "Akses ditolak. Hanya Admin yang dapat melakukan tindakan ini.";
+            $_SESSION['toast_type'] = 'error';
+            header("Location: ?" . http_build_query($_GET));
+            exit;
+        }
     }
     if (!checkRateLimit('peserta_crud', 10, 60)) {
         $toast_message = "Terlalu banyak permintaan. Silakan coba lagi dalam satu menit.";
@@ -901,7 +913,7 @@ $role = $_SESSION['role'] ?? 'user';
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <?php if (isAdmin()): ?>
+                                <?php if (canInputScore()): ?>
                                 <button onclick="openAddModal()"
                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors shadow-sm">
                                     <i class="fas fa-user-plus"></i>
@@ -1215,12 +1227,13 @@ $role = $_SESSION['role'] ?? 'user';
                                                         </button>
                                                     <?php endif; ?>
 
-                                                    <?php if (isAdmin()): ?>
-                                                    <button type="button" onclick="editPeserta(<?= htmlspecialchars(json_encode($group)) ?>)"
+                                                    <?php if (canInputScore()): ?>
+                                                    <button type="button" onclick="editPeserta(<?= htmlspecialchars(json_encode($p)) ?>)"
                                                             class="p-1.5 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-
+                                                    <?php endif; ?>
+                                                    <?php if (isAdmin()): ?>
                                                     <button type="button" onclick="confirmDelete(<?= $p['id'] ?>, '<?= htmlspecialchars($nama, ENT_QUOTES) ?>')"
                                                             class="p-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                         <i class="fas fa-trash-alt"></i>
