@@ -3,7 +3,7 @@ include '../config/panggil.php';
 include '../includes/check_access.php';
 include '../includes/theme.php';
 require_once '../includes/security.php';
-requireAdmin();
+requireLogin();
 
 if (!checkRateLimit('view_load', 60, 60)) {
     header('HTTP/1.1 429 Too Many Requests');
@@ -24,6 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         goto skip_post;
     }
     verify_csrf();
+    if (!isAdmin()) {
+        $toast_message = "Akses ditolak. Anda tidak memiliki izin untuk melakukan tindakan ini.";
+        $toast_type = 'error';
+        goto skip_post;
+    }
     $_POST = cleanInput($_POST);
     if (isset($_POST['action'])) {
         switch ($_POST['action']) {
@@ -265,10 +270,12 @@ $role = $_SESSION['role'] ?? 'user';
                                     <p class="text-sm text-slate-500 dark:text-zinc-400">Kelola kategori umur & kuota peserta</p>
                                 </div>
                             </div>
-                            <button onclick="openModal('addModal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                            <?php if (isAdmin()): ?>
+                            <button onclick="openModal('addModal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors shadow-sm">
                                 <i class="fas fa-plus"></i>
                                 <span class="hidden sm:inline">Tambah Kategori</span>
                             </button>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -449,7 +456,7 @@ $role = $_SESSION['role'] ?? 'user';
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-center gap-1">
-
+                                            <?php if (isAdmin()): ?>
                                             <button onclick="editData(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>', <?= $row['min_age'] ?>, <?= $row['max_age'] ?>, '<?= addslashes($gender) ?>', <?= $quota ?>)"
                                                     class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors" title="Edit">
                                                 <i class="fas fa-edit text-sm"></i>
@@ -459,6 +466,9 @@ $role = $_SESSION['role'] ?? 'user';
                                                     class="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Hapus">
                                                 <i class="fas fa-trash text-sm"></i>
                                             </button>
+                                            <?php else: ?>
+                                            <span class="text-xs text-slate-400 italic">Hanya Admin</span>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
@@ -475,9 +485,11 @@ $role = $_SESSION['role'] ?? 'user';
                                             </div>
                                             <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada data kategori</p>
                                             <p class="text-slate-400 dark:text-zinc-500 text-sm mb-4">Silakan tambahkan kategori baru</p>
+                                            <?php if (isAdmin()): ?>
                                             <button onclick="openModal('addModal')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
                                                 <i class="fas fa-plus"></i> Tambah Kategori
                                             </button>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>

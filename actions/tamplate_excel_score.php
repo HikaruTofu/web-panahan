@@ -1,6 +1,6 @@
 <?php 
 include '../config/panggil.php'; 
-enforceAdmin();
+enforceCanInputScore();
 
 if (!checkRateLimit('action_load', 30, 60)) {
     header('HTTP/1.1 429 Too Many Requests');

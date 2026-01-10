@@ -2,7 +2,7 @@
     // relies on panggil.php for session
 
     include '../config/panggil.php';
-    enforceAdmin();
+    enforceCanInputScore();
 
     if (!checkRateLimit('view_load', 60, 60)) {
         header('HTTP/1.1 429 Too Many Requests');
