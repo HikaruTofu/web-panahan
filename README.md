@@ -32,11 +32,18 @@ Sistem telah di-harden sesuai standar **OWASP Top 10:2025**:
 
 ## 📋 SQL Migration (PENTING)
 
-Jika melakukan update dari versi lama, jalankan perintah ini di database server untuk mendukung role baru:
+Jika melakukan update dari versi lama ke versi terbaru, Anda **WAJIB** menjalankan perintah SQL di bawah ini agar sistem mengenali role baru (`petugas`).
 
-```sql
-ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'operator', 'viewer', 'petugas') DEFAULT 'operator';
-```
+### Cara Update via phpMyAdmin:
+1. Masuk ke **phpMyAdmin** server Anda.
+2. Pilih database yang digunakan (`panahan_turnament_new`).
+3. Klik tab **"SQL"** di bagian atas.
+4. Copy-paste perintah di bawah ini ke dalam kotak teks:
+   ```sql
+   ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'operator', 'viewer', 'petugas') DEFAULT 'operator';
+   ```
+5. Klik tombol **"Go"** atau **"Kirim"** di pojok kanan bawah.
+6. **Selesai!** Sekarang Anda bisa mengubah role user menjadi "petugas" di menu Manajemen User.
 
 ## 👤 Login Default
 
