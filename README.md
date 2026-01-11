@@ -42,9 +42,18 @@ Jika melakukan update dari versi lama ke versi terbaru, Anda **WAJIB** menjalank
 
 **A. Update Role & Performance (WAJIB):**
 ```sql
+-- 1. Tambah Role 'petugas' jika belum ada
+ALTER TABLE users MODIFY COLUMN role ENUM('admin','operator','viewer','petugas') DEFAULT 'operator';
+
+-- 2. Tambah Index Performa (Sangat disarankan untuk database besar)
 ALTER TABLE score ADD INDEX idx_kb (score_board_id), ADD INDEX idx_ps (peserta_id), ADD INDEX idx_kg (kegiatan_id);
 ALTER TABLE peserta ADD INDEX idx_kg (kegiatan_id);
 ALTER TABLE score_boards ADD INDEX idx_kg (kegiatan_id);
+
+-- 3. Tambah kolom audit (jika upgrade dari versi < 2.0)
+ALTER TABLE peserta 
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 ```
 
 5. Klik tombol **"Go"** atau **"Kirim"**.
