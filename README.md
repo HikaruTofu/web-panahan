@@ -60,5 +60,12 @@ ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDAT
 
 *Silakan cek database/setup awal untuk detail kredensial admin.*
 
+## 💾 Live Deployment & Backup
+
+Jika Anda ingin men-*deploy* ke server live atau memindahkan data:
+1.  Gunakan file `latest_database_backup.sql` yang tersedia di root project.
+2.  Import file tersebut ke database target (MySQL 8.0+ disarankan).
+3.  Pastikan file `config/panggil.php` sudah dikonfigurasi dengan `sname`, `uname`, `pwd`, dan `database` yang benar sesuai server live Anda.
+
 ---
 Made with ❤️ for Indonesian Archery Community 🇮🇩
