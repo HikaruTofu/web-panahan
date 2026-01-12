@@ -3,9 +3,9 @@
  * Data Recovery Panel
  * View and manage 24-hour backups of deleted records.
  */
-include '../config/panggil.php';
-include '../includes/check_access.php';
-include '../includes/theme.php';
+include __DIR__ . '/../config/panggil.php';
+include __DIR__ . '/../includes/check_access.php';
+include __DIR__ . '/../includes/theme.php';
 requireAdmin();
 
 $username = $_SESSION['username'] ?? 'User';

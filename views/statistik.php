@@ -3,10 +3,10 @@
  * Statistik & Penilaian Peserta
  * UI: Intentional Minimalism with Tailwind CSS (consistent with Dashboard)
  */
-include '../config/panggil.php';
-include '../includes/check_access.php';
-include '../includes/theme.php';
-require_once '../includes/security.php';
+include __DIR__ . '/../config/panggil.php';
+include __DIR__ . '/../includes/check_access.php';
+include __DIR__ . '/../includes/theme.php';
+require_once __DIR__ . '/../includes/security.php';
 requireLogin(); // Ganti dari requireAdmin agar user biasa bisa melihat statistik
 
 if (!checkRateLimit('view_load', 60, 60)) {

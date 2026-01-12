@@ -1,8 +1,8 @@
 <?php
 // Aktifkan error reporting untuk debuggin
-include '../config/panggil.php';
-include '../includes/check_access.php';
-include '../includes/theme.php';
+include __DIR__ . '/../config/panggil.php';
+include __DIR__ . '/../includes/check_access.php';
+include __DIR__ . '/../includes/theme.php';
 requireLogin();
 
 // Handle export to Excel

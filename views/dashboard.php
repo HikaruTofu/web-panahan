@@ -8,11 +8,11 @@
 
 set_time_limit(300);
 ini_set('memory_limit', '512M');
-include '../config/panggil.php';
-include '../includes/check_access.php';
-include '../includes/theme.php';
+include __DIR__ . '/../config/panggil.php';
+include __DIR__ . '/../includes/check_access.php';
+include __DIR__ . '/../includes/theme.php';
 // Ensure security helper is loaded
-require_once '../includes/security.php';
+require_once __DIR__ . '/../includes/security.php';
 requireAdmin();
 
 if (!checkRateLimit('view_load', 60, 60)) {

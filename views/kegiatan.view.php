@@ -1,9 +1,9 @@
 <?php
-include '../config/panggil.php';
-include '../includes/check_access.php';
-include '../includes/theme.php';
-require_once '../includes/security.php';
-requireLogin(); // Ganti dari requireAdmin agar user biasa bisa masuk
+include __DIR__ . '/../config/panggil.php';
+include __DIR__ . '/../includes/check_access.php';
+include __DIR__ . '/../includes/theme.php';
+require_once __DIR__ . '/../includes/security.php';
+requireLogin(); 
 
 if (!checkRateLimit('view_load', 60, 60)) {
     header('HTTP/1.1 429 Too Many Requests');
