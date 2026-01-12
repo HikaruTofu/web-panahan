@@ -4,7 +4,7 @@
  * Backups deleted records to filesystem for 24 hours.
  */
 
-define('RECOVERY_BACKUP_FILE', dirname(__DIR__) . '/sessions/recovery_backups.json');
+// RECOVERY_BACKUP_FILE is defined in config/panggil.php
 
 /**
  * Backup a record to JSON before permanent deletion

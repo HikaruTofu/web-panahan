@@ -1,7 +1,7 @@
 <?php
     // relies on panggil.php for session
 
-    include '../config/panggil.php';
+    require_once __DIR__ . '/../config/panggil.php';
     enforceCanInputScore();
 
     if (!checkRateLimit('view_load', 60, 60)) {

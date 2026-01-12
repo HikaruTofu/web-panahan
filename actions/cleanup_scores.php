@@ -3,8 +3,8 @@
  * Database Cleanup Script
  * Removes score records that don't match databaru.txt source
  */
-include '../config/panggil.php';
-include_once '../includes/theme.php';
+require_once __DIR__ . '/../config/panggil.php';
+require_once __DIR__ . '/../includes/theme.php';
 enforceAdmin();
 
 if (!checkRateLimit('action_load', 60, 60)) {
@@ -40,7 +40,7 @@ echo "
 echo "<h2>Step 1: Identify Athletes with Scores NOT in databaru.txt</h2>";
 
 // Parse databaru.txt to get valid athlete names
-$fileContent = file_get_contents('../databaru.txt');
+$fileContent = file_get_contents(__DIR__ . '/../databaru.txt');
 $lines = explode("\n", $fileContent);
 $validAthletes = [];
 

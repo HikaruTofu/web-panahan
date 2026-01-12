@@ -1,6 +1,6 @@
 <?php
-include 'config/panggil.php';
-include 'includes/theme.php';
+require_once __DIR__ . '/config/panggil.php';
+require_once __DIR__ . '/includes/theme.php';
 // Cek jika sudah login
 if (isset($_SESSION['login']) && $_SESSION['login'] === true) {
     // Redirect berdasarkan role

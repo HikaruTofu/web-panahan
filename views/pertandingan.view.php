@@ -3,8 +3,9 @@
  * Pertandingan / Bantalan Assignment View
  * UI: Intentional Minimalism with Tailwind CSS (consistent with Dashboard)
  */
-include '../includes/check_access.php';
-require_once '../includes/security.php';
+require_once __DIR__ . '/../config/panggil.php';
+require_once __DIR__ . '/../includes/check_access.php';
+require_once __DIR__ . '/../includes/security.php';
 requireAdmin();
 
 if (!checkRateLimit('view_load', 60, 60)) {
@@ -12,11 +13,6 @@ if (!checkRateLimit('view_load', 60, 60)) {
     die('Terlalu banyak permintaan. Silakan coba lagi nanti.');
 }
 
-if (!file_exists('../config/panggil.php')) {
-    die("Error: panggil.php file not found!");
-}
-
-include '../config/panggil.php';
 $_GET = cleanInput($_GET);
 
 if (!isset($conn) && !isset($connection)) {

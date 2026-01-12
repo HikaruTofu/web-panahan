@@ -1,6 +1,6 @@
 <?php
-include '../config/panggil.php';
-require_once '../includes/security.php';
+require_once __DIR__ . '/../config/panggil.php';
+require_once __DIR__ . '/../includes/security.php';
 
 // Only staff can access detailed stats via AJAX if needed, though statistics is generally open
 // We reuse the session check from panggil.php implicitly

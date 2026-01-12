@@ -2,7 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-include '../config/panggil.php';
+require_once __DIR__ . '/../config/panggil.php';
 
 echo "<h1>Session Diagnosis (Views)</h1>";
 echo "<pre>";

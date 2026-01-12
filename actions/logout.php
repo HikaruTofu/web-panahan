@@ -1,5 +1,5 @@
 <?php
-include '../config/panggil.php';
+require_once __DIR__ . '/../config/panggil.php';
 
 // Hapus semua data session
 $_SESSION = array();

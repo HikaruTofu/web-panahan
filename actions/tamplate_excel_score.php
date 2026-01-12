@@ -1,5 +1,6 @@
 <?php 
-include '../config/panggil.php'; 
+require_once __DIR__ . '/../config/panggil.php';
+ 
 enforceCanInputScore();
 
 if (!checkRateLimit('action_load', 30, 60)) {

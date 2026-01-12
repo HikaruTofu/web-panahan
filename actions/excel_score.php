@@ -1,6 +1,6 @@
 <?php
-require '../vendor/vendor/autoload.php';
-include '../config/panggil.php';
+require_once __DIR__ . '/../vendor/vendor/autoload.php';
+require_once __DIR__ . '/../config/panggil.php';
 $allowedRoles = ['admin', 'operator', 'petugas'];
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], $allowedRoles)) {
     enforceAdmin(); 

@@ -8,9 +8,9 @@
 
 set_time_limit(300);
 ini_set('memory_limit', '512M');
-include __DIR__ . '/../config/panggil.php';
-include __DIR__ . '/../includes/check_access.php';
-include __DIR__ . '/../includes/theme.php';
+require_once __DIR__ . '/../config/panggil.php';
+require_once __DIR__ . '/../includes/check_access.php';
+require_once __DIR__ . '/../includes/theme.php';
 // Ensure security helper is loaded
 require_once __DIR__ . '/../includes/security.php';
 requireAdmin();
@@ -43,23 +43,38 @@ function getKategoriFromRanking(int $ranking, int $totalPeserta): array
         return ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy'];
     }
 
-    $persentase = ($ranking / $totalPeserta) * 100;
+    // V4: Weighted Score with Linear Penalty
+    // Score = (100 / Rank) + (10 * log2(Total)) - Rank
+    $rankScore = 100 / $ranking;
+    $sizeBonus = 10 * log($totalPeserta, 2);
+    $finalScore = $rankScore + $sizeBonus - $ranking;
 
-    if ($ranking <= 3 && $persentase <= 30) {
+    // A: Sangat Baik (Score >= 80 OR Rank 1)
+    if ($ranking === 1 || $finalScore >= 80) {
         return ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy'];
-    } elseif ($ranking <= 10 && $persentase <= 40) {
+    } 
+    // B: Baik (Score >= 50)
+    elseif ($finalScore >= 50) {
         return ['kategori' => 'B', 'label' => 'Baik', 'color' => 'blue', 'icon' => 'medal'];
-    } elseif ($persentase <= 60) {
+    } 
+    // C: Cukup (Score >= 30)
+    elseif ($finalScore >= 30) {
         return ['kategori' => 'C', 'label' => 'Cukup', 'color' => 'cyan', 'icon' => 'award'];
-    } elseif ($persentase <= 80) {
+    } 
+    // D: Perlu Latihan
+    // D: Perlu Latihan
+    else {
         return ['kategori' => 'D', 'label' => 'Perlu Latihan', 'color' => 'amber', 'icon' => 'trending-up'];
-    } else {
-        return ['kategori' => 'E', 'label' => 'Pemula', 'color' => 'slate', 'icon' => 'user'];
     }
 }
 
-function getKategoriDominan(array $rankings): array
+function getKategoriDominan(array $rankings, string $nama_peserta = ''): array
 {
+    // MANUAL OVERRIDE: Priyo
+    if (!empty($nama_peserta) && stripos($nama_peserta, 'priyo') !== false) {
+         return ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy'];
+    }
+
     if (empty($rankings)) {
         return ['kategori' => 'E', 'label' => 'Belum Bertanding', 'color' => 'slate', 'icon' => 'user'];
     }
@@ -71,8 +86,33 @@ function getKategoriDominan(array $rankings): array
         $kategoriCount[$kat['kategori']]++;
     }
 
-    arsort($kategoriCount);
-    $dominan = key($kategoriCount);
+    // --- Experience Floor ---
+    $totalMain = count($rankings);
+    if ($totalMain >= 10) {
+        // Floor C: If E/D are dominant, move to C
+        if ($kategoriCount['E'] > 0 || $kategoriCount['D'] > 0) {
+            $kategoriCount['C'] += ($kategoriCount['E'] + $kategoriCount['D']);
+            $kategoriCount['E'] = 0;
+            $kategoriCount['D'] = 0;
+        }
+    } elseif ($totalMain >= 5) {
+        // Floor D: If E is dominant, move to D
+        if ($kategoriCount['E'] > 0) {
+            $kategoriCount['D'] += $kategoriCount['E'];
+            $kategoriCount['E'] = 0;
+        }
+    }
+
+    // --- Tie-breaker: arsort might pick lower cat if values are equal.
+    // We want the HIGHEST category of the tied ones.
+    $maxCount = max($kategoriCount);
+    $dominan = 'E';
+    foreach (['A', 'B', 'C', 'D', 'E'] as $key) {
+        if ($kategoriCount[$key] === $maxCount) {
+            $dominan = $key;
+            break; // Found highest (A is checked first)
+        }
+    }
 
     $mapping = [
         'A' => ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy'],
@@ -135,11 +175,11 @@ try {
 
     // 3. DYNAMIC RANKING: Hybrid system with Activity Filtering
     $keg_filter_scores = ($kegiatan_id !== 'all') ? " AND s.kegiatan_id = $kegiatan_id" : "";
-    $keg_filter_official = "";
+    $keg_filter_official_cond = "";
     if ($kegiatan_id !== 'all' && $kegiatan_id != 11) {
         // rankings_source table has no kegiatan_id column and covers only Activity 11
         // If filtering for another specific activity, official ranks should be empty
-        $keg_filter_official = " WHERE 1=0 ";
+        $keg_filter_official_cond = " AND 1=0 ";
     }
     $keg_filter_peserta = ($kegiatan_id !== 'all') ? " WHERE kegiatan_id = $kegiatan_id" : "";
 
@@ -172,11 +212,14 @@ try {
         -- 2. Official Rankings from databaru.txt (rankings_source table) - Assumed Activity 11
         OfficialRanks AS (
             SELECT 
-                nama_peserta COLLATE utf8mb4_general_ci as nama_peserta, 
+                CASE 
+                    WHEN LOWER(TRIM(nama_peserta)) = 'afiyya tsabita ahnaf' THEN 'Affiya Tsabita Ahnaf'
+                    ELSE nama_peserta 
+                END COLLATE utf8mb4_general_ci as nama_peserta, 
                 ranking, 
                 total_participants as board_participants
             FROM rankings_source
-            $keg_filter_official
+            WHERE total_score > 0 $keg_filter_official_cond
         ),
         -- 3. Unified dataset: Merge Official (Act 11) + Calculated (Others)
         UnifiedRankings AS (
@@ -210,11 +253,21 @@ try {
             SUM(CASE WHEN ur.ranking = 1 THEN 1 ELSE 0 END) as juara1,
             SUM(CASE WHEN ur.ranking = 2 THEN 1 ELSE 0 END) as juara2,
             SUM(CASE WHEN ur.ranking = 3 THEN 1 ELSE 0 END) as juara3,
+            SUM(CASE WHEN ur.ranking = 1 THEN 100 WHEN ur.ranking = 2 THEN 50 WHEN ur.ranking = 3 THEN 25 ELSE 0 END) as total_performance_points,
+            SUM(COALESCE(ss.total_score_sum, 0)) as total_score_sum,
             GROUP_CONCAT(ur.ranking) as all_ranks,
             GROUP_CONCAT(ur.board_participants) as all_participants
         FROM UnifiedRankings ur
         LEFT JOIN UniquePeserta up ON LOWER(TRIM(ur.nama_peserta COLLATE utf8mb4_general_ci)) = up.normalized_name
+        LEFT JOIN (
+            SELECT 
+                LOWER(TRIM(nama_peserta)) as normalized_name, 
+                SUM(total_score) as total_score_sum 
+            FROM ScoreStats 
+            GROUP BY normalized_name
+        ) ss ON LOWER(TRIM(ur.nama_peserta COLLATE utf8mb4_general_ci)) = ss.normalized_name
         GROUP BY COALESCE(up.normalized_name, LOWER(TRIM(ur.nama_peserta COLLATE utf8mb4_general_ci)))
+        HAVING (total_score_sum > 0 OR total_performance_points > 0)
     ";
 
     $resultStats = $conn->query($queryDynamicRanking);
@@ -232,7 +285,17 @@ try {
                 ];
             }
 
-            $kategoriDominan = getKategoriDominan($rankings);
+            $juara1 = 0;
+            $juara2 = 0;
+            $juara3 = 0;
+
+            foreach ($rankings as $r) {
+                if ($r['ranking'] == 1) $juara1++;
+                if ($r['ranking'] == 2) $juara2++;
+                if ($r['ranking'] == 3) $juara3++;
+            }
+
+            $kategoriDominan = getKategoriDominan($rankings, $row['nama_peserta']);
 
             $atletData = [
                 'nama' => $row['nama_peserta'],
@@ -242,11 +305,12 @@ try {
                 'kategori_label' => $kategoriDominan['label'],
                 'kategori_icon' => $kategoriDominan['icon'],
                 'kategori_color' => $kategoriDominan['color'],
-                'total_turnamen' => $row['total_turnamen'],
+                'total_turnamen' => count($rankings), // Use array count directly
                 'avg_ranking' => round($row['avg_rank'], 2),
-                'juara1' => (int)$row['juara1'],
-                'juara2' => (int)$row['juara2'],
-                'juara3' => (int)$row['juara3']
+                'juara1' => $juara1,
+                'juara2' => $juara2,
+                'juara3' => $juara3,
+                'total_score' => (float)($row['total_score_sum'] ?? 0) // Track score to exclude ghost data
             ];
 
             // Category A & B = Berprestasi (as per requirements)
@@ -886,29 +950,27 @@ try {
         </div>
     </div>
 
-    <!-- Athlete Detail Modal -->
-    <div id="athlete-modal" class="fixed inset-0 z-50 hidden">
+    <!-- Detail Modal (Ported from statistik.php) -->
+    <div id="detailModal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/50" onclick="closeAthleteModal()"></div>
-        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden">
-            <div class="bg-gradient-to-br from-archery-600 to-archery-800 text-white px-6 py-4 flex items-center justify-between">
-                <h3 class="font-semibold text-lg" id="modal-title">Detail Atlet</h3>
+        <div class="absolute inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-4xl bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="bg-gradient-to-br from-archery-600 to-archery-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
+                <h3 class="font-semibold text-lg" id="modalNama">Detail Peserta</h3>
                 <button onclick="closeAthleteModal()" class="p-2 rounded-lg hover:bg-white/10 transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="p-6 max-h-[70vh] overflow-y-auto" id="modal-content">
-                <!-- Skeleton Loader -->
-                <div id="modal-skeleton" class="space-y-4">
-                    <div class="skeleton h-6 w-48 rounded"></div>
-                    <div class="skeleton h-4 w-32 rounded"></div>
-                    <div class="grid grid-cols-3 gap-4 mt-6">
-                        <div class="skeleton h-20 rounded-lg"></div>
-                        <div class="skeleton h-20 rounded-lg"></div>
-                        <div class="skeleton h-20 rounded-lg"></div>
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1" id="modalContent">
+                <!-- Content loaded by JS -->
+                <div id="modal-skeleton" class="space-y-4 animate-pulse">
+                    <div class="h-40 bg-slate-100 dark:bg-zinc-800 rounded-xl"></div>
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="h-24 bg-slate-100 dark:bg-zinc-800 rounded-xl"></div>
+                        <div class="h-24 bg-slate-100 dark:bg-zinc-800 rounded-xl"></div>
+                        <div class="h-24 bg-slate-100 dark:bg-zinc-800 rounded-xl"></div>
+                        <div class="h-24 bg-slate-100 dark:bg-zinc-800 rounded-xl"></div>
                     </div>
                 </div>
-                <!-- Actual Content -->
-                <div id="modal-data" class="hidden"></div>
             </div>
         </div>
     </div>
@@ -971,120 +1033,188 @@ try {
         mobileOverlay?.addEventListener('click', toggleMobileMenu);
         closeMobileMenu?.addEventListener('click', toggleMobileMenu);
 
-        // Athlete Detail Modal
-        function showAthleteDetail(athleteName) {
-            const modal = document.getElementById('athlete-modal');
+        // Athlete Detail Modal (Ported from statistik.php)
+        async function showAthleteDetail(athleteName) {
+            const modal = document.getElementById('detailModal');
             const skeleton = document.getElementById('modal-skeleton');
-            const dataContainer = document.getElementById('modal-data');
-            const modalTitle = document.getElementById('modal-title');
-
+            const content = document.getElementById('modalContent');
+            const modalTitle = document.getElementById('modalNama');
+            
             modal.classList.remove('hidden');
             skeleton.classList.remove('hidden');
-            dataContainer.classList.add('hidden');
+            
+            // Clear previous content but keep skeleton
+            const previousContent = Array.from(content.children).filter(el => el.id !== 'modal-skeleton');
+            previousContent.forEach(el => el.remove());
+            
             modalTitle.textContent = 'Memuat...';
 
-            // Fetch athlete data
-            fetch('../actions/api/get_athlete_stats.php?name=' + encodeURIComponent(athleteName))
-                .then(response => response.json())
-                .then(data => {
-                    skeleton.classList.add('hidden');
-                    dataContainer.classList.remove('hidden');
+            try {
+                // Fetch athlete data from API (which now includes V4 logic & overrides)
+                const response = await fetch('../actions/api/get_athlete_stats.php?name=' + encodeURIComponent(athleteName));
+                const result = await response.json();
 
-                    if (data.success) {
-                        modalTitle.textContent = athleteName;
-                        dataContainer.innerHTML = renderAthleteData(data.data, athleteName);
-                    } else {
-                        dataContainer.innerHTML = `
-                            <div class="text-center py-8">
-                                <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                                    <i class="fas fa-exclamation-circle text-red-500 text-2xl"></i>
-                                </div>
-                                <p class="text-slate-600">${data.message || 'Data tidak ditemukan'}</p>
-                            </div>
-                        `;
-                        showToast(data.message || 'Gagal memuat data atlet', 'error');
-                    }
-                })
-                .catch(error => {
+                if (result.success) {
+                    const data = result.data;
                     skeleton.classList.add('hidden');
-                    dataContainer.classList.remove('hidden');
-                    dataContainer.innerHTML = `
-                        <div class="text-center py-8">
-                            <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+                    modalTitle.textContent = data.name;
+
+                    const colorMap = {
+                        'emerald': 'bg-emerald-500',
+                        'blue': 'bg-blue-500',
+                        'cyan': 'bg-cyan-500',
+                        'amber': 'bg-amber-500',
+                        'slate': 'bg-slate-500'
+                    };
+                    const kDominan = data.kategori_dominan || { kategori: '?', label: '-', color: 'slate', reason: '-', tip: '' };
+                    const katColor = colorMap[kDominan.color] || 'bg-slate-500';
+                    const bracketSectionId = 'bracket-stats-section';
+
+                    let html = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Profile Info -->
+                            <div class="bg-slate-50 dark:bg-zinc-800 rounded-xl p-4">
+                                <h4 class="font-semibold text-slate-900 dark:text-white mb-3">Informasi Peserta</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Gender</span><span class="font-medium text-slate-900 dark:text-white">${data.gender || '-'}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Kota</span><span class="font-medium text-slate-900 dark:text-white">${data.kota || '-'}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Club</span><span class="font-medium text-slate-900 dark:text-white">${data.club || '-'}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Sekolah</span><span class="font-medium text-slate-900 dark:text-white">${data.sekolah || '-'}</span></div>
+                                </div>
                             </div>
-                            <p class="text-slate-600">Terjadi kesalahan saat memuat data</p>
+
+                            <!-- Category -->
+                            <div class="bg-slate-50 dark:bg-zinc-800 rounded-xl p-4 text-center">
+                                <h4 class="font-semibold text-slate-900 dark:text-white mb-3">Kategori Dominan</h4>
+                                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full ${katColor} text-white text-lg font-bold">
+                                    Kategori ${kDominan.kategori}
+                                </div>
+                                <p class="text-slate-600 dark:text-zinc-400 mt-2 font-medium">${kDominan.label}</p>
+                                
+                                <div class="mt-4 pt-4 border-t border-slate-200 dark:border-zinc-700">
+                                    <p class="text-sm text-slate-600 dark:text-zinc-400 mb-2">
+                                        <i class="fas fa-info-circle mr-1 opacity-70"></i> ${kDominan.reason || '-'}
+                                    </p>
+                                    ${kDominan.tip ? `
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs p-3 rounded-lg flex gap-2 items-start text-left">
+                                        <i class="fas fa-lightbulb mt-0.5"></i>
+                                        <span>${kDominan.tip}</span>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+                            <div class="bg-archery-50 dark:bg-archery-900/30 rounded-xl p-4 text-center">
+                                <p class="text-2xl font-bold text-archery-600 dark:text-archery-400">${data.total_turnamen}</p>
+                                <p class="text-xs text-slate-500 dark:text-zinc-400">Total Turnamen</p>
+                            </div>
+                            <div class="bg-yellow-50 dark:bg-yellow-900/30 rounded-xl p-4 text-center">
+                                <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${data.juara1}</p>
+                                <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 1</p>
+                            </div>
+                            <div class="bg-slate-100 dark:bg-zinc-700 rounded-xl p-4 text-center">
+                                <p class="text-2xl font-bold text-slate-600 dark:text-zinc-300">${data.juara2}</p>
+                                <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 2</p>
+                            </div>
+                            <div class="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-4 text-center">
+                                <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">${data.juara3}</p>
+                                <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 3</p>
+                            </div>
+                        </div>
+
+                        <!-- Bracket Stats (Lazy Loaded) -->
+                        <div id="${bracketSectionId}" class="mt-6 opacity-50">
+                            <div class="bg-slate-50 dark:bg-zinc-800/30 rounded-xl p-4 animate-pulse">
+                                <p class="text-sm text-center text-slate-500 italic">Memuat statistik bracket...</p>
+                            </div>
+                        </div>
+
+                        <!-- Tournament History -->
+                        <div class="mt-6">
+                            <h4 class="font-semibold text-slate-900 dark:text-white mb-3">Riwayat Turnamen</h4>
+                            ${data.tournaments.length > 0 ? `
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-slate-100 dark:bg-zinc-800">
+                                            <tr>
+                                                <th class="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400">#</th>
+                                                <th class="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400">Turnamen</th>
+                                                <th class="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400">Kategori</th>
+                                                <th class="px-3 py-2 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400">Rank</th>
+                                                <th class="px-3 py-2 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400">Peserta</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100 dark:divide-zinc-700">
+                                            ${data.tournaments.map((t, i) => `
+                                                <tr>
+                                                    <td class="px-3 py-2 text-slate-500 dark:text-zinc-400">${i + 1}</td>
+                                                    <td class="px-3 py-2 font-medium text-slate-900 dark:text-white">${t.nama_kegiatan}</td>
+                                                    <td class="px-3 py-2 text-slate-600 dark:text-zinc-400">${t.category}</td>
+                                                    <td class="px-3 py-2 text-center">
+                                                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full ${t.ranking <= 3 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : 'bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400'} text-xs font-bold">
+                                                            ${t.ranking}
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-3 py-2 text-center text-slate-500 dark:text-zinc-400">${t.total_peserta}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ` : '<p class="text-slate-500 dark:text-zinc-400 text-center py-4">Belum ada riwayat turnamen</p>'}
                         </div>
                     `;
-                    showToast('Gagal terhubung ke server', 'error');
-                });
-        }
 
-        function renderAthleteData(data, name) {
-            return `
-                <div class="space-y-6">
-                    <!-- Profile -->
-                    <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-archery-500 to-archery-700 flex items-center justify-center text-white text-xl font-bold">
-                            ${name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-lg text-slate-900 dark:text-white">${name}</h4>
-                            <p class="text-sm text-slate-500 dark:text-zinc-400">${data.club || 'No Club'}</p>
-                        </div>
-                    </div>
+                    // Inject HTML (preserving skeleton div at top, but we cleared siblings earlier)
+                    // We append to content
+                    content.insertAdjacentHTML('beforeend', html);
 
-                    <!-- Stats Grid -->
-                    <div class="grid grid-cols-4 gap-3">
-                        <div class="bg-slate-50 dark:bg-zinc-800 rounded-lg p-3 text-center">
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white">${data.total_turnamen || 0}</p>
-                            <p class="text-xs text-slate-500 dark:text-zinc-400">Turnamen</p>
-                        </div>
-                        <div class="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-3 text-center">
-                            <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">${data.juara1 || 0}</p>
-                            <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 1</p>
-                        </div>
-                        <div class="bg-slate-100 dark:bg-zinc-700 rounded-lg p-3 text-center">
-                            <p class="text-2xl font-bold text-slate-600 dark:text-zinc-300">${data.juara2 || 0}</p>
-                            <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 2</p>
-                        </div>
-                        <div class="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-3 text-center">
-                            <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">${data.juara3 || 0}</p>
-                            <p class="text-xs text-slate-500 dark:text-zinc-400">Juara 3</p>
-                        </div>
-                    </div>
-
-                    <!-- Tournament History -->
-                    ${data.tournaments && data.tournaments.length > 0 ? `
-                        <div>
-                            <h5 class="font-semibold text-slate-900 dark:text-white mb-3">Riwayat Turnamen</h5>
-                            <div class="space-y-2 max-h-48 overflow-y-auto">
-                                ${data.tournaments.map((t, i) => `
-                                    <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-zinc-800 rounded-lg">
-                                        <div class="flex items-center gap-3">
-                                            <span class="w-8 h-8 rounded-full ${t.ranking <= 3 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400' : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400'} flex items-center justify-center text-sm font-bold">
-                                                #${t.ranking}
-                                            </span>
-                                            <div>
-                                                <p class="text-sm font-medium text-slate-900 dark:text-white">${t.nama_kegiatan || 'Turnamen'}</p>
-                                                <p class="text-xs text-slate-500 dark:text-zinc-400">${t.category || ''} - ${t.total_peserta || 0} peserta</p>
-                                            </div>
-                                        </div>
+                    // Fetch Bracket Stats
+                    try {
+                        const bracketRes = await fetch(`../actions/get_bracket_stats.php?nama=${encodeURIComponent(data.name)}`);
+                        const bStats = await bracketRes.json();
+                        
+                        const bracketEl = document.getElementById(bracketSectionId);
+                        if (bracketEl && bStats.total_bracket > 0) {
+                            bracketEl.innerHTML = `
+                                <div class="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-4 border border-amber-200/50 dark:border-amber-900/50">
+                                    <h4 class="font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                                        <i class="fas fa-sitemap text-amber-500"></i> Statistik Bracket
+                                    </h4>
+                                    <div class="grid grid-cols-3 gap-4 text-center">
+                                        <div><p class="text-xl font-bold text-yellow-600 dark:text-yellow-400">${bStats.bracket_champion}</p><p class="text-xs text-slate-500 dark:text-zinc-400">Champion</p></div>
+                                        <div><p class="text-xl font-bold text-slate-600 dark:text-zinc-300">${bStats.bracket_runner_up}</p><p class="text-xs text-slate-500 dark:text-zinc-400">Runner Up</p></div>
+                                        <div><p class="text-xl font-bold text-amber-600 dark:text-amber-400">${bStats.bracket_third_place}</p><p class="text-xs text-slate-500 dark:text-zinc-400">3rd Place</p></div>
                                     </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : `
-                        <div class="text-center py-4 text-slate-500 dark:text-zinc-400 text-sm">
-                            Belum ada riwayat turnamen
-                        </div>
-                    `}
-                </div>
-            `;
+                                </div>
+                            `;
+                            bracketEl.classList.remove('opacity-50');
+                        } else if (bracketEl) {
+                            bracketEl.remove();
+                        }
+                    } catch (e) {
+                         console.error("Gagal memuat statistik bracket:", e);
+                         const bracketEl = document.getElementById(bracketSectionId);
+                         if (bracketEl) bracketEl.remove();
+                    }
+
+                } else {
+                    skeleton.classList.add('hidden');
+                    modalTitle.textContent = 'Data Tidak Ditemukan';
+                    showToast(result.message || 'Data tidak ditemukan', 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                skeleton.classList.add('hidden');
+                showToast('Gagal memuat data', 'error');
+            }
         }
 
         function closeAthleteModal() {
-            document.getElementById('athlete-modal').classList.add('hidden');
+            document.getElementById('detailModal').classList.add('hidden');
         }
 
         function showClubDetail(clubName) {

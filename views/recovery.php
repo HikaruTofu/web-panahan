@@ -3,9 +3,9 @@
  * Data Recovery Panel
  * View and manage 24-hour backups of deleted records.
  */
-include __DIR__ . '/../config/panggil.php';
-include __DIR__ . '/../includes/check_access.php';
-include __DIR__ . '/../includes/theme.php';
+require_once __DIR__ . '/../config/panggil.php';
+require_once __DIR__ . '/../includes/check_access.php';
+require_once __DIR__ . '/../includes/theme.php';
 requireAdmin();
 
 $username = $_SESSION['username'] ?? 'User';
@@ -165,20 +165,20 @@ usort($backups, function($a, $b) {
                                         </div>
                                         <div class="w-full lg:w-64 space-y-3">
                                             <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Aksi</h4>
-                                            <a href="recovery.php?restore_id=<?= urlencode($b['id']) ?>" 
-                                               onclick="return confirm('Kembalikan data ini ke database?')"
-                                               class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
-                                                <i class="fas fa-undo"></i> Kembalikan Data
-                                            </a>
-                                            <button onclick='copyToClipboard(<?= json_encode($b['content']) ?>)'
-                                                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors">
-                                                <i class="fas fa-copy"></i> Salin Data
-                                            </button>
-                                            <a href="recovery.php?delete_id=<?= urlencode($b['id']) ?>" 
-                                               onclick="return confirm('Hapus backup ini sekarang?')"
-                                               class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 text-sm font-medium transition-colors">
-                                                <i class="fas fa-trash"></i> Bersihkan
-                                            </a>
+                                             <a href="recovery.php?restore_id=<?= urlencode($b['id']) ?>" 
+                                                onclick="const url=this.href; showConfirmModal('Konfirmasi Restore', 'Apakah Anda yakin ingin mengembalikan data ini ke database?', () => window.location.href = url, 'primary'); return false;"
+                                                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
+                                                 <i class="fas fa-undo"></i> Kembalikan Data
+                                             </a>
+                                             <button onclick='copyToClipboard(<?= json_encode($b['content']) ?>)'
+                                                     class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors">
+                                                 <i class="fas fa-copy"></i> Salin Data
+                                             </button>
+                                             <a href="recovery.php?delete_id=<?= urlencode($b['id']) ?>" 
+                                                onclick="const url=this.href; showConfirmModal('Konfirmasi Hapus Permanen', 'Hapus backup ini sekarang? Tindakan ini tidak dapat dibatalkan.', () => window.location.href = url, 'danger'); return false;"
+                                                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 text-sm font-medium transition-colors">
+                                                 <i class="fas fa-trash"></i> Bersihkan
+                                             </a>
                                             <p class="text-[10px] text-slate-500 italic text-center">Data ini akan otomatis terhapus dalam 24 jam sejak waktu penghapusan.</p>
                                         </div>
                                     </div>
@@ -263,10 +263,23 @@ usort($backups, function($a, $b) {
             mobileSidebar?.classList.add('-translate-x-full');
         });
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Data JSON telah disalin ke clipboard!');
+            const jsonStr = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
+            navigator.clipboard.writeText(jsonStr).then(() => {
+                showToast('JSON berhasil disalin!', 'success');
+            }).catch(err => {
+                showToast('Gagal menyalin data', 'error');
             });
         }
     </script>
+
+    <!-- Modal Infrastructure -->
+    <?= getConfirmationModal() ?>
+    <?= getToastContainer() ?>
+
+    <?php if (isset($_SESSION['toast_message'])): ?>
+    <script>
+        showToast("<?= $_SESSION['toast_message'] ?>", "<?= $_SESSION['toast_type'] ?? 'info' ?>");
+    </script>
+    <?php unset($_SESSION['toast_message'], $_SESSION['toast_type']); endif; ?>
 </body>
 </html>

@@ -3,9 +3,9 @@
  * Peserta Lomba - Tournament Participants Management
  * UI: Intentional Minimalism with Tailwind CSS
  */
-include '../config/panggil.php';
-include '../includes/check_access.php';
-require_once '../includes/security.php';
+require_once __DIR__ . '/../config/panggil.php';
+require_once __DIR__ . '/../includes/check_access.php';
+require_once __DIR__ . '/../includes/security.php';
 requireAdmin();
 
 if (!checkRateLimit('view_load', 60, 60)) {

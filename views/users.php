@@ -3,9 +3,9 @@
  * User Management View
  * UI: Calm, Clear, Fast - Aligned with categori.view.php & kegiatan.view.php
  */
-include __DIR__ . '/../config/panggil.php';
-include __DIR__ . '/../includes/check_access.php';
-include __DIR__ . '/../includes/theme.php';
+require_once __DIR__ . '/../config/panggil.php';
+require_once __DIR__ . '/../includes/check_access.php';
+require_once __DIR__ . '/../includes/theme.php';
 require_once __DIR__ . '/../includes/security.php';
 requireAdmin(); 
 

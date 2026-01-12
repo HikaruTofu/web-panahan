@@ -3,9 +3,9 @@
  * Data Peserta - Turnamen Panahan
  * UI: Intentional Minimalism with Tailwind CSS
  */
-include __DIR__ . '/../config/panggil.php';
-include __DIR__ . '/../includes/check_access.php';
-include __DIR__ . '/../includes/theme.php';
+require_once __DIR__ . '/../config/panggil.php';
+require_once __DIR__ . '/../includes/check_access.php';
+require_once __DIR__ . '/../includes/theme.php';
 require_once __DIR__ . '/../includes/security.php';
 requireLogin(); 
 
@@ -227,8 +227,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 if ($check->get_result()->num_rows > 0) { $check->close(); continue; }
                 $check->close();
 
+                $tanggal_lahir_db = !empty($tanggal_lahir) ? $tanggal_lahir : null;
                 $stmt = $conn->prepare("INSERT INTO peserta (nama_peserta, tanggal_lahir, jenis_kelamin, asal_kota, nama_club, sekolah, kelas, nomor_hp, bukti_pembayaran, category_id, kegiatan_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-                $stmt->bind_param("sssssssssii", $nama_peserta, $tanggal_lahir, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp, $bukti_pembayaran, $category_id, $kegiatan_id);
+                $stmt->bind_param("sssssssssii", $nama_peserta, $tanggal_lahir_db, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp, $bukti_pembayaran, $category_id, $kegiatan_id);
                 if ($stmt->execute()) $successCount++;
                 $stmt->close();
             }
@@ -270,8 +271,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
             try {
                 // 1. Update shared info for ALL rows matching old name + DOB
                 // This keeps the participant details in sync across different category/activity rows
-                $stmt = $conn->prepare("UPDATE peserta SET nama_peserta=?, tanggal_lahir=?, jenis_kelamin=?, asal_kota=?, nama_club=?, sekolah=?, kelas=?, nomor_hp=?, updated_at=NOW() WHERE nama_peserta=? AND (tanggal_lahir=? OR tanggal_lahir IS NULL OR tanggal_lahir = '')");
-                $stmt->bind_param("ssssssssss", $nama_peserta, $tanggal_lahir, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp, $old_name, $tanggal_lahir);
+                $tanggal_lahir_db = !empty($tanggal_lahir) ? $tanggal_lahir : null;
+                $stmt = $conn->prepare("UPDATE peserta SET nama_peserta=?, tanggal_lahir=?, jenis_kelamin=?, asal_kota=?, nama_club=?, sekolah=?, kelas=?, nomor_hp=?, updated_at=NOW() WHERE nama_peserta=? AND (tanggal_lahir <=> ? OR tanggal_lahir IS NULL)");
+                $stmt->bind_param("ssssssssss", $nama_peserta, $tanggal_lahir_db, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp, $old_name, $tanggal_lahir_db);
                 $stmt->execute();
                 $stmt->close();
 
@@ -292,9 +294,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 foreach ($category_ids as $cat_id) {
                     $cat_id = intval($cat_id);
                     if (!isset($existing_cats[$cat_id])) {
+                        $tanggal_lahir_db = !empty($tanggal_lahir) ? $tanggal_lahir : null;
                         $ins = "INSERT INTO peserta (nama_peserta, category_id, kegiatan_id, tanggal_lahir, jenis_kelamin, asal_kota, nama_club, sekolah, kelas, nomor_hp, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
                         $stmt = $conn->prepare($ins);
-                        $stmt->bind_param("siisssssss", $nama_peserta, $cat_id, $kegiatan_id, $tanggal_lahir, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp);
+                        $stmt->bind_param("siisssssss", $nama_peserta, $cat_id, $kegiatan_id, $tanggal_lahir_db, $jenis_kelamin, $asal_kota, $nama_club, $sekolah, $kelas, $nomor_hp);
                         $stmt->execute();
                         $stmt->close();
                     }
@@ -440,9 +443,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                         
                         $updateQ = "UPDATE peserta SET nama_peserta=?, tanggal_lahir=?, jenis_kelamin=?, asal_kota=?, nama_club=?, sekolah=?, kelas=?, nomor_hp=?, updated_at=NOW() WHERE id=?";
                         $stmtUpd = $conn->prepare($updateQ);
+                        $tanggal_lahir_master = !empty($masterData['tanggal_lahir']) ? $masterData['tanggal_lahir'] : null;
                         $stmtUpd->bind_param("ssssssssi", 
                             $masterData['nama_peserta'], 
-                            $masterData['tanggal_lahir'], 
+                            $tanggal_lahir_master, 
                             $masterData['jenis_kelamin'], 
                             $masterData['asal_kota'], 
                             $masterData['nama_club'], 
@@ -473,7 +477,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
 
 // Handle export to Excel
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
-    require '../vendor/vendor/autoload.php';
+    require_once __DIR__ . '/../vendor/vendor/autoload.php';
     
     // Use FQCN instead of 'use' inside block
     // use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -1400,7 +1404,7 @@ $role = $_SESSION['role'] ?? 'user';
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-zinc-800">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Tanggal Lahir <span class="text-red-500">*</span></label>
-                            <input type="text" id="add_tanggal_lahir" name="tanggal_lahir" class="datepicker w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" placeholder="Pilih Tanggal" onchange="updateKategoriOptions('add')" required>
+                            <input type="text" id="add_tanggal_lahir" name="tanggal_lahir" class="datepicker w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" placeholder="Pilih Tanggal (Opsional)" onchange="updateKategoriOptions('add')">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2">Jenis Kelamin <span class="text-red-500">*</span></label>
@@ -1529,7 +1533,7 @@ $role = $_SESSION['role'] ?? 'user';
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Tanggal Lahir <span class="text-red-500">*</span></label>
-                            <input type="text" class="datepicker w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="tanggal_lahir" id="edit_tanggal_lahir" placeholder="Pilih Tanggal" onchange="updateKategoriOptions('edit')" required>
+                            <input type="text" class="datepicker w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white text-sm" name="tanggal_lahir" id="edit_tanggal_lahir" placeholder="Pilih Tanggal (Opsional)" onchange="updateKategoriOptions('edit')">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">Jenis Kelamin <span class="text-red-500">*</span></label>

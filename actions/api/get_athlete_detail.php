@@ -1,6 +1,6 @@
 <?php
-include '../../config/panggil.php';
-include '../../includes/check_access.php';
+require_once __DIR__ . '/../../config/panggil.php';
+require_once __DIR__ . '/../../includes/check_access.php';
 requireAdmin();
 
 header('Content-Type: application/json');

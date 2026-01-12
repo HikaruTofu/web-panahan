@@ -3,9 +3,9 @@
  * Statistik & Penilaian Peserta
  * UI: Intentional Minimalism with Tailwind CSS (consistent with Dashboard)
  */
-include __DIR__ . '/../config/panggil.php';
-include __DIR__ . '/../includes/check_access.php';
-include __DIR__ . '/../includes/theme.php';
+require_once __DIR__ . '/../config/panggil.php';
+require_once __DIR__ . '/../includes/check_access.php';
+require_once __DIR__ . '/../includes/theme.php';
 require_once __DIR__ . '/../includes/security.php';
 requireLogin(); // Ganti dari requireAdmin agar user biasa bisa melihat statistik
 
@@ -27,25 +27,77 @@ function getKategoriFromRanking($ranking, $totalPeserta)
         return ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy'];
     }
 
-    $persentase = ($ranking / $totalPeserta) * 100;
+    // V4: Weighted Score with Linear Penalty
+    // Score = (100 / Rank) + (10 * log2(Total)) - Rank
+    $rankScore = 100 / $ranking;
+    $sizeBonus = 10 * log($totalPeserta, 2);
+    $finalScore = $rankScore + $sizeBonus - $ranking;
 
-    if ($ranking <= 3 && $persentase <= 30) {
-        return ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy'];
-    } elseif ($ranking <= 10 && $persentase <= 40) {
-        return ['kategori' => 'B', 'label' => 'Baik', 'color' => 'blue', 'icon' => 'medal'];
-    } elseif ($persentase <= 60) {
-        return ['kategori' => 'C', 'label' => 'Cukup', 'color' => 'cyan', 'icon' => 'award'];
-    } elseif ($persentase <= 80) {
-        return ['kategori' => 'D', 'label' => 'Perlu Latihan', 'color' => 'amber', 'icon' => 'trending-up'];
-    } else {
-        return ['kategori' => 'E', 'label' => 'Pemula', 'color' => 'slate', 'icon' => 'user'];
-    }
+    // A: Sangat Baik (Score >= 80 OR Rank 1)
+    if ($ranking === 1 || $finalScore >= 80) {
+        return [
+            'kategori' => 'A', 
+            'label' => 'Sangat Baik', 
+            'color' => 'emerald', 
+            'icon' => 'trophy',
+            'reason' => $ranking === 1 ? "Juara 1 (Otomatis Grade A)" : "Skor Performa: " . round($finalScore, 1) . " (Sangat Tinggi)",
+            'tip' => "Pertahankan konsistensi podium Anda!"
+        ];
+    } 
+    // B: Baik (Score >= 50)
+    elseif ($finalScore >= 50) {
+        return [
+            'kategori' => 'B', 
+            'label' => 'Baik', 
+            'color' => 'blue', 
+            'icon' => 'medal',
+            'reason' => "Skor Performa: " . round($finalScore, 1) . " (Baik)",
+            'tip' => "Coba tingkatkan peringkat di turnamen besar untuk naik ke A."
+        ];
+    } 
+    // C: Cukup (Score >= 30)
+    elseif ($finalScore >= 30) {
+        return [
+            'kategori' => 'C', 
+            'label' => 'Cukup', 
+            'color' => 'cyan', 
+            'icon' => 'award',
+            'reason' => "Skor Performa: " . round($finalScore, 1) . " (Cukup)",
+            'tip' => "Fokus latihan untuk masuk 10 besar secara konsisten."
+        ];
+    } 
+    // D: Perlu Latihan
+    else {
+        return [
+            'kategori' => 'D', 
+            'label' => 'Perlu Latihan', 
+            'color' => 'amber', 
+            'icon' => 'trending-up',
+            'reason' => "Skor Performa: " . round($finalScore, 1) . " (Perlu Boost)",
+            'tip' => "Perbanyak jam terbang dan pengalaman tanding."
+        ];
+    } 
 }
 
-function getKategoriDominan($rankings)
+function getKategoriDominan($rankings, $nama_peserta = '')
 {
+    // MANUAL OVERRIDE: Priyo (User Request to avoid complaints)
+    // Matches "Priyo" case-insensitively
+    if (!empty($nama_peserta) && stripos($nama_peserta, 'priyo') !== false) {
+         $reason = "Special Achievement: Dedicated Athlete (Manual Adjustment)";
+         $tip = "Pertahankan status elit Anda!";
+         return ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy', 'reason' => $reason, 'tip' => $tip];
+    }
+
     if (empty($rankings)) {
-        return ['kategori' => 'E', 'label' => 'Belum Bertanding', 'color' => 'slate', 'icon' => 'user'];
+        return [
+            'kategori' => 'E', 
+            'label' => 'Belum Bertanding', 
+            'color' => 'slate', 
+            'icon' => 'user',
+            'reason' => "Belum ada data turnamen.",
+            'tip' => "Ayo mulai ikuti turnamen!"
+        ];
     }
 
     $kategoriCount = ['A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0];
@@ -55,15 +107,51 @@ function getKategoriDominan($rankings)
         $kategoriCount[$kat['kategori']]++;
     }
 
-    arsort($kategoriCount);
-    $dominan = key($kategoriCount);
+    // --- Experience Floor ---
+    $totalMain = count($rankings);
+    if ($totalMain >= 10) {
+        // Floor C: If E/D are dominant, move to C
+        if ($kategoriCount['E'] > 0 || $kategoriCount['D'] > 0) {
+            $kategoriCount['C'] += ($kategoriCount['E'] + $kategoriCount['D']);
+            $kategoriCount['E'] = 0;
+            $kategoriCount['D'] = 0;
+        }
+    } elseif ($totalMain >= 5) {
+        // Floor D: If E is dominant, move to D
+        if ($kategoriCount['E'] > 0) {
+            $kategoriCount['D'] += $kategoriCount['E'];
+            $kategoriCount['E'] = 0;
+        }
+    }
+
+    // --- Tie-breaker: Highest priority category wins ties
+    $maxCount = max($kategoriCount);
+    $dominan = 'E';
+    foreach (['A', 'B', 'C', 'D', 'E'] as $key) {
+        if ($kategoriCount[$key] === $maxCount) {
+            $dominan = $key;
+            break; 
+        }
+    }
+
+    // Dynamic Reasoning
+    $reason = "Mendominasi dengan {$maxCount}x skor Grade {$dominan}.";
+    $tip = "";
+
+    switch ($dominan) {
+        case 'A': $tip = "Luar biasa! Pertahankan performa elit Anda."; break;
+        case 'B': $tip = "Sangat bagus! Sedikit lagi menuju dominasi Grade A."; break;
+        case 'C': $tip = "Konsisten! Tingkatkan fokus untuk masuk ke Grade B."; break;
+        case 'D': $tip = "Ayo semangat! Perbanyak latihan dan jam terbang."; break;
+        case 'E': $tip = "Selamat datang! Nikmati setiap proses turnamen."; break;
+    }
 
     $mapping = [
-        'A' => ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy'],
-        'B' => ['kategori' => 'B', 'label' => 'Baik', 'color' => 'blue', 'icon' => 'medal'],
-        'C' => ['kategori' => 'C', 'label' => 'Cukup', 'color' => 'cyan', 'icon' => 'award'],
-        'D' => ['kategori' => 'D', 'label' => 'Perlu Latihan', 'color' => 'amber', 'icon' => 'trending-up'],
-        'E' => ['kategori' => 'E', 'label' => 'Pemula', 'color' => 'slate', 'icon' => 'user'],
+        'A' => ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy', 'reason' => $reason, 'tip' => $tip],
+        'B' => ['kategori' => 'B', 'label' => 'Baik', 'color' => 'blue', 'icon' => 'medal', 'reason' => $reason, 'tip' => $tip],
+        'C' => ['kategori' => 'C', 'label' => 'Cukup', 'color' => 'cyan', 'icon' => 'award', 'reason' => $reason, 'tip' => $tip],
+        'D' => ['kategori' => 'D', 'label' => 'Perlu Latihan', 'color' => 'amber', 'icon' => 'trending-up', 'reason' => $reason, 'tip' => $tip],
+        'E' => ['kategori' => 'E', 'label' => 'Pemula', 'color' => 'slate', 'icon' => 'user', 'reason' => $reason, 'tip' => $tip],
     ];
 
     return $mapping[$dominan];
@@ -212,11 +300,11 @@ while ($row = $resultClubs->fetch_assoc()) {
 $allRankings = [];
 
 $keg_filter_scores = ($kegiatan_id !== 'all') ? " AND s.kegiatan_id = $kegiatan_id" : "";
-    $keg_filter_official = "";
+    $keg_filter_official_cond = "";
     if ($kegiatan_id !== 'all' && $kegiatan_id != 11) {
         // rankings_source table has no kegiatan_id column and covers only Activity 11
         // If filtering for another specific activity, official ranks should be empty
-        $keg_filter_official = " WHERE 1=0 ";
+        $keg_filter_official_cond = " AND 1=0 ";
     }
 
 $queryAllRanks = "
@@ -257,16 +345,34 @@ $queryAllRanks = "
     -- 2. Official Rankings from databaru.txt (rankings_source table)
     OfficialRanks AS (
         SELECT 
-            nama_peserta COLLATE utf8mb4_general_ci as nama_peserta, 
-            'Turnamen' as nama_kegiatan,
-            category as category_name,
-            ranking, 
-            total_participants as board_participants,
+            CASE 
+                WHEN LOWER(TRIM(rs.nama_peserta)) = 'afiyya tsabita ahnaf' THEN 'Affiya Tsabita Ahnaf'
+                ELSE rs.nama_peserta 
+            END COLLATE utf8mb4_general_ci as nama_peserta, 
+            'Panahan 2025' as nama_kegiatan,
+            rs.category as category_name,
+            rs.ranking,
+            rs.total_participants as board_participants,
             11 as kegiatan_id,
-            0 as category_id,
-            0 as score_board_id
-        FROM rankings_source
-        $keg_filter_official
+            COALESCE(p.category_id, 0) as category_id,
+            COALESCE(sb.id, 0) as score_board_id
+        FROM rankings_source rs
+        LEFT JOIN peserta p ON LOWER(TRIM(p.nama_peserta)) = LOWER(TRIM(rs.nama_peserta)) 
+            AND p.kegiatan_id = 11
+            -- Add Category Matching to prevent Cartesian Product
+            AND (
+                (rs.category LIKE '%3m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%3m%') OR
+                (rs.category LIKE '%5m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%5m%') OR
+                (rs.category LIKE '%7m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%7m%') OR
+                (rs.category LIKE '%10m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%10m%') OR
+                (rs.category LIKE '%15m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%15m%') OR
+                (rs.category LIKE '%20m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%20m%') OR
+                (rs.category LIKE '%30m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%30m%') OR
+                (rs.category LIKE '%40m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%40m%') OR
+                (rs.category LIKE '%50m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%50m%')
+            )
+        LEFT JOIN score_boards sb ON sb.category_id = p.category_id AND sb.kegiatan_id = 11
+        WHERE rs.total_score > 0 $keg_filter_official_cond
     ),
     -- 3. Unified dataset: Merge Official (Act 11) + Calculated (Others + Missing Act 11)
     UnifiedRankings AS (
@@ -282,6 +388,7 @@ $queryAllRanks = "
     )
     SELECT
         ur.nama_peserta,
+
         ur.rank_pos,
         ur.board_participants as total_participants,
         ur.nama_kegiatan,
@@ -313,7 +420,7 @@ if ($resultAllRanks) {
 
 // Excel Export
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
-    require '../vendor/vendor/autoload.php';
+    require_once __DIR__ . '/../vendor/vendor/autoload.php';
     
     // use PhpOffice\PhpSpreadsheet\Spreadsheet;
     // use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -511,7 +618,7 @@ while ($peserta = $result->fetch_assoc()) {
         'bracket_third_place' => 0
     ];
 
-    $kategoriDominan = getKategoriDominan($rankings);
+    $kategoriDominan = getKategoriDominan($rankings, $peserta['nama_peserta']);
 
     if (!empty($kategori_filter) && $kategoriDominan['kategori'] != $kategori_filter) {
         continue;
@@ -568,10 +675,19 @@ if ($sortByKategori) {
     });
 } else {
     usort($pesertaData, function ($a, $b) {
+
+
+        // 2. Secondary: Medal Count (Gold -> Silver -> Bronze)
         if ($b['juara1'] != $a['juara1']) return $b['juara1'] - $a['juara1'];
         if ($b['juara2'] != $a['juara2']) return $b['juara2'] - $a['juara2'];
         if ($b['juara3'] != $a['juara3']) return $b['juara3'] - $a['juara3'];
-        if ($a['avg_ranking'] != $b['avg_ranking']) return $a['avg_ranking'] - $b['avg_ranking'];
+
+        // 3. Tertiary: Avg Ranking (Lower is better, but 0 means 'No Rank' so it should be last)
+        $rankA = $a['avg_ranking'] == 0 ? 999999 : $a['avg_ranking'];
+        $rankB = $b['avg_ranking'] == 0 ? 999999 : $b['avg_ranking'];
+
+        if ($rankA != $rankB) return $rankA - $rankB;
+
         return strcmp($a['nama'], $b['nama']);
     });
 }
@@ -1209,7 +1325,19 @@ $role = $_SESSION['role'] ?? 'user';
                         <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full ${katColor} text-white text-lg font-bold">
                             Kategori ${data.kategori_dominan.kategori}
                         </div>
-                        <p class="text-slate-600 dark:text-zinc-400 mt-2">${data.kategori_dominan.label}</p>
+                        <p class="text-slate-600 dark:text-zinc-400 mt-2 font-medium">${data.kategori_dominan.label}</p>
+                        
+                        <div class="mt-4 pt-4 border-t border-slate-200 dark:border-zinc-700">
+                            <p class="text-sm text-slate-600 dark:text-zinc-400 mb-2">
+                                <i class="fas fa-info-circle mr-1 opacity-70"></i> ${data.kategori_dominan.reason || '-'}
+                            </p>
+                            ${data.kategori_dominan.tip ? `
+                            <div class="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs p-3 rounded-lg flex gap-2 items-start text-left">
+                                <i class="fas fa-lightbulb mt-0.5"></i>
+                                <span>${data.kategori_dominan.tip}</span>
+                            </div>
+                            ` : ''}
+                        </div>
                     </div>
                 </div>
 
@@ -1257,7 +1385,7 @@ $role = $_SESSION['role'] ?? 'user';
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 dark:divide-zinc-700">
                                     ${data.rankings.map((r, i) => {
-                                        const isClickable = r.kegiatan_id && r.category_id && r.score_board_id && r.kegiatan_id != 11;
+                                        const isClickable = r.kegiatan_id && r.category_id && r.score_board_id;
                                         const link = isClickable ? `detail.php?action=scorecard&resource=index&kegiatan_id=${r.kegiatan_id}&category_id=${r.category_id}&scoreboard=${r.score_board_id}&rangking=true` : '#';
                                         
                                         return `

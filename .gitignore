@@ -25,9 +25,18 @@ uploads/pembayaran/*
 databaru.txt
 .agent/
 .claude/
+.gemini/
+antigravity/
 *.sql
 rankings_source_hosted.sql
 to-do
 CLAUDE.md
 AGENTS.md
 sessions/
+
+# Prototype Testing
+ocr_testing/
+
+# Node/Composer (Standard)
+node_modules/
+# vendor/ # (Uncomment if using composer)

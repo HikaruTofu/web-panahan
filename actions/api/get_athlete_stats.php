@@ -3,7 +3,7 @@
  * Athlete Statistics API - Dynamic calculation from score table
  */
 header('Content-Type: application/json');
-include '../../config/panggil.php';
+require_once __DIR__ . '/../../config/panggil.php';
 enforceAuth();
 
 if (!checkRateLimit('api_request', 30, 60)) {
@@ -147,7 +147,8 @@ try {
             'juara1' => $juara1,
             'juara2' => $juara2,
             'juara3' => $juara3,
-            'tournaments' => $tournaments
+            'tournaments' => $tournaments,
+            'kategori_dominan' => getKategoriDominan($tournaments, $athleteInfo['nama_peserta'])
         ]
     ];
 
@@ -159,4 +160,109 @@ try {
         'message' => 'Terjadi kesalahan server: ' . $e->getMessage()
     ]);
 }
-?>
+
+// Helper Functions (Ported from statistik.php)
+function getKategoriFromRanking(int $ranking, int $totalPeserta): array
+{
+    if ($totalPeserta <= 1) {
+        return ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy', 'reason' => 'Juara Tunggal (Otomatis A)', 'tip' => 'Pertahankan!'];
+    }
+
+    // V4: Weighted Score with Linear Penalty
+    $rankScore = 100 / $ranking;
+    $sizeBonus = 10 * log($totalPeserta, 2);
+    $finalScore = $rankScore + $sizeBonus - $ranking;
+
+    if ($ranking === 1 || $finalScore >= 80) {
+        return [
+            'kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy',
+            'reason' => $ranking === 1 ? "Juara 1 (Otomatis Grade A)" : "Skor Performa: " . round($finalScore, 1) . " (Sangat Tinggi)",
+            'tip' => "Pertahankan konsistensi podium Anda!"
+        ];
+    } elseif ($finalScore >= 50) {
+        return [
+            'kategori' => 'B', 'label' => 'Baik', 'color' => 'blue', 'icon' => 'medal',
+            'reason' => "Skor Performa: " . round($finalScore, 1) . " (Baik)",
+            'tip' => "Coba tingkatkan peringkat di turnamen besar untuk naik ke A."
+        ];
+    } elseif ($finalScore >= 30) {
+        return [
+            'kategori' => 'C', 'label' => 'Cukup', 'color' => 'cyan', 'icon' => 'award',
+            'reason' => "Skor Performa: " . round($finalScore, 1) . " (Cukup)",
+            'tip' => "Fokus latihan untuk masuk 10 besar secara konsisten."
+        ];
+    } else {
+        return [
+            'kategori' => 'D', 'label' => 'Perlu Latihan', 'color' => 'amber', 'icon' => 'trending-up',
+            'reason' => "Skor Performa: " . round($finalScore, 1) . " (Perlu Boost)",
+            'tip' => "Perbanyak jam terbang dan pengalaman tanding."
+        ];
+    }
+}
+
+function getKategoriDominan(array $rankings, string $nama_peserta = ''): array
+{
+    // MANUAL OVERRIDE: Priyo
+    if (!empty($nama_peserta) && stripos($nama_peserta, 'priyo') !== false) {
+         $reason = "Special Achievement: Dedicated Athlete (Manual Adjustment)";
+         $tip = "Pertahankan status elit Anda!";
+         return ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy', 'reason' => $reason, 'tip' => $tip];
+    }
+
+    if (empty($rankings)) {
+        return [
+            'kategori' => 'E', 'label' => 'Belum Bertanding', 'color' => 'slate', 'icon' => 'user',
+            'reason' => "Belum ada data turnamen.",
+            'tip' => "Ayo mulai ikuti turnamen!"
+        ];
+    }
+
+    $kategoriCount = ['A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0];
+
+    foreach ($rankings as $rank) {
+        $kat = getKategoriFromRanking($rank['ranking'], $rank['total_peserta']);
+        $kategoriCount[$kat['kategori']]++;
+    }
+
+    $totalMain = count($rankings);
+    if ($totalMain >= 10) {
+        if ($kategoriCount['E'] > 0 || $kategoriCount['D'] > 0) {
+            $kategoriCount['C'] += ($kategoriCount['E'] + $kategoriCount['D']);
+            $kategoriCount['E'] = 0; $kategoriCount['D'] = 0;
+        }
+    } elseif ($totalMain >= 5) {
+        if ($kategoriCount['E'] > 0) {
+            $kategoriCount['D'] += $kategoriCount['E'];
+            $kategoriCount['E'] = 0;
+        }
+    }
+
+    $maxCount = max($kategoriCount);
+    $dominan = 'E';
+    foreach (['A', 'B', 'C', 'D', 'E'] as $key) {
+        if ($kategoriCount[$key] === $maxCount) {
+            $dominan = $key;
+            break; 
+        }
+    }
+
+    $reason = "Mendominasi dengan {$maxCount}x skor Grade {$dominan}.";
+    $tip = "";
+    switch ($dominan) {
+        case 'A': $tip = "Luar biasa! Pertahankan performa elit Anda."; break;
+        case 'B': $tip = "Sangat bagus! Sedikit lagi menuju dominasi Grade A."; break;
+        case 'C': $tip = "Konsisten! Tingkatkan fokus untuk masuk ke Grade B."; break;
+        case 'D': $tip = "Ayo semangat! Perbanyak latihan dan jam terbang."; break;
+        case 'E': $tip = "Selamat datang! Nikmati setiap proses turnamen."; break;
+    }
+
+    $mapping = [
+        'A' => ['kategori' => 'A', 'label' => 'Sangat Baik', 'color' => 'emerald', 'icon' => 'trophy', 'reason' => $reason, 'tip' => $tip],
+        'B' => ['kategori' => 'B', 'label' => 'Baik', 'color' => 'blue', 'icon' => 'medal', 'reason' => $reason, 'tip' => $tip],
+        'C' => ['kategori' => 'C', 'label' => 'Cukup', 'color' => 'cyan', 'icon' => 'award', 'reason' => $reason, 'tip' => $tip],
+        'D' => ['kategori' => 'D', 'label' => 'Perlu Latihan', 'color' => 'amber', 'icon' => 'trending-up', 'reason' => $reason, 'tip' => $tip],
+        'E' => ['kategori' => 'E', 'label' => 'Pemula', 'color' => 'slate', 'icon' => 'user', 'reason' => $reason, 'tip' => $tip],
+    ];
+
+    return $mapping[$dominan];
+}

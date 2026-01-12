@@ -1,8 +1,8 @@
 <?php
 // Aktifkan error reporting untuk debuggin
-include __DIR__ . '/../config/panggil.php';
-include __DIR__ . '/../includes/check_access.php';
-include __DIR__ . '/../includes/theme.php';
+require_once __DIR__ . '/../config/panggil.php';
+require_once __DIR__ . '/../includes/check_access.php';
+require_once __DIR__ . '/../includes/theme.php';
 requireLogin();
 
 // Handle export to Excel
@@ -11,7 +11,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'excel') {
     if (!canInputScore()) {
        enforceAdmin();
     }
-    require '../vendor/vendor/autoload.php';
+    require_once __DIR__ . '/../vendor/vendor/autoload.php';
     
     // use PhpOffice\PhpSpreadsheet\Spreadsheet;
     // use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -1246,11 +1246,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
     }
     verify_csrf();
     $_POST = cleanInput($_POST);
-    try {
-        include '../config/panggil.php';
-    } catch (Exception $e) {
-        die("Error koneksi database: " . $e->getMessage());
-    }
 
     $kegiatan_id = isset($_GET['kegiatan_id']) ? intval($_GET['kegiatan_id']) : null;
     $category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : null;
@@ -1495,7 +1490,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
         } else {
             if (!empty($score_val)) {
                 $stmtOp = $conn->prepare("INSERT INTO `score` (`kegiatan_id`, `category_id`, `score_board_id`, `peserta_id`, `arrow`, `session`, `score`) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                $stmtOp->bind_param("iiiiiii", $kegiatan_id, $category_id, $sb_id, $peserta_id, $arrow, $session, $score_val);
+                $stmtOp->bind_param("iiiiiis", $kegiatan_id, $category_id, $sb_id, $peserta_id, $arrow, $session, $score_val);
                 $message = "Score added";
             } else {
                 $message = "Empty score - no action";
@@ -2883,11 +2878,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 // BAGIAN TAMPILAN NORMAL (DAFTAR PESERTA)
 // ============================================
 
-try {
-    include '../config/panggil.php';
-} catch (Exception $e) {
-    die("Error koneksi database: " . $e->getMessage());
-}
+require_once __DIR__ . '/../config/panggil.php';
 
 $kegiatan_id = isset($_GET['kegiatan_id']) ? intval($_GET['kegiatan_id']) : null;
 
