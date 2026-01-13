@@ -1149,10 +1149,17 @@ try {
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-slate-100 dark:divide-zinc-700">
-                                            ${data.tournaments.map((t, i) => `
-                                                <tr>
+                                            ${data.tournaments.map((t, i) => {
+                                                const isClickable = t.kegiatan_id && t.category_id && t.score_board_id;
+                                                const link = isClickable ? `detail.php?action=scorecard&resource=index&kegiatan_id=${t.kegiatan_id}&category_id=${t.category_id}&scoreboard=${t.score_board_id}&rangking=true` : '#';
+                                                
+                                                return `
+                                                <tr class="${isClickable ? 'hover:bg-slate-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors' : ''}" 
+                                                    onclick="${isClickable ? `window.location.href='${link}'` : ''}">
                                                     <td class="px-3 py-2 text-slate-500 dark:text-zinc-400">${i + 1}</td>
-                                                    <td class="px-3 py-2 font-medium text-slate-900 dark:text-white">${t.nama_kegiatan}</td>
+                                                    <td class="px-3 py-2 font-medium text-slate-900 dark:text-white">
+                                                        ${isClickable ? `<a href="${link}" class="text-archery-600 dark:text-archery-400 hover:underline">${t.nama_kegiatan}</a>` : t.nama_kegiatan}
+                                                    </td>
                                                     <td class="px-3 py-2 text-slate-600 dark:text-zinc-400">${t.category}</td>
                                                     <td class="px-3 py-2 text-center">
                                                         <span class="inline-flex items-center justify-center w-6 h-6 rounded-full ${t.ranking <= 3 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' : 'bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400'} text-xs font-bold">
@@ -1161,7 +1168,8 @@ try {
                                                     </td>
                                                     <td class="px-3 py-2 text-center text-slate-500 dark:text-zinc-400">${t.total_peserta}</td>
                                                 </tr>
-                                            `).join('')}
+                                                `;
+                                            }).join('')}
                                         </tbody>
                                     </table>
                                 </div>

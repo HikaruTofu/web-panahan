@@ -174,7 +174,10 @@ try {
             'tanggal' => date('d M Y', strtotime($row['tanggal'])),
             'ranking' => (int)$row['ranking'],
             'total_peserta' => (int)$row['total_peserta'],
-            'total_score' => (int)$row['total_score']
+            'total_score' => (int)$row['total_score'],
+            'kegiatan_id' => $row['kegiatan_id'],
+            'category_id' => $row['category_id'],
+            'score_board_id' => $row['score_board_id']
         ];
 
         if ($row['ranking'] == 1) $juara1++;
