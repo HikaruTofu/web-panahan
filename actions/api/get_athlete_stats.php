@@ -141,9 +141,9 @@ try {
             LEFT JOIN score_boards sb ON sb.category_id = p.category_id AND sb.kegiatan_id = 11
         ),
         UnifiedRankings AS (
-            SELECT nama_peserta, nama_kegiatan, category_name, ranking as rank_pos, board_participants, kegiatan_id, category_id, score_board_id, total_score FROM OfficialRanks
+            SELECT nama_peserta, nama_kegiatan, category_name, ranking, board_participants as total_peserta, kegiatan_id, category_id, score_board_id, total_score FROM OfficialRanks
             UNION ALL
-            SELECT cr.nama_peserta, cr.nama_kegiatan, cr.category_name, cr.ranking as rank_pos, cr.board_participants, cr.kegiatan_id, cr.category_id, cr.score_board_id, cr.total_score
+            SELECT cr.nama_peserta, cr.nama_kegiatan, cr.category_name, cr.ranking, cr.board_participants as total_peserta, cr.kegiatan_id, cr.category_id, cr.score_board_id, cr.total_score
             FROM CalculatedRanks cr
             WHERE cr.kegiatan_id != 11 
             OR NOT EXISTS (
@@ -154,7 +154,7 @@ try {
         SELECT ur.*, NOW() as tanggal
         FROM UnifiedRankings ur
         WHERE LOWER(TRIM(ur.nama_peserta)) = LOWER(TRIM(?))
-        ORDER BY ur.kegiatan_id DESC, ur.rank_pos ASC
+        ORDER BY ur.kegiatan_id DESC, ur.ranking ASC
     ";
 
     $stmtStats = $conn->prepare($queryStats);
