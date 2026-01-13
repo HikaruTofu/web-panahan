@@ -1077,6 +1077,7 @@ try {
                                 <h4 class="font-semibold text-slate-900 dark:text-white mb-3">Informasi Peserta</h4>
                                 <div class="space-y-2 text-sm">
                                     <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Gender</span><span class="font-medium text-slate-900 dark:text-white">${data.gender || '-'}</span></div>
+                                    <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Umur</span><span class="font-medium text-slate-900 dark:text-white">${data.umur > 0 ? data.umur + ' tahun' : '-'}</span></div>
                                     <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Kota</span><span class="font-medium text-slate-900 dark:text-white">${data.kota || '-'}</span></div>
                                     <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Club</span><span class="font-medium text-slate-900 dark:text-white">${data.club || '-'}</span></div>
                                     <div class="flex justify-between"><span class="text-slate-500 dark:text-zinc-400">Sekolah</span><span class="font-medium text-slate-900 dark:text-white">${data.sekolah || '-'}</span></div>

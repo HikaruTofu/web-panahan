@@ -23,7 +23,7 @@ $athleteName = trim($_GET['name']);
 
 try {
     // Get athlete basic info
-    $queryInfo = "SELECT nama_peserta, nama_club, jenis_kelamin, asal_kota, sekolah
+    $queryInfo = "SELECT nama_peserta, nama_club, jenis_kelamin, asal_kota, sekolah, tanggal_lahir
                   FROM peserta WHERE LOWER(nama_peserta) = LOWER(?) LIMIT 1";
     $stmtInfo = $conn->prepare($queryInfo);
     $stmtInfo->bind_param("s", $athleteName);
@@ -31,6 +31,13 @@ try {
     $resultInfo = $stmtInfo->get_result();
     $athleteInfo = $resultInfo->fetch_assoc();
     $stmtInfo->close();
+
+    $umur = 0;
+    if ($athleteInfo && !empty($athleteInfo['tanggal_lahir']) && $athleteInfo['tanggal_lahir'] !== '0000-00-00') {
+        $dob = new DateTime($athleteInfo['tanggal_lahir']);
+        $now = new DateTime();
+        $umur = $now->diff($dob)->y;
+    }
 
     if (!$athleteInfo) {
         // Fallback: Try SOUNDEX match for minor typos
@@ -66,47 +73,88 @@ try {
         }
     }
 
-    // Dynamic ranking calculation from score table - optimized single query
+    // Unified ranking logic (Ported from statistik.php for consistency)
     $queryStats = "
-        WITH ScoreStats AS (
+        WITH 
+        -- 1. Calculate Dynamic Rankings from score table as fallback
+        ScoreStats AS (
             SELECT
-                s.score_board_id,
-                s.peserta_id,
                 s.kegiatan_id,
+                s.score_board_id,
                 s.category_id,
-                SUM(
-                    CASE
-                        WHEN LOWER(s.score) = 'x' THEN 10
-                        WHEN LOWER(s.score) = 'm' THEN 0
-                        ELSE CAST(s.score AS UNSIGNED)
-                    END
-                ) as total_score,
+                s.peserta_id,
+                MAX(p.nama_peserta) as nama_peserta,
+                SUM(CASE WHEN LOWER(s.score) = 'x' THEN 10 WHEN LOWER(s.score) = 'm' THEN 0 ELSE CAST(s.score AS UNSIGNED) END) as total_score,
                 SUM(CASE WHEN LOWER(s.score) = 'x' THEN 1 ELSE 0 END) as total_x
             FROM score s
-            GROUP BY s.score_board_id, s.peserta_id, s.kegiatan_id, s.category_id
+            JOIN peserta p ON s.peserta_id = p.id
+            INNER JOIN score_boards sb ON s.score_board_id = sb.id
+            GROUP BY s.kegiatan_id, s.score_board_id, s.category_id, s.peserta_id
+            HAVING total_score > 0
         ),
-        RankedScores AS (
+        CalculatedRanks AS (
             SELECT
-                ss.*,
-                RANK() OVER (PARTITION BY ss.score_board_id ORDER BY ss.total_score DESC, ss.total_x DESC) as rank_pos,
-                COUNT(*) OVER (PARTITION BY ss.score_board_id) as board_participants
+                ss.nama_peserta,
+                k.nama_kegiatan,
+                COALESCE(c.name, c2.name) as category_name,
+                ss.kegiatan_id,
+                ss.category_id,
+                ss.score_board_id,
+                RANK() OVER (PARTITION BY ss.kegiatan_id, ss.score_board_id ORDER BY ss.total_score DESC, ss.total_x DESC) as ranking,
+                COUNT(*) OVER (PARTITION BY ss.kegiatan_id, ss.score_board_id) as board_participants,
+                ss.total_score
             FROM ScoreStats ss
+            JOIN kegiatan k ON ss.kegiatan_id = k.id
+            LEFT JOIN score_boards sb ON ss.score_board_id = sb.id
+            LEFT JOIN categories c ON sb.category_id = c.id
+            LEFT JOIN categories c2 ON ss.category_id = c2.id
+        ),
+        -- 2. Official Rankings from rankings_source table (Activity 11)
+        OfficialRanks AS (
+            SELECT 
+                CASE 
+                    WHEN LOWER(TRIM(rs.nama_peserta)) = 'afiyya tsabita ahnaf' THEN 'Affiya Tsabita Ahnaf'
+                    ELSE rs.nama_peserta 
+                END as nama_peserta, 
+                'Panahan 2025' as nama_kegiatan,
+                rs.category as category_name,
+                rs.ranking,
+                rs.total_participants as board_participants,
+                11 as kegiatan_id,
+                COALESCE(p.category_id, 0) as category_id,
+                COALESCE(sb.id, 0) as score_board_id,
+                rs.total_score
+            FROM rankings_source rs
+            LEFT JOIN peserta p ON LOWER(TRIM(p.nama_peserta)) = LOWER(TRIM(rs.nama_peserta)) 
+                AND p.kegiatan_id = 11
+                AND (
+                    (rs.category LIKE '%3m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%3m%') OR
+                    (rs.category LIKE '%5m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%5m%') OR
+                    (rs.category LIKE '%7m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%7m%') OR
+                    (rs.category LIKE '%10m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%10m%') OR
+                    (rs.category LIKE '%15m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%15m%') OR
+                    (rs.category LIKE '%20m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%20m%') OR
+                    (rs.category LIKE '%30m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%30m%') OR
+                    (rs.category LIKE '%40m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%40m%') OR
+                    (rs.category LIKE '%50m%' AND (SELECT name FROM categories WHERE id=p.category_id) LIKE '%50m%')
+                )
+            LEFT JOIN score_boards sb ON sb.category_id = p.category_id AND sb.kegiatan_id = 11
+        ),
+        UnifiedRankings AS (
+            SELECT nama_peserta, nama_kegiatan, category_name, ranking as rank_pos, board_participants, kegiatan_id, category_id, score_board_id, total_score FROM OfficialRanks
+            UNION ALL
+            SELECT cr.nama_peserta, cr.nama_kegiatan, cr.category_name, cr.ranking as rank_pos, cr.board_participants, cr.kegiatan_id, cr.category_id, cr.score_board_id, cr.total_score
+            FROM CalculatedRanks cr
+            WHERE cr.kegiatan_id != 11 
+            OR NOT EXISTS (
+                SELECT 1 FROM OfficialRanks orf 
+                WHERE LOWER(TRIM(orf.nama_peserta)) = LOWER(TRIM(cr.nama_peserta))
+            )
         )
-        SELECT
-            rs.score_board_id,
-            rs.rank_pos as ranking,
-            rs.board_participants as total_peserta,
-            rs.total_score,
-            k.nama_kegiatan,
-            c.name as category_name,
-            COALESCE(sb.created, NOW()) as tanggal
-        FROM RankedScores rs
-        JOIN peserta p ON rs.peserta_id = p.id
-        JOIN kegiatan k ON rs.kegiatan_id = k.id
-        JOIN categories c ON rs.category_id = c.id
-        LEFT JOIN score_boards sb ON rs.score_board_id = sb.id
-        WHERE LOWER(p.nama_peserta) = LOWER(?)
-        ORDER BY tanggal DESC
+        SELECT ur.*, NOW() as tanggal
+        FROM UnifiedRankings ur
+        WHERE LOWER(TRIM(ur.nama_peserta)) = LOWER(TRIM(?))
+        ORDER BY ur.kegiatan_id DESC, ur.rank_pos ASC
     ";
 
     $stmtStats = $conn->prepare($queryStats);
@@ -141,6 +189,7 @@ try {
             'name' => $athleteInfo['nama_peserta'],
             'club' => $athleteInfo['nama_club'] ?: 'No Club',
             'gender' => $athleteInfo['jenis_kelamin'] ?? '',
+            'umur' => $umur,
             'kota' => $athleteInfo['asal_kota'] ?? '',
             'sekolah' => $athleteInfo['sekolah'] ?? '',
             'total_turnamen' => count($tournaments),
