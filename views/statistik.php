@@ -1005,26 +1005,97 @@ $role = $_SESSION['role'] ?? 'user';
                     </form>
                 </div>
 
-                <!-- Data Table -->
-                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+                <!-- Mobile Card View -->
+                <div class="md:hidden space-y-3">
+                    <?php if (empty($pesertaData)): ?>
+                    <div class="py-12 text-center">
+                        <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-inbox text-slate-400 dark:text-zinc-500 text-2xl"></i>
+                        </div>
+                        <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada data peserta</p>
+                        <p class="text-slate-400 dark:text-zinc-500 text-sm">Ubah filter atau pastikan peserta telah mengikuti turnamen</p>
+                    </div>
+                    <?php else: ?>
+                    <?php $mobileNo = $offset + 1; foreach ($pesertaDataPaginated as $p): ?>
+                    <?php $c = $colorMap[$p['kategori_dominan']['color']] ?? $colorMap['slate']; ?>
+                    <div class="bg-white dark:bg-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-700 p-4">
+                        <div class="flex items-start gap-3 mb-3">
+                            <span class="text-sm text-slate-400 dark:text-zinc-500 font-medium w-6"><?= $mobileNo++ ?></span>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($p['nama']) ?></p>
+                                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs <?= $p['gender'] == 'Laki-laki' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400' ?>">
+                                        <?= $p['gender'] == 'Laki-laki' ? 'L' : 'P' ?>
+                                    </span>
+                                    <span class="text-sm text-slate-500 dark:text-zinc-400"><?= $p['umur'] > 0 ? $p['umur'] . ' th' : '-' ?></span>
+                                    <span class="text-slate-300 dark:text-zinc-600">•</span>
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium <?= $c['bg'] ?> text-white"><?= $p['kategori_dominan']['kategori'] ?></span>
+                                </div>
+                            </div>
+                            <button onclick="showDetail(<?= htmlspecialchars(json_encode($p)) ?>)" class="p-2 rounded-lg bg-archery-50 dark:bg-archery-900/30 text-archery-600 dark:text-archery-400">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm border-t border-slate-100 dark:border-zinc-700 pt-3">
+                            <div class="truncate">
+                                <span class="text-slate-400 dark:text-zinc-500">Club:</span>
+                                <span class="text-slate-700 dark:text-zinc-300 ml-1"><?= htmlspecialchars($p['club'] ?? '-') ?></span>
+                            </div>
+                            <div class="truncate">
+                                <span class="text-slate-400 dark:text-zinc-500">Sekolah:</span>
+                                <span class="text-slate-700 dark:text-zinc-300 ml-1"><?= htmlspecialchars($p['sekolah'] ?? '-') ?></span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 dark:text-zinc-500">Turnamen:</span>
+                                <span class="text-archery-600 dark:text-archery-400 font-semibold ml-1"><?= $p['total_turnamen'] ?></span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 dark:text-zinc-500">Avg Rank:</span>
+                                <span class="text-slate-700 dark:text-zinc-300 ml-1"><?= $p['avg_ranking'] > 0 ? '#' . $p['avg_ranking'] : '-' ?></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-zinc-700 flex-wrap">
+                            <?php if ($p['juara1'] > 0): ?>
+                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400">🥇 <?= $p['juara1'] ?></span>
+                            <?php endif; ?>
+                            <?php if ($p['juara2'] > 0): ?>
+                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300">🥈 <?= $p['juara2'] ?></span>
+                            <?php endif; ?>
+                            <?php if ($p['juara3'] > 0): ?>
+                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">🥉 <?= $p['juara3'] ?></span>
+                            <?php endif; ?>
+                            <?php if ($p['top10'] > 0): ?>
+                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">Top10: <?= $p['top10'] ?>x</span>
+                            <?php endif; ?>
+                            <?php if ($p['bracket_stats']['bracket_champion'] > 0): ?>
+                            <span class="text-xs text-yellow-600">🏆<?= $p['bracket_stats']['bracket_champion'] ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Desktop Data Table -->
+                <div class="hidden md:block bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar" style="max-height: 65vh;">
-                        <table class="w-full">
+                        <table class="w-full min-w-[900px]">
                             <thead class="bg-slate-100 dark:bg-zinc-800 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Nama</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Gender</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Umur</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Club</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Turnamen</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Avg Rank</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">J1</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">J2</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">J3</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Top10</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Bracket</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Aksi</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-10 sm:w-12">#</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Nama</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Gender</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Umur</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Club</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Turnamen</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Avg</th>
+                                    <th class="px-1 sm:px-3 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">J1</th>
+                                    <th class="px-1 sm:px-3 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">J2</th>
+                                    <th class="px-1 sm:px-3 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">J3</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Top10</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Bracket</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
@@ -1043,65 +1114,65 @@ $role = $_SESSION['role'] ?? 'user';
                                 <?php else: ?>
                                     <?php $no = $offset + 1; foreach ($pesertaDataPaginated as $p): ?>
                                         <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
-                                            <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++ ?></td>
-                                            <td class="px-4 py-3">
-                                                <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($p['nama']) ?></p>
-                                                <p class="text-xs text-slate-500 dark:text-zinc-500"><?= htmlspecialchars($p['sekolah'] ?? '-') ?></p>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++ ?></td>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
+                                                <p class="font-medium text-slate-900 dark:text-white text-sm truncate max-w-[100px] sm:max-w-none"><?= htmlspecialchars($p['nama']) ?></p>
+                                                <p class="text-xs text-slate-500 dark:text-zinc-500 truncate max-w-[100px] sm:max-w-none"><?= htmlspecialchars($p['sekolah'] ?? '-') ?></p>
                                             </td>
-                                            <td class="px-4 py-3">
-                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $p['gender'] == 'Laki-laki' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400' ?>">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
+                                                <span class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium <?= $p['gender'] == 'Laki-laki' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400' ?>">
                                                     <i class="fas <?= $p['gender'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?> text-xs"></i>
                                                     <?= $p['gender'] == 'Laki-laki' ? 'L' : 'P' ?>
                                                 </span>
                                             </td>
-                                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-zinc-400"><?= $p['umur'] > 0 ? $p['umur'] . ' th' : '-' ?></td>
-                                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-zinc-400 max-w-32 truncate"><?= htmlspecialchars($p['club'] ?? '-') ?></td>
-                                            <td class="px-4 py-3">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-slate-600 dark:text-zinc-400"><?= $p['umur'] > 0 ? $p['umur'] . ' th' : '-' ?></td>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-slate-600 dark:text-zinc-400 max-w-[80px] sm:max-w-32 truncate"><?= htmlspecialchars($p['club'] ?? '-') ?></td>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
                                                 <?php $c = $colorMap[$p['kategori_dominan']['color']] ?? $colorMap['slate']; ?>
-                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold <?= $c['bg'] ?> text-white">
+                                                <span class="inline-flex items-center gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-semibold <?= $c['bg'] ?> text-white">
                                                     <?= $p['kategori_dominan']['kategori'] ?>
                                                 </span>
-                                                <p class="text-xs text-slate-500 dark:text-zinc-500 mt-0.5"><?= $p['kategori_dominan']['label'] ?></p>
+                                                <p class="text-xs text-slate-500 dark:text-zinc-500 mt-0.5 truncate max-w-[60px] sm:max-w-none"><?= $p['kategori_dominan']['label'] ?></p>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
                                                 <span class="font-semibold text-archery-600 dark:text-archery-400"><?= $p['total_turnamen'] ?></span>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
                                                 <?php if ($p['avg_ranking'] > 0): ?>
-                                                    <span class="text-sm text-slate-600 dark:text-zinc-400">#<?= $p['avg_ranking'] ?></span>
+                                                    <span class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400">#<?= $p['avg_ranking'] ?></span>
                                                 <?php else: ?>
                                                     <span class="text-slate-400 dark:text-zinc-600">-</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-1 sm:px-3 py-2 sm:py-3 text-center">
                                                 <?php if ($p['juara1'] > 0): ?>
-                                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-bold"><?= $p['juara1'] ?></span>
+                                                    <span class="inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-bold"><?= $p['juara1'] ?></span>
                                                 <?php else: ?>
                                                     <span class="text-slate-300 dark:text-zinc-600">-</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-1 sm:px-3 py-2 sm:py-3 text-center">
                                                 <?php if ($p['juara2'] > 0): ?>
-                                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 text-xs font-bold"><?= $p['juara2'] ?></span>
+                                                    <span class="inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 text-xs font-bold"><?= $p['juara2'] ?></span>
                                                 <?php else: ?>
                                                     <span class="text-slate-300 dark:text-zinc-600">-</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-1 sm:px-3 py-2 sm:py-3 text-center">
                                                 <?php if ($p['juara3'] > 0): ?>
-                                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold"><?= $p['juara3'] ?></span>
+                                                    <span class="inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold"><?= $p['juara3'] ?></span>
                                                 <?php else: ?>
                                                     <span class="text-slate-300 dark:text-zinc-600">-</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
                                                 <?php if ($p['top10'] > 0): ?>
-                                                    <span class="text-sm text-blue-600 dark:text-blue-400 font-medium"><?= $p['top10'] ?>x</span>
+                                                    <span class="text-xs sm:text-sm text-blue-600 dark:text-blue-400 font-medium"><?= $p['top10'] ?>x</span>
                                                 <?php else: ?>
                                                     <span class="text-slate-300 dark:text-zinc-600">-</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
                                                 <?php if ($p['bracket_stats']['total_bracket'] > 0): ?>
                                                     <div class="flex flex-col items-center gap-0.5">
                                                         <?php if ($p['bracket_stats']['bracket_champion'] > 0): ?>
@@ -1118,10 +1189,10 @@ $role = $_SESSION['role'] ?? 'user';
                                                     <span class="text-slate-300">-</span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
                                                 <button onclick="showDetail(<?= htmlspecialchars(json_encode($p)) ?>)"
-                                                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-archery-50 dark:bg-archery-900/30 text-archery-700 dark:text-archery-400 text-xs font-medium hover:bg-archery-100 dark:hover:bg-archery-900/50 transition-colors">
-                                                    <i class="fas fa-eye"></i> Detail
+                                                        class="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-archery-50 dark:bg-archery-900/30 text-archery-700 dark:text-archery-400 text-xs font-medium hover:bg-archery-100 dark:hover:bg-archery-900/50 transition-colors">
+                                                    <i class="fas fa-eye"></i><span class="hidden sm:inline"> Detail</span>
                                                 </button>
                                             </td>
                                         </tr>

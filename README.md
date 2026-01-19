@@ -30,32 +30,6 @@ Sistem telah di-harden sesuai standar **OWASP Top 10:2025**:
 - **Frontend**: Tailwind CSS + Chart.js
 - **DevOps**: Docker & Docker Compose
 
-## 📋 SQL Migration (PENTING)
-
-Jika melakukan update dari versi lama ke versi terbaru, Anda **WAJIB** menjalankan perintah SQL di bawah ini agar sistem mengenali role baru (`petugas`).
-
-### Cara Update via phpMyAdmin:
-1. Masuk ke **phpMyAdmin** server Anda.
-2. Pilih database yang digunakan (`panahan_turnament_new`).
-3. Klik tab **"SQL"** di bagian atas.
-4. Copy-paste perintah di bawah ini (pilih yang sesuai kebutuhan Anda):
-
-**A. Update Role & Performance (WAJIB):**
-```sql
--- 1. Tambah Index Performa (Sangat disarankan untuk database besar)
-ALTER TABLE score ADD INDEX idx_kb (score_board_id), ADD INDEX idx_ps (peserta_id), ADD INDEX idx_kg (kegiatan_id);
-ALTER TABLE peserta ADD INDEX idx_kg (kegiatan_id);
-ALTER TABLE score_boards ADD INDEX idx_kg (kegiatan_id);
-
--- 3. Tambah kolom audit (jika upgrade dari versi < 2.0)
-ALTER TABLE peserta 
-ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
-```
-
-5. Klik tombol **"Go"** atau **"Kirim"**.
-6. **Selesai!** Aplikasi sekarang lebih cepat dan mendukung role baru.
-
 ## 👤 Login Default
 
 *Silakan cek database/setup awal untuk detail kredensial admin.*

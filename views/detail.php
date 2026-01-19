@@ -3,7 +3,62 @@
 require_once __DIR__ . '/../config/panggil.php';
 require_once __DIR__ . '/../includes/check_access.php';
 require_once __DIR__ . '/../includes/theme.php';
-requireLogin();
+
+// Public access for ranking view only (read-only, no sensitive data)
+$isPublicRankingView = isset($_GET['action']) && $_GET['action'] === 'scorecard'
+                    && isset($_GET['rangking'])
+                    && isset($_GET['scoreboard'])
+                    && isset($_GET['kegiatan_id'])
+                    && isset($_GET['category_id']);
+
+// Allow public access for ranking, require login for everything else
+if (!$isPublicRankingView) {
+    requireLogin();
+}
+
+// Set guest defaults if not logged in (for public ranking view)
+$isGuest = !isLoggedIn();
+if ($isGuest) {
+    $username = 'Guest';
+    $name = 'Guest';
+    $role = 'viewer';
+
+    // STRICT: Guests can ONLY access the ranking view - nothing else
+    // If they try to manipulate URL params, show 403 page
+    if (!$isPublicRankingView) {
+        http_response_code(403);
+        ?>
+        <!DOCTYPE html>
+        <html lang="id">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Akses Ditolak - Turnamen Panahan</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+        </head>
+        <body class="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+            <div class="text-center max-w-md">
+                <div class="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-lock text-red-500 text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white mb-2">Akses Ditolak</h1>
+                <p class="text-zinc-400 mb-6">Halaman ini memerlukan login. Anda hanya dapat melihat halaman ranking publik.</p>
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                    <a href="../index.php" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 transition-colors">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                    <button onclick="history.back()" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-zinc-800 text-zinc-300 font-medium hover:bg-zinc-700 transition-colors">
+                        <i class="fas fa-arrow-left"></i> Kembali
+                    </button>
+                </div>
+            </div>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
+}
 
 // Handle export to Excel
 if (isset($_GET['export']) && $_GET['export'] == 'excel') {
@@ -160,10 +215,12 @@ if (session_status() == PHP_SESSION_NONE) {
     // session_start();
 }
 
-// Get user info from session
-$username = $_SESSION['username'] ?? 'User';
-$name = $_SESSION['name'] ?? $username;
-$role = $_SESSION['role'] ?? 'user';
+// Get user info from session (or use guest defaults for public ranking)
+if (!$isGuest) {
+    $username = $_SESSION['username'] ?? 'User';
+    $name = $_SESSION['name'] ?? $username;
+    $role = $_SESSION['role'] ?? 'user';
+}
 
 // ============================================
 // HANDLER UNTUK BRACKET TOURNAMENT (ADUAN)
@@ -1240,11 +1297,16 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 // HANDLER UNTUK SCORECARD SETUP
 // ============================================
 if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
-    if (!canInputScore()) {
+    // Allow public access for ranking view, require auth for everything else
+    if (!$isPublicRankingView && !canInputScore()) {
         header("Location: detail.php?id=" . intval($_GET['kegiatan_id'] ?? 0));
         exit;
     }
-    verify_csrf();
+
+    // Only verify CSRF for authenticated users (not guests viewing rankings)
+    if (!$isGuest) {
+        verify_csrf();
+    }
     $_POST = cleanInput($_POST);
 
     $kegiatan_id = isset($_GET['kegiatan_id']) ? intval($_GET['kegiatan_id']) : null;
@@ -1591,10 +1653,71 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             @media print {
                 .no-print { display: none !important; }
             }
+
+            /* Mobile Score Keyboard - Floating Style */
+            .mobile-score-keyboard {
+                position: fixed;
+                bottom: 1rem;
+                left: 0.75rem;
+                right: 0.75rem;
+                z-index: 9999;
+                transform: translateY(calc(100% + 2rem));
+                transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+                opacity: 0;
+                pointer-events: none;
+            }
+            .mobile-score-keyboard.active {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+            .mobile-score-keyboard .keyboard-inner {
+                background: rgba(24, 24, 27, 0.95);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border-radius: 1rem;
+                border: 1px solid rgba(63, 63, 70, 0.5);
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+                overflow: hidden;
+            }
+            .mobile-score-keyboard .keyboard-btn {
+                min-width: 2.5rem;
+                height: 2.75rem;
+                font-weight: 600;
+                border-radius: 0.5rem;
+                transition: all 0.15s ease;
+                user-select: none;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .mobile-score-keyboard .keyboard-btn:active {
+                transform: scale(0.92);
+                opacity: 0.8;
+            }
+            .keyboard-btn.score-x { background: #16a34a; color: white; }
+            .keyboard-btn.score-10 { background: #22c55e; color: white; }
+            .keyboard-btn.score-high { background: #f59e0b; color: white; }
+            .keyboard-btn.score-mid { background: #64748b; color: white; }
+            .keyboard-btn.score-low { background: #94a3b8; color: white; }
+            .keyboard-btn.score-m { background: #dc2626; color: white; }
+            .keyboard-btn.action-save { background: #16a34a; color: white; }
+            .keyboard-btn.action-close { background: #475569; color: white; }
+            .keyboard-btn.action-clear { background: #ef4444; color: white; }
+
+            /* Add bottom padding when keyboard is active on mobile */
+            body.keyboard-active {
+                padding-bottom: 200px;
+            }
+
+            /* Hide on desktop/tablet */
+            @media (min-width: 768px) {
+                .mobile-score-keyboard { display: none !important; }
+                body.keyboard-active { padding-bottom: 0; }
+            }
         </style>
     </head>
     <body class="h-full bg-slate-50 dark:bg-zinc-950 transition-colors">
         <div class="flex h-full">
+            <?php if (!$isGuest): ?>
             <!-- Sidebar -->
             <aside class="hidden lg:flex lg:flex-col w-72 bg-zinc-900 text-white">
                 <div class="flex items-center gap-3 px-6 py-5 border-b border-zinc-800">
@@ -1664,10 +1787,27 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             <button id="mobile-menu-btn" class="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-zinc-900 text-white shadow-lg">
                 <i class="fas fa-bars"></i>
             </button>
+            <?php endif; ?>
 
             <!-- Main Content -->
             <main class="flex-1 overflow-auto">
-                <div class="px-6 lg:px-8 py-6">
+                <?php if ($isGuest): ?>
+                <!-- Guest Header for Public Ranking -->
+                <div class="bg-zinc-900 text-white px-4 py-3 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-archery-600 flex items-center justify-center">
+                            <i class="fas fa-bullseye text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-semibold text-sm">Turnamen Panahan</h1>
+                            <p class="text-xs text-zinc-400">Live Ranking</p>
+                        </div>
+                    </div>
+                    <?= getThemeToggleButton() ?>
+                </div>
+                <?php endif; ?>
+                <div class="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+                    <?php if (!$isGuest): ?>
                     <!-- Breadcrumb -->
                     <nav class="flex items-center gap-2 text-sm text-slate-500 dark:text-zinc-400 mb-4 no-print">
                         <a href="dashboard.php" class="hover:text-archery-600 transition-colors">Dashboard</a>
@@ -1678,6 +1818,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         <i class="fas fa-chevron-right text-xs text-slate-300 dark:text-zinc-600"></i>
                         <span class="text-slate-900 dark:text-white font-medium">Scorecard</span>
                     </nav>
+                    <?php endif; ?>
 
             <?php if (isset($_GET['resource'])) { ?>
                 <?php if ($_GET['resource'] == 'form') { ?>
@@ -1879,19 +2020,38 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         </div>
                     </div>
 
-                    <!-- Peserta Selector Dropdown -->
-                    <div id="pesertaSelectorInline" class="p-6">
-                        <div class="bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl p-8 text-center max-w-md mx-auto">
-                            <p class="text-slate-500 dark:text-zinc-400 text-sm mb-4">Pilih peserta untuk mulai input skor</p>
+                    <!-- Peserta Selector - Improved -->
+                    <div id="pesertaSelectorInline" class="p-4 sm:p-6">
+                        <div class="bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl overflow-hidden">
+                            <!-- Header with Search -->
+                            <div class="px-4 py-3 border-b border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-900">
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                    <div class="flex-1">
+                                        <div class="relative">
+                                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500"></i>
+                                            <input type="text"
+                                                   id="pesertaSearchInput"
+                                                   placeholder="Cari nama peserta..."
+                                                   class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-archery-500 focus:border-transparent text-sm"
+                                                   oninput="filterPesertaList(this.value)">
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-zinc-400">
+                                        <span id="filteredCount"><?= count($pesertaList) ?></span>
+                                        <span>peserta</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                            <div class="relative">
-                                <button id="dropdownBtn" onclick="toggleDropdown()"
-                                        class="w-full px-4 py-3 rounded-lg bg-archery-600 text-white font-medium flex items-center justify-between hover:bg-archery-700 transition-colors">
-                                    <span id="dropdownText">Pilih Peserta</span>
-                                    <i class="fas fa-chevron-down dropdown-arrow transition-transform"></i>
-                                </button>
-                                <div id="dropdownMenu" class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl shadow-lg max-h-60 overflow-y-auto z-[100] transition-all origin-top scale-95 opacity-0 pointer-events-none display-none-initial">
+                            <!-- Peserta Grid -->
+                            <div id="pesertaGrid" class="p-3 max-h-[60vh] overflow-y-auto">
+                                <div id="pesertaGridInner" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                                     <!-- Populated by JavaScript -->
+                                </div>
+                                <!-- Empty State -->
+                                <div id="pesertaEmptyState" class="hidden py-12 text-center">
+                                    <i class="fas fa-search text-4xl text-slate-300 dark:text-zinc-600 mb-3"></i>
+                                    <p class="text-slate-500 dark:text-zinc-400">Peserta tidak ditemukan</p>
                                 </div>
                             </div>
                         </div>
@@ -1912,17 +2072,59 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
 
                     <div id="playersContainer" class="px-6 pb-6"></div>
                 </div>
+
+                <!-- Mobile Score Keyboard (only visible on mobile when input is focused) -->
+                <div id="mobileScoreKeyboard" class="mobile-score-keyboard md:hidden">
+                    <div class="keyboard-inner">
+                        <!-- Current Input Indicator & Actions -->
+                        <div class="flex items-center justify-between px-4 py-2.5 border-b border-zinc-700/50">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-zinc-400">Sesi</span>
+                                <span id="keyboardCurrentSession" class="text-sm font-semibold text-white bg-zinc-700 px-2 py-0.5 rounded">-</span>
+                                <span class="text-xs text-zinc-400">Panah</span>
+                                <span id="keyboardCurrentArrow" class="text-sm font-semibold text-white bg-zinc-700 px-2 py-0.5 rounded">-</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="mobileKeyboardClear()" class="keyboard-btn action-clear px-3 text-sm">
+                                    <i class="fas fa-backspace"></i>
+                                </button>
+                                <button onclick="closeMobileKeyboard()" class="keyboard-btn action-close px-3 text-sm">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Score Buttons -->
+                        <div class="p-3">
+                            <div class="grid grid-cols-4 gap-2">
+                                <button onclick="mobileKeyboardInput('X')" class="keyboard-btn score-x text-lg">X</button>
+                                <button onclick="mobileKeyboardInput('10')" class="keyboard-btn score-10">10</button>
+                                <button onclick="mobileKeyboardInput('9')" class="keyboard-btn score-high">9</button>
+                                <button onclick="mobileKeyboardInput('8')" class="keyboard-btn score-high">8</button>
+                                <button onclick="mobileKeyboardInput('7')" class="keyboard-btn score-mid">7</button>
+                                <button onclick="mobileKeyboardInput('6')" class="keyboard-btn score-mid">6</button>
+                                <button onclick="mobileKeyboardInput('5')" class="keyboard-btn score-mid">5</button>
+                                <button onclick="mobileKeyboardInput('4')" class="keyboard-btn score-low">4</button>
+                                <button onclick="mobileKeyboardInput('3')" class="keyboard-btn score-low">3</button>
+                                <button onclick="mobileKeyboardInput('2')" class="keyboard-btn score-low">2</button>
+                                <button onclick="mobileKeyboardInput('1')" class="keyboard-btn score-low">1</button>
+                                <button onclick="mobileKeyboardInput('M')" class="keyboard-btn score-m text-lg">M</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             <?php } ?>
 
             <!-- Ranking Mode -->
             <?php if (isset($_GET['scoreboard']) && isset($_GET['rangking'])) { ?>
                 <div id="scorecardContainer" class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div class="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div class="flex items-center gap-3">
+                            <?php if (!$isGuest): ?>
                             <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>"
                                class="p-2 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors no-print">
                                 <i class="fas fa-arrow-left"></i>
                             </a>
+                            <?php endif; ?>
                             <div>
                                 <h2 class="font-semibold text-slate-900 dark:text-white">Ranking</h2>
                                 <p class="text-sm text-slate-500 dark:text-zinc-400"><?= htmlspecialchars($kategoriData['name']) ?> • <?= htmlspecialchars($kegiatanData['nama_kegiatan']) ?></p>
@@ -1940,18 +2142,20 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                     <i class="fas fa-table mr-1"></i> Detail
                                 </button>
                             </div>
+                            <?php if (!$isGuest && canInputScore()): ?>
                             <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $_GET['scoreboard'] ?>"
                                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700 transition-colors">
-                                <i class="fas fa-edit"></i> Input Skor
+                                <i class="fas fa-edit"></i> <span class="hidden sm:inline">Input Skor</span>
                             </a>
                             <button onclick="exportScorecardToExcel()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-sm font-medium hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors">
-                                <i class="fas fa-file-excel"></i> Export
+                                <i class="fas fa-file-excel"></i> <span class="hidden sm:inline">Export</span>
                             </button>
+                            <?php endif; ?>
                         </div>
                     </div>
 
                     <!-- Leaderboard Container -->
-                    <div class="p-6">
+                    <div class="p-4 sm:p-6">
                         <!-- PHP DEBUG: pesertaList count = <?= count($pesertaList) ?>, peserta_score count = <?= count($peserta_score) ?> -->
                         <div id="playersContainer"></div>
                     </div>
@@ -1973,7 +2177,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             <?php } ?>
 
             const pesertaData = <?= json_encode($pesertaList) ?>;
-            const CSRF_TOKEN = "<?= $_SESSION['csrf_token'] ?>";
+            const CSRF_TOKEN = "<?= get_csrf_token() ?>";
             let selectedPesertaId = null;
             let saveTimeout = null;
             let inputTimeout = null;
@@ -2205,53 +2409,78 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             ?>
 
             function init() {
-                renderDropdownMenu();
+                renderPesertaGrid();
 
-                document.addEventListener('click', function (event) {
-                    const dropdown = document.getElementById('dropdownMenu');
-                    const dropdownBtn = document.getElementById('dropdownBtn');
+                // Focus search input on load
+                const searchInput = document.getElementById('pesertaSearchInput');
+                if (searchInput) {
+                    setTimeout(() => searchInput.focus(), 100);
+                }
+            }
 
-                    if (dropdown && dropdownBtn && !dropdownBtn.contains(event.target) && !dropdown.contains(event.target)) {
-                        dropdown.classList.remove('show');
-                        dropdownBtn.querySelector('.dropdown-arrow').style.transform = 'rotate(0deg)';
-                    }
+            function renderPesertaGrid(filter = '') {
+                const grid = document.getElementById('pesertaGridInner');
+                const emptyState = document.getElementById('pesertaEmptyState');
+                const countEl = document.getElementById('filteredCount');
+                if (!grid) return;
+
+                grid.innerHTML = '';
+                const filterLower = filter.toLowerCase().trim();
+
+                const filtered = pesertaData.filter(p => {
+                    if (!filterLower) return true;
+                    const name = (p.nama_peserta || '').toLowerCase();
+                    const club = (p.nama_club || p.club || '').toLowerCase();
+                    return name.includes(filterLower) || club.includes(filterLower);
+                });
+
+                if (countEl) countEl.textContent = filtered.length;
+
+                if (filtered.length === 0) {
+                    if (emptyState) emptyState.classList.remove('hidden');
+                    return;
+                } else {
+                    if (emptyState) emptyState.classList.add('hidden');
+                }
+
+                filtered.forEach(peserta => {
+                    const card = document.createElement('div');
+                    card.className = 'peserta-card flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-archery-500 hover:bg-archery-50 dark:hover:bg-archery-900/20 cursor-pointer transition-all';
+                    card.onclick = () => selectPeserta(peserta.id);
+
+                    const genderIcon = peserta.jenis_kelamin === 'P' ? 'fa-venus' : 'fa-mars';
+                    const genderColor = peserta.jenis_kelamin === 'P'
+                        ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
+                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
+                    const genderLabel = peserta.jenis_kelamin === 'P' ? 'Putri' : 'Putra';
+                    const clubName = peserta.nama_club || peserta.club || '';
+
+                    card.innerHTML = `
+                        <div class="w-10 h-10 rounded-full ${genderColor} flex items-center justify-center flex-shrink-0">
+                            <i class="fas ${genderIcon}"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-slate-900 dark:text-white text-sm truncate">${peserta.nama_peserta}</p>
+                            <p class="text-xs text-slate-500 dark:text-zinc-400 truncate">${clubName ? clubName : genderLabel}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-slate-300 dark:text-zinc-600 text-xs"></i>
+                    `;
+
+                    grid.appendChild(card);
                 });
             }
 
+            function filterPesertaList(query) {
+                renderPesertaGrid(query);
+            }
+
+            // Keep old functions for compatibility but they now use the grid
             function renderDropdownMenu() {
-                const menu = document.getElementById('dropdownMenu');
-                if (!menu) return;
-
-                menu.innerHTML = '';
-
-                pesertaData.forEach(peserta => {
-                    const item = document.createElement('div');
-                    item.className = 'px-5 py-3 hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer flex items-center gap-4 border-b border-slate-100 dark:border-zinc-700 last:border-0 transition-colors';
-                    item.onclick = () => selectPeserta(peserta.id);
-
-                    item.innerHTML = `
-                        <div class="w-8 h-8 rounded-full ${peserta.jenis_kelamin === 'P' ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} flex items-center justify-center">
-                            <i class="fas ${peserta.jenis_kelamin === 'P' ? 'fa-venus' : 'fa-mars'} text-sm"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium text-slate-900 dark:text-white text-sm">${peserta.nama_peserta}</p>
-                            <p class="text-xs text-slate-500 dark:text-zinc-400">${peserta.jenis_kelamin === 'P' ? 'Putri' : 'Putra'}</p>
-                        </div>
-                    `;
-
-                    menu.appendChild(item);
-                });
+                renderPesertaGrid();
             }
 
             function toggleDropdown() {
-                const dropdown = document.getElementById('dropdownMenu');
-                const dropdownBtn = document.getElementById('dropdownBtn');
-
-                if (dropdown && dropdownBtn) {
-                    dropdown.classList.toggle('show');
-                    const arrow = dropdownBtn.querySelector('.dropdown-arrow');
-                    arrow.style.transform = dropdown.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
-                }
+                // No longer needed but kept for compatibility
             }
 
             function selectPeserta(pesertaId) {
@@ -2309,9 +2538,26 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
             }
 
             function changePeserta() {
-                showConfirmModal('Ganti Peserta', 'Yakin ingin ganti peserta? Data yang telah diinput sudah tersimpan.', () => {
-                    location.reload();
-                });
+                // Show selector again without page reload
+                const selectorInline = document.getElementById('pesertaSelectorInline');
+                const selectedInfo = document.getElementById('selectedPesertaInfo');
+                const playersContainer = document.getElementById('playersContainer');
+                const exportBtn = document.getElementById('exportBtn');
+                const searchInput = document.getElementById('pesertaSearchInput');
+
+                if (selectorInline) selectorInline.style.display = 'block';
+                if (selectedInfo) selectedInfo.classList.add('hidden');
+                if (playersContainer) playersContainer.innerHTML = '';
+                if (exportBtn) exportBtn.classList.add('hidden');
+
+                // Clear search and re-render grid
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.focus();
+                }
+                renderPesertaGrid();
+
+                selectedPesertaId = null;
             }
 
             function goBack() {
@@ -2403,17 +2649,18 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     tableSection.className = 'border border-slate-200 dark:border-zinc-700 rounded-xl overflow-hidden';
 
                     let tableHTML = `
-                        <table class="w-full">
-                            <thead class="bg-zinc-800 text-white">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-20">10+X</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-16">X</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-24">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100 dark:divide-zinc-700 bg-white dark:bg-zinc-900">
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[320px]">
+                                <thead class="bg-zinc-800 text-white">
+                                    <tr>
+                                        <th class="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-12 sm:w-16">#</th>
+                                        <th class="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
+                                        <th class="px-2 sm:px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-16 sm:w-20 hidden sm:table-cell">10+X</th>
+                                        <th class="px-2 sm:px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-12 sm:w-16 hidden sm:table-cell">X</th>
+                                        <th class="px-2 sm:px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider w-20 sm:w-24">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-zinc-700 bg-white dark:bg-zinc-900">
                     `;
 
                     pesertaData.forEach((peserta, index) => {
@@ -2422,25 +2669,29 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                         const hasScore = (peserta.total_score || 0) > 0;
                         const rankDisplay = (hasScore && isTop3) ? ['🥇', '🥈', '🥉'][index] : (index + 1);
                         const nameWeight = isTop3 ? 'font-semibold' : 'font-medium';
-                        const scoreWeight = isTop3 ? 'font-bold text-lg' : 'font-semibold';
+                        const scoreWeight = isTop3 ? 'font-bold text-base sm:text-lg' : 'font-semibold';
                         const scoreColor = index === 0 ? 'text-archery-700 dark:text-archery-400' : 'text-slate-900 dark:text-white';
 
                         tableHTML += `
                             <tr class="${rowClass} transition-colors">
-                                <td class="px-4 py-3 text-center text-lg text-slate-900 dark:text-white">${rankDisplay}</td>
-                                <td class="px-4 py-3">
-                                    <span class="${nameWeight} text-slate-900 dark:text-white">${peserta.nama_peserta}</span>
+                                <td class="px-2 sm:px-4 py-3 text-center text-base sm:text-lg text-slate-900 dark:text-white">${rankDisplay}</td>
+                                <td class="px-2 sm:px-4 py-3">
+                                    <div>
+                                        <span class="${nameWeight} text-slate-900 dark:text-white text-sm sm:text-base block truncate max-w-[120px] sm:max-w-none">${peserta.nama_peserta}</span>
+                                        <span class="text-xs text-slate-500 dark:text-zinc-400 sm:hidden">${peserta.ten_plus_x_score || 0}× 10+X • ${peserta.x_score || 0}× X</span>
+                                    </div>
                                 </td>
-                                <td class="px-4 py-3 text-right text-slate-500 dark:text-zinc-400 text-sm">${peserta.ten_plus_x_score || 0}</td>
-                                <td class="px-4 py-3 text-right text-slate-500 dark:text-zinc-400 text-sm">${peserta.x_score || 0}</td>
-                                <td class="px-4 py-3 text-right ${scoreWeight} ${scoreColor}">${peserta.total_score || 0}</td>
+                                <td class="px-2 sm:px-4 py-3 text-right text-slate-500 dark:text-zinc-400 text-sm hidden sm:table-cell">${peserta.ten_plus_x_score || 0}</td>
+                                <td class="px-2 sm:px-4 py-3 text-right text-slate-500 dark:text-zinc-400 text-sm hidden sm:table-cell">${peserta.x_score || 0}</td>
+                                <td class="px-2 sm:px-4 py-3 text-right ${scoreWeight} ${scoreColor}">${peserta.total_score || 0}</td>
                             </tr>
                         `;
                     });
 
                     tableHTML += `
-                            </tbody>
-                        </table>
+                                </tbody>
+                            </table>
+                        </div>
                         <div class="bg-slate-50 dark:bg-zinc-800 px-4 py-3 text-sm text-slate-500 dark:text-zinc-400 border-t border-slate-200 dark:border-zinc-700">
                             ${pesertaData.length} peserta • ${jumlahSesi} sesi × ${jumlahPanah} panah
                         </div>
@@ -2698,6 +2949,171 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     el.classList.add('score-high');
                 }
             }
+
+            // ========================================
+            // Mobile Score Keyboard Functions
+            // ========================================
+            let currentFocusedInput = null;
+            const isMobileDevice = () => window.innerWidth < 768;
+
+            function showMobileKeyboard(inputEl) {
+                if (!isMobileDevice()) return;
+
+                currentFocusedInput = inputEl;
+                const keyboard = document.getElementById('mobileScoreKeyboard');
+                if (keyboard) {
+                    keyboard.classList.add('active');
+                    document.body.classList.add('keyboard-active');
+
+                    // Update indicator
+                    const session = inputEl.getAttribute('data-session');
+                    const arrow = inputEl.getAttribute('data-arrow');
+                    document.getElementById('keyboardCurrentSession').textContent = session || '-';
+                    document.getElementById('keyboardCurrentArrow').textContent = arrow || '-';
+
+                    // Scroll input into view
+                    setTimeout(() => {
+                        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
+                }
+            }
+
+            function closeMobileKeyboard() {
+                const keyboard = document.getElementById('mobileScoreKeyboard');
+                if (keyboard) {
+                    keyboard.classList.remove('active');
+                    document.body.classList.remove('keyboard-active');
+                }
+                if (currentFocusedInput) {
+                    currentFocusedInput.blur();
+                }
+                currentFocusedInput = null;
+            }
+
+            function mobileKeyboardInput(value) {
+                if (!currentFocusedInput) return;
+
+                // Set the value
+                currentFocusedInput.value = value;
+
+                // Trigger the existing input handling
+                handleArrowInput(currentFocusedInput);
+
+                // Move to next input after a short delay
+                const playerId = currentFocusedInput.getAttribute('data-player-id');
+                const arrow = currentFocusedInput.getAttribute('data-arrow');
+                const session = currentFocusedInput.getAttribute('data-session');
+                const totalArrow = parseInt(currentFocusedInput.getAttribute('data-total-arrow'));
+
+                setTimeout(() => {
+                    moveToNextInput(currentFocusedInput, playerId, arrow, session, totalArrow);
+                    // Find and focus the next input for the keyboard
+                    const nextInput = findNextArrowInput(playerId, parseInt(arrow), parseInt(session), totalArrow);
+                    if (nextInput) {
+                        currentFocusedInput = nextInput;
+                        nextInput.focus();
+                        // Update indicator
+                        document.getElementById('keyboardCurrentSession').textContent = nextInput.getAttribute('data-session') || '-';
+                        document.getElementById('keyboardCurrentArrow').textContent = nextInput.getAttribute('data-arrow') || '-';
+                        // Scroll to next input
+                        nextInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 150);
+            }
+
+            function mobileKeyboardClear() {
+                if (!currentFocusedInput) return;
+                currentFocusedInput.value = '';
+                handleArrowInput(currentFocusedInput);
+            }
+
+            function findNextArrowInput(playerId, currentArrow, currentSession, totalArrow) {
+                let nextArrow = currentArrow;
+                let nextSession = currentSession;
+
+                if (nextArrow < totalArrow) {
+                    nextArrow++;
+                } else {
+                    nextArrow = 1;
+                    nextSession++;
+                }
+
+                const nextId = `${playerId}_a${nextArrow}_s${nextSession}`;
+                return document.getElementById(nextId);
+            }
+
+            // Attach focus/blur handlers to arrow inputs on mobile
+            function attachMobileKeyboardHandlers() {
+                if (!isMobileDevice()) return;
+
+                document.querySelectorAll('.arrow-input').forEach(input => {
+                    // Prevent native keyboard on mobile
+                    input.setAttribute('inputmode', 'none');
+                    input.setAttribute('readonly', 'readonly');
+
+                    input.addEventListener('focus', function(e) {
+                        showMobileKeyboard(this);
+                    });
+
+                    input.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        this.focus();
+                        showMobileKeyboard(this);
+                    });
+                });
+            }
+
+            // Re-attach handlers when new score cards are rendered
+            const originalRenderPlayerScoreCard = typeof renderPlayerScoreCard === 'function' ? renderPlayerScoreCard : null;
+
+            // Watch for new arrow inputs being added
+            const observeMobileKeyboard = new MutationObserver((mutations) => {
+                if (isMobileDevice()) {
+                    mutations.forEach(mutation => {
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeType === 1) {
+                                const inputs = node.querySelectorAll ? node.querySelectorAll('.arrow-input') : [];
+                                inputs.forEach(input => {
+                                    input.setAttribute('inputmode', 'none');
+                                    input.setAttribute('readonly', 'readonly');
+                                    input.addEventListener('focus', function() {
+                                        showMobileKeyboard(this);
+                                    });
+                                    input.addEventListener('click', function(e) {
+                                        e.preventDefault();
+                                        this.focus();
+                                        showMobileKeyboard(this);
+                                    });
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+
+            // Start observing when DOM is ready
+            document.addEventListener('DOMContentLoaded', function() {
+                attachMobileKeyboardHandlers();
+                const playersContainer = document.getElementById('playersContainer');
+                if (playersContainer) {
+                    observeMobileKeyboard.observe(playersContainer, { childList: true, subtree: true });
+                }
+            });
+
+            // Close keyboard when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!isMobileDevice()) return;
+                const keyboard = document.getElementById('mobileScoreKeyboard');
+                if (!keyboard) return;
+
+                const isKeyboardClick = keyboard.contains(e.target);
+                const isInputClick = e.target.classList.contains('arrow-input');
+
+                if (!isKeyboardClick && !isInputClick && keyboard.classList.contains('active')) {
+                    closeMobileKeyboard();
+                }
+            });
+            // ========================================
 
             function editScorecard() {
                 window.location.href = 'detail.php?action=scorecard&resource=form&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>';

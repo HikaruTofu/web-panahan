@@ -362,18 +362,110 @@ $role = $_SESSION['role'] ?? 'user';
                     </form>
                 </div>
 
-                <!-- Data Table -->
-                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
+                <!-- Mobile Card View -->
+                <div class="md:hidden space-y-3">
+                    <?php
+                    if ($result->num_rows > 0):
+                        $result->data_seek(0); // Reset pointer
+                        $mobileNo = 1;
+                        while ($row = $result->fetch_assoc()):
+                            $quota = (int)($row['max_participants'] ?? 0);
+                            $registered = (int)($row['registered_count'] ?? 0);
+                            $percentage = $quota > 0 ? min(100, round(($registered / $quota) * 100)) : 0;
+                            $isOverCapacity = $quota > 0 && $registered > $quota;
+                            $gender = $row['gender'] ?? 'Campuran';
+                    ?>
+                    <div class="bg-white dark:bg-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-700 p-4">
+                        <div class="flex items-start gap-3 mb-3">
+                            <span class="text-sm text-slate-400 dark:text-zinc-500 font-medium w-5"><?= $mobileNo++ ?></span>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($row['name']) ?></p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300"><?= $row['min_age'] ?>–<?= $row['max_age'] ?> th</span>
+                                    <?php if ($gender === 'Laki-laki'): ?>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                                        <i class="fas fa-mars"></i> Putra
+                                    </span>
+                                    <?php elseif ($gender === 'Perempuan'): ?>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400">
+                                        <i class="fas fa-venus"></i> Putri
+                                    </span>
+                                    <?php else: ?>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
+                                        <i class="fas fa-venus-mars"></i> Mix
+                                    </span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                        <?php if ($quota > 0): ?>
+                        <div class="border-t border-slate-100 dark:border-zinc-700 pt-3">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="flex-1 h-2 bg-slate-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full <?= $isOverCapacity ? 'bg-red-500' : ($percentage >= 80 ? 'bg-amber-500' : 'bg-archery-500') ?>" style="width: <?= min(100, $percentage) ?>%"></div>
+                                </div>
+                                <span class="text-xs font-medium <?= $isOverCapacity ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-zinc-400' ?>"><?= $registered ?>/<?= $quota ?></span>
+                            </div>
+                            <p class="text-xs <?= $isOverCapacity ? 'text-red-500' : ($percentage >= 80 ? 'text-amber-500' : 'text-slate-400 dark:text-zinc-500') ?>">
+                                <?php if ($isOverCapacity): ?>
+                                <i class="fas fa-exclamation-triangle"></i> Melebihi kuota!
+                                <?php elseif ($percentage >= 80): ?>
+                                <i class="fas fa-info-circle"></i> Hampir penuh (<?= $percentage ?>%)
+                                <?php else: ?>
+                                Tersedia <?= $quota - $registered ?> slot
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                        <?php else: ?>
+                        <div class="border-t border-slate-100 dark:border-zinc-700 pt-3">
+                            <span class="text-sm text-slate-600 dark:text-zinc-400"><?= $registered ?> terdaftar</span>
+                            <span class="text-xs text-slate-400 dark:text-zinc-500 ml-1">(tanpa batas)</span>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (isAdmin()): ?>
+                        <div class="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-slate-100 dark:border-zinc-700">
+                            <button onclick="editData(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>', <?= $row['min_age'] ?>, <?= $row['max_age'] ?>, '<?= addslashes($gender) ?>', <?= $quota ?>)"
+                                class="p-2 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteData(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>')"
+                                class="p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    <?php
+                        endwhile;
+                        $result->data_seek(0); // Reset for desktop table
+                    else:
+                    ?>
+                    <div class="py-12 text-center">
+                        <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-inbox text-slate-400 dark:text-zinc-500 text-2xl"></i>
+                        </div>
+                        <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada data kategori</p>
+                        <?php if (isAdmin()): ?>
+                        <button onclick="openModal('addModal')" class="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-archery-600 text-white text-sm font-medium hover:bg-archery-700">
+                            <i class="fas fa-plus"></i> Tambah Kategori
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Desktop Data Table -->
+                <div class="hidden md:block bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar">
-                        <table class="w-full">
+                        <table class="w-full min-w-[600px]">
                             <thead class="bg-slate-100 dark:bg-zinc-800 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-28">Rentang Umur</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-24">Gender</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-48">Kuota & Kapasitas</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-24">Aksi</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-10 sm:w-12">#</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Umur</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">L/P</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kuota</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
@@ -390,39 +482,39 @@ $role = $_SESSION['role'] ?? 'user';
                                 ?>
                                 <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
 
-                                    <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++; ?></td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-2 sm:px-4 py-2 sm:py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++; ?></td>
+                                    <td class="px-2 sm:px-4 py-2 sm:py-3">
 
-                                        <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($row['name']); ?></p>
+                                        <p class="font-medium text-slate-900 dark:text-white text-sm truncate max-w-[100px] sm:max-w-none"><?= htmlspecialchars($row['name']); ?></p>
 
                                         <p class="text-xs text-slate-400 dark:text-zinc-500">Lahir <?= date("Y") - $row['max_age']; ?> – <?= date("Y") - $row['min_age']; ?></p>
                                     </td>
-                                    <td class="px-4 py-3 text-center">
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300">
+                                    <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
+                                        <span class="inline-flex items-center px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300">
 
-                                            <?= $row['min_age']; ?> – <?= $row['max_age']; ?> th
+                                            <?= $row['min_age']; ?>–<?= $row['max_age']; ?>
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-center">
+                                    <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
 
                                         <?php if ($gender === 'Laki-laki'): ?>
-                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
-                                                <i class="fas fa-mars"></i> Putra
+                                            <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                                                <i class="fas fa-mars"></i><span class="hidden sm:inline"> Putra</span>
                                             </span>
 
                                         <?php elseif ($gender === 'Perempuan'): ?>
-                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400">
-                                                <i class="fas fa-venus"></i> Putri
+                                            <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400">
+                                                <i class="fas fa-venus"></i><span class="hidden sm:inline"> Putri</span>
                                             </span>
 
                                         <?php else: ?>
-                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
-                                                <i class="fas fa-venus-mars"></i> Campuran
+                                            <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
+                                                <i class="fas fa-venus-mars"></i><span class="hidden sm:inline"> Mix</span>
                                             </span>
 
                                         <?php endif; ?>
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-2 sm:px-4 py-2 sm:py-3">
 
                                         <?php if ($quota > 0): ?>
                                             <!-- Usage Bar -->
@@ -467,7 +559,7 @@ $role = $_SESSION['role'] ?? 'user';
 
                                         <?php endif; ?>
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-2 sm:px-4 py-2 sm:py-3">
                                         <div class="flex items-center justify-center gap-1">
                                             <?php if (isAdmin()): ?>
                                             <button onclick="editData(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>', <?= $row['min_age'] ?>, <?= $row['max_age'] ?>, '<?= addslashes($gender) ?>', <?= $quota ?>)"

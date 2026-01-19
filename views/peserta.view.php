@@ -1085,22 +1085,116 @@ $role = $_SESSION['role'] ?? 'user';
 
                 <?php endif; ?>
 
-                <!-- Data Table -->
-                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden transition-colors">
+                <!-- Mobile Card View -->
+                <div class="md:hidden space-y-3">
+                    <?php if (empty($pesertaGrouped)): ?>
+                    <div class="py-12 text-center">
+                        <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-inbox text-slate-400 dark:text-zinc-500 text-2xl"></i>
+                        </div>
+                        <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada data peserta</p>
+                        <p class="text-slate-400 dark:text-zinc-500 text-sm">Ubah filter pencarian atau tambah peserta baru</p>
+                    </div>
+                    <?php else: ?>
+                    <?php
+                    $mobileNo = $offset + 1;
+                    foreach ($pesertaGroupedPaginated as $key => $group):
+                        $nama = $group['display_name'];
+                        $pMobile = $group['data'];
+                        $recordCount = count($group['all_records']);
+
+                        $umurMobile = "-";
+                        if (!empty($pMobile['tanggal_lahir'])) {
+                            $dob = new DateTime($pMobile['tanggal_lahir']);
+                            $today = new DateTime();
+                            $umurMobile = $today->diff($dob)->y . " th";
+                        }
+
+                        $hasBayarMobile = !empty($pMobile['bukti_pembayaran']);
+                    ?>
+                    <div class="bg-white dark:bg-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-700 p-4">
+                        <div class="flex items-start gap-3 mb-3">
+                            <span class="text-sm text-slate-400 dark:text-zinc-500 font-medium w-6"><?= $mobileNo++ ?></span>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <p class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($nama) ?></p>
+                                    <?php if ($recordCount > 1): ?>
+                                    <span class="px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">x<?= $recordCount ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs <?= $pMobile['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400' ?>">
+                                        <?= $pMobile['jenis_kelamin'] == 'Laki-laki' ? 'L' : 'P' ?>
+                                    </span>
+                                    <span class="text-sm text-slate-500 dark:text-zinc-400"><?= $umurMobile ?></span>
+                                </div>
+                            </div>
+                            <div>
+                                <?php if ($hasBayarMobile): ?>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                                    <i class="fas fa-check-circle"></i>
+                                </span>
+                                <?php else: ?>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                    <i class="fas fa-clock"></i>
+                                </span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-1 mb-3">
+                            <?php if (!empty($group['categories'])): ?>
+                            <?php foreach ($group['categories'] as $cat): ?>
+                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400"><?= htmlspecialchars($cat) ?></span>
+                            <?php endforeach; ?>
+                            <?php endif; ?>
+                            <?php if (!empty($group['kegiatan'])): ?>
+                            <?php foreach ($group['kegiatan'] as $keg): ?>
+                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"><?= htmlspecialchars($keg) ?></span>
+                            <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-sm border-t border-slate-100 dark:border-zinc-700 pt-3">
+                            <div class="truncate">
+                                <span class="text-slate-400 dark:text-zinc-500">Club:</span>
+                                <span class="text-slate-700 dark:text-zinc-300 ml-1"><?= htmlspecialchars($pMobile['nama_club'] ?? '-') ?></span>
+                            </div>
+                            <div class="truncate">
+                                <span class="text-slate-400 dark:text-zinc-500">Sekolah:</span>
+                                <span class="text-slate-700 dark:text-zinc-300 ml-1"><?= htmlspecialchars($pMobile['sekolah'] ?? '-') ?></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-slate-100 dark:border-zinc-700">
+                            <?php if ($recordCount > 1): ?>
+                            <button type="button" onclick="showDetails(<?= htmlspecialchars(json_encode($group['all_records'])) ?>)" class="p-2 rounded-lg text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/30"><i class="fas fa-eye"></i></button>
+                            <?php endif; ?>
+                            <?php if (canInputScore()): ?>
+                            <button type="button" onclick="editPeserta(<?= htmlspecialchars(json_encode($pMobile)) ?>)" class="p-2 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30"><i class="fas fa-edit"></i></button>
+                            <?php endif; ?>
+                            <?php if (isAdmin()): ?>
+                            <button type="button" onclick="confirmDelete(<?= $pMobile['id'] ?>, '<?= htmlspecialchars($nama, ENT_QUOTES) ?>')" class="p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"><i class="fas fa-trash-alt"></i></button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Desktop Data Table -->
+                <div class="hidden md:block bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden transition-colors">
                     <div class="overflow-x-auto custom-scrollbar" style="max-height: 65vh;">
-                        <table class="w-full">
+                        <table class="w-full min-w-[800px]">
                             <thead class="bg-slate-100 dark:bg-zinc-800 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Nama</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kegiatan</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Umur</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Gender</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Club</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Sekolah</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Status</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Aksi</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-10 sm:w-12">#</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Nama</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Kegiatan</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Umur</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">L/P</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Club</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Sekolah</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
@@ -1138,14 +1232,14 @@ $role = $_SESSION['role'] ?? 'user';
                                     ?>
                                         <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
 
-                                            <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++ ?></td>
-                                            <td class="px-4 py-3">
-                                                <div class="flex items-center gap-2">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++ ?></td>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
+                                                <div class="flex items-center gap-1 sm:gap-2">
 
-                                                    <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($nama) ?></p>
+                                                    <p class="font-medium text-slate-900 dark:text-white text-sm truncate max-w-[100px] sm:max-w-none"><?= htmlspecialchars($nama) ?></p>
 
                                                     <?php if ($recordCount > 1): ?>
-                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                                        <span class="inline-flex items-center px-1 sm:px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
 
                                                             x<?= $recordCount ?>
                                                         </span>
@@ -1153,16 +1247,16 @@ $role = $_SESSION['role'] ?? 'user';
                                                     <?php endif; ?>
                                                 </div>
 
-                                                <p class="text-xs text-slate-400 dark:text-zinc-500">ID: <?= implode(', ', $group['ids']) ?></p>
+                                                <p class="text-xs text-slate-400 dark:text-zinc-500 truncate max-w-[100px] sm:max-w-none">ID: <?= implode(', ', $group['ids']) ?></p>
                                             </td>
-                                            <td class="px-4 py-3">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
 
                                                 <?php if (!empty($group['categories'])): ?>
                                                     <div class="flex flex-wrap gap-1">
 
                                                         <?php foreach ($group['categories'] as $cat): ?>
 
-                                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400"><?= htmlspecialchars($cat) ?></span>
+                                                    <span class="inline-flex px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 truncate max-w-[60px] sm:max-w-none"><?= htmlspecialchars($cat) ?></span>
 
                                                         <?php endforeach; ?>
                                                     </div>
@@ -1172,14 +1266,14 @@ $role = $_SESSION['role'] ?? 'user';
 
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="px-4 py-3">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
 
                                                 <?php if (!empty($group['kegiatan'])): ?>
                                                     <div class="flex flex-wrap gap-1">
 
                                                         <?php foreach ($group['kegiatan'] as $keg): ?>
 
-                                                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"><?= htmlspecialchars($keg) ?></span>
+                                                            <span class="inline-flex px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 truncate max-w-[60px] sm:max-w-none"><?= htmlspecialchars($keg) ?></span>
 
                                                         <?php endforeach; ?>
                                                     </div>
@@ -1190,10 +1284,10 @@ $role = $_SESSION['role'] ?? 'user';
                                                 <?php endif; ?>
                                             </td>
 
-                                            <td class="px-4 py-3 text-center text-sm text-slate-600 dark:text-zinc-400"><?= $umur ?></td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm text-slate-600 dark:text-zinc-400"><?= $umur ?></td>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
 
-                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400' ?>">
+                                                <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400' ?>">
 
                                                     <i class="fas <?= $p['jenis_kelamin'] == 'Laki-laki' ? 'fa-mars' : 'fa-venus' ?> text-xs"></i>
 
@@ -1201,34 +1295,34 @@ $role = $_SESSION['role'] ?? 'user';
                                                 </span>
                                             </td>
 
-                                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-zinc-400 max-w-32 truncate" title="<?= htmlspecialchars($p['nama_club'] ?? '') ?>">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-slate-600 dark:text-zinc-400 max-w-[60px] sm:max-w-32 truncate" title="<?= htmlspecialchars($p['nama_club'] ?? '') ?>">
 
                                                 <?= htmlspecialchars($p['nama_club'] ?? '-') ?>
                                             </td>
 
-                                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-zinc-400 max-w-32 truncate" title="<?= htmlspecialchars($p['sekolah'] ?? '') ?>">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-slate-600 dark:text-zinc-400 max-w-[60px] sm:max-w-32 truncate" title="<?= htmlspecialchars($p['sekolah'] ?? '') ?>">
 
                                                 <?= htmlspecialchars($p['sekolah'] ?? '-') ?>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
 
                                                 <?php if ($hasBayar): ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
-                                                        <i class="fas fa-check-circle"></i> Lunas
+                                                    <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                                                        <i class="fas fa-check-circle"></i><span class="hidden sm:inline"> Lunas</span>
                                                     </span>
 
-                                                    <button onclick="showImage('payment', '../assets/uploads/<?= htmlspecialchars($p['bukti_pembayaran']) ?>', '<?= htmlspecialchars($nama) ?>')" class="block mx-auto mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                                                    <button onclick="showImage('payment', '../assets/uploads/<?= htmlspecialchars($p['bukti_pembayaran']) ?>', '<?= htmlspecialchars($nama) ?>')" class="block mx-auto mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline hidden sm:block">
                                                         Lihat Bukti
                                                     </button>
 
                                                 <?php else: ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
-                                                        <i class="fas fa-clock"></i> Pending
+                                                    <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                                        <i class="fas fa-clock"></i><span class="hidden sm:inline"> Pending</span>
                                                     </span>
 
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
                                                 <div class="flex items-center justify-center gap-1">
 
                                                     <?php if ($recordCount > 1): ?>

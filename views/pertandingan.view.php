@@ -577,49 +577,113 @@ $role = $_SESSION['role'] ?? 'user';
                     </div>
                 <?php endif; ?>
 
-                <!-- Data Table -->
-                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <!-- Mobile Card View -->
+                <div class="md:hidden space-y-3 mb-6">
+                    <?php if (count($filteredParticipants) > 0): ?>
+                        <?php foreach ($filteredParticipants as $index => $participant): ?>
+                            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                                <!-- Header: Number & Name -->
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <span class="flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
+                                            <?= $index + 1 ?>
+                                        </span>
+                                        <div>
+                                            <p class="font-semibold text-slate-900 text-sm"><?= htmlspecialchars($participant['nama_peserta'] ?? '') ?></p>
+                                            <p class="text-xs text-slate-500 flex items-center gap-1">
+                                                <i class="fas <?= ($participant['jenis_kelamin'] ?? '') == 'Laki-laki' ? 'fa-mars text-blue-500' : 'fa-venus text-pink-500' ?>"></i>
+                                                <?= htmlspecialchars($participant['jenis_kelamin'] ?? '') ?>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <!-- Bantalan Badge -->
+                                    <div class="flex items-center gap-1">
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-archery-600 text-white text-sm font-bold shadow-sm">
+                                            <?= $participant['randomNumber'] ?>
+                                        </span>
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-600 text-white text-sm font-bold shadow-sm">
+                                            <?= $participant['randomLetter'] ?>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Details Grid -->
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div class="bg-slate-50 rounded-lg p-2">
+                                        <p class="text-slate-400 mb-0.5">Club</p>
+                                        <p class="text-slate-700 font-medium truncate"><?= htmlspecialchars($participant['nama_club'] ?? '-') ?></p>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-lg p-2">
+                                        <p class="text-slate-400 mb-0.5">Kota</p>
+                                        <p class="text-slate-700 font-medium truncate"><?= htmlspecialchars($participant['asal_kota'] ?? '-') ?></p>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-lg p-2">
+                                        <p class="text-slate-400 mb-0.5">Kategori</p>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <?= htmlspecialchars($categoriesData[$participant['category_id']] ?? "Kat {$participant['category_id']}") ?>
+                                        </span>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-lg p-2">
+                                        <p class="text-slate-400 mb-0.5">Kegiatan</p>
+                                        <p class="text-slate-700 font-medium truncate"><?= htmlspecialchars($kegiatanData[$participant['kegiatan_id']] ?? "Keg {$participant['kegiatan_id']}") ?></p>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="bg-white rounded-xl border border-slate-200 p-8 text-center">
+                            <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-users text-slate-400 text-2xl"></i>
+                            </div>
+                            <p class="text-slate-500 font-medium">Tidak ada peserta yang sesuai dengan filter</p>
+                            <p class="text-slate-400 text-sm">Ubah filter untuk melihat peserta lainnya</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Desktop Data Table -->
+                <div class="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar" style="max-height: 60vh;">
-                        <table class="w-full">
+                        <table class="w-full min-w-[700px]">
                             <thead class="bg-zinc-800 text-white sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama Peserta</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Club</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Asal Kota</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kategori</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Kegiatan</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Bantalan</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider w-10 sm:w-12">#</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider">Nama</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider">Club</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider">Kota</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider">Kategori</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider">Kegiatan</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold uppercase tracking-wider">Bantalan</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 <?php if (count($filteredParticipants) > 0): ?>
                                     <?php foreach ($filteredParticipants as $index => $participant): ?>
                                         <tr class="hover:bg-slate-50 transition-colors">
-                                            <td class="px-4 py-3 text-sm text-slate-500"><?php echo $index + 1; ?></td>
-                                            <td class="px-4 py-3">
-                                                <p class="font-medium text-slate-900"><?php echo htmlspecialchars($participant['nama_peserta'] ?? ''); ?></p>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-sm text-slate-500"><?php echo $index + 1; ?></td>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
+                                                <p class="font-medium text-slate-900 text-sm truncate max-w-[100px] sm:max-w-none"><?php echo htmlspecialchars($participant['nama_peserta'] ?? ''); ?></p>
                                                 <p class="text-xs text-slate-500">
                                                     <i class="fas <?php echo ($participant['jenis_kelamin'] ?? '') == 'Laki-laki' ? 'fa-mars text-blue-500' : 'fa-venus text-pink-500'; ?> mr-1"></i>
-                                                    <?php echo htmlspecialchars($participant['jenis_kelamin'] ?? ''); ?>
+                                                    <span class="hidden sm:inline"><?php echo htmlspecialchars($participant['jenis_kelamin'] ?? ''); ?></span>
                                                 </p>
                                             </td>
-                                            <td class="px-4 py-3 text-sm text-slate-600"><?php echo htmlspecialchars($participant['nama_club'] ?? '-'); ?></td>
-                                            <td class="px-4 py-3 text-sm text-slate-600"><?php echo htmlspecialchars($participant['asal_kota'] ?? '-'); ?></td>
-                                            <td class="px-4 py-3">
-                                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                    <?php echo htmlspecialchars($categoriesData[$participant['category_id']] ?? "Kategori {$participant['category_id']}"); ?>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-slate-600 truncate max-w-[60px] sm:max-w-none"><?php echo htmlspecialchars($participant['nama_club'] ?? '-'); ?></td>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-slate-600 truncate max-w-[60px] sm:max-w-none"><?php echo htmlspecialchars($participant['asal_kota'] ?? '-'); ?></td>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
+                                                <span class="inline-flex items-center px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 truncate max-w-[60px] sm:max-w-none">
+                                                    <?php echo htmlspecialchars($categoriesData[$participant['category_id']] ?? "Kat {$participant['category_id']}"); ?>
                                                 </span>
                                             </td>
-                                            <td class="px-4 py-3 text-sm text-slate-600">
-                                                <?php echo htmlspecialchars($kegiatanData[$participant['kegiatan_id']] ?? "Kegiatan {$participant['kegiatan_id']}"); ?>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-slate-600 truncate max-w-[60px] sm:max-w-none">
+                                                <?php echo htmlspecialchars($kegiatanData[$participant['kegiatan_id']] ?? "Keg {$participant['kegiatan_id']}"); ?>
                                             </td>
-                                            <td class="px-4 py-3">
-                                                <div class="flex items-center justify-center gap-1">
-                                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-archery-600 text-white text-sm font-bold shadow-sm">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
+                                                <div class="flex items-center justify-center gap-0.5 sm:gap-1">
+                                                    <span class="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-archery-600 text-white text-xs sm:text-sm font-bold shadow-sm">
                                                         <?php echo $participant['randomNumber']; ?>
                                                     </span>
-                                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-600 text-white text-sm font-bold shadow-sm">
+                                                    <span class="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-emerald-600 text-white text-xs sm:text-sm font-bold shadow-sm">
                                                         <?php echo $participant['randomLetter']; ?>
                                                     </span>
                                                 </div>

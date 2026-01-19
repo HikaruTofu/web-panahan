@@ -399,18 +399,86 @@ $role = $_SESSION['role'] ?? 'user';
                     </form>
                 </div>
 
-                <!-- Data Table -->
-                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+                <!-- Mobile Card View -->
+                <div class="md:hidden space-y-3">
+                    <?php if (count($users) > 0): ?>
+                    <?php $mobileNo = 1; foreach ($users as $row): ?>
+                    <?php $roleLower = strtolower($row['role']); ?>
+                    <div class="bg-white dark:bg-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-700 p-4">
+                        <div class="flex items-center gap-3 mb-3">
+                            <span class="text-sm text-slate-400 dark:text-zinc-500 font-medium w-5"><?= $mobileNo++ ?></span>
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-archery-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                                <?= strtoupper(substr($row['name'], 0, 1)) ?>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-slate-900 dark:text-white"><?= htmlspecialchars($row['name']) ?></p>
+                                <p class="text-sm text-slate-500 dark:text-zinc-400 truncate"><?= htmlspecialchars($row['email']) ?></p>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between border-t border-slate-100 dark:border-zinc-700 pt-3">
+                            <div class="flex items-center gap-2">
+                                <?php if ($roleLower === 'admin'): ?>
+                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
+                                    <i class="fas fa-shield-alt"></i> Admin
+                                </span>
+                                <?php elseif ($roleLower === 'operator'): ?>
+                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                                    <i class="fas fa-user-cog"></i> Operator
+                                </span>
+                                <?php elseif ($roleLower === 'petugas'): ?>
+                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                    <i class="fas fa-user-tie"></i> Petugas
+                                </span>
+                                <?php else: ?>
+                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400">
+                                    <i class="fas fa-eye"></i> <?= ucfirst($row['role']) ?>
+                                </span>
+                                <?php endif; ?>
+                                <?php if (strtolower($row['status'] ?? 'active') === 'active'): ?>
+                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                                    <i class="fas fa-check-circle"></i>
+                                </span>
+                                <?php else: ?>
+                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-500 dark:text-zinc-400">
+                                    <i class="fas fa-pause-circle"></i>
+                                </span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <button onclick="editUser(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>', '<?= addslashes($row['email']) ?>', '<?= addslashes($row['role']) ?>', '<?= addslashes($row['status'] ?? 'active') ?>')"
+                                    class="p-2 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteUser(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>')"
+                                    class="p-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                    <?php else: ?>
+                    <div class="py-12 text-center">
+                        <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-users text-slate-400 dark:text-zinc-500 text-2xl"></i>
+                        </div>
+                        <p class="text-slate-500 dark:text-zinc-400 font-medium">Tidak ada user ditemukan</p>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Desktop Data Table -->
+                <div class="hidden md:block bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden shadow-sm">
                     <div class="overflow-x-auto custom-scrollbar">
-                        <table class="w-full">
+                        <table class="w-full min-w-[600px]">
                             <thead class="bg-slate-100 dark:bg-zinc-800 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-12">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">User</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Email</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-28">Role</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-28">Status</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-24">Aksi</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider w-10 sm:w-12">#</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">User</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Email</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Role</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs font-semibold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-zinc-800">
@@ -420,58 +488,58 @@ $role = $_SESSION['role'] ?? 'user';
                                     <?php $no = 1; foreach ($users as $row): ?>
                                         <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
 
-                                            <td class="px-4 py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++ ?></td>
-                                            <td class="px-4 py-3">
-                                                <div class="flex items-center gap-3">
-                                                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-archery-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-sm text-slate-500 dark:text-zinc-400"><?= $no++ ?></td>
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
+                                                <div class="flex items-center gap-2 sm:gap-3">
+                                                    <div class="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-archery-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
 
                                                         <?= strtoupper(substr($row['name'], 0, 1)) ?>
                                                     </div>
 
-                                                    <p class="font-medium text-slate-900 dark:text-white"><?= htmlspecialchars($row['name']) ?></p>
+                                                    <p class="font-medium text-slate-900 dark:text-white text-sm truncate max-w-[80px] sm:max-w-none"><?= htmlspecialchars($row['name']) ?></p>
                                                 </div>
                                             </td>
-                                            <td class="px-4 py-3">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
 
-                                                <span class="text-sm text-slate-600 dark:text-zinc-400"><?= htmlspecialchars($row['email']) ?></span>
+                                                <span class="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 truncate max-w-[100px] sm:max-w-none block"><?= htmlspecialchars($row['email']) ?></span>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
 
-                                                <?php 
+                                                <?php
                                                 $roleLower = strtolower($row['role']);
                                                 if ($roleLower === 'admin'): ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
-                                                        <i class="fas fa-shield-alt"></i> Admin
+                                                    <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
+                                                        <i class="fas fa-shield-alt"></i><span class="hidden sm:inline"> Admin</span>
                                                     </span>
                                                 <?php elseif ($roleLower === 'operator'): ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
-                                                        <i class="fas fa-user-cog"></i> Operator
+                                                    <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                                                        <i class="fas fa-user-cog"></i><span class="hidden sm:inline"> Operator</span>
                                                     </span>
                                                 <?php elseif ($roleLower === 'petugas'): ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
-                                                        <i class="fas fa-user-tie"></i> Petugas
+                                                    <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                                                        <i class="fas fa-user-tie"></i><span class="hidden sm:inline"> Petugas</span>
                                                     </span>
                                                 <?php else: ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400">
-                                                        <i class="fas fa-eye"></i> <?= ucfirst($row['role']) ?>
+                                                    <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-400">
+                                                        <i class="fas fa-eye"></i><span class="hidden sm:inline"> <?= ucfirst($row['role']) ?></span>
                                                     </span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="px-4 py-3 text-center">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3 text-center">
 
                                                 <?php if (strtolower($row['status'] ?? 'active') === 'active'): ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
-                                                        <i class="fas fa-check-circle"></i> Aktif
+                                                    <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                                                        <i class="fas fa-check-circle"></i><span class="hidden sm:inline"> Aktif</span>
                                                     </span>
 
                                                 <?php else: ?>
-                                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-500 dark:text-zinc-400">
-                                                        <i class="fas fa-pause-circle"></i> Nonaktif
+                                                    <span class="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-zinc-700 text-slate-500 dark:text-zinc-400">
+                                                        <i class="fas fa-pause-circle"></i><span class="hidden sm:inline"> Nonaktif</span>
                                                     </span>
 
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="px-4 py-3">
+                                            <td class="px-2 sm:px-4 py-2 sm:py-3">
                                                 <div class="flex items-center justify-center gap-1">
 
                                                     <button onclick="editUser(<?= $row['id'] ?>, '<?= addslashes($row['name']) ?>', '<?= addslashes($row['email']) ?>', '<?= addslashes($row['role']) ?>', '<?= addslashes($row['status'] ?? 'active') ?>')"
