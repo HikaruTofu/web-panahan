@@ -763,11 +763,14 @@ $role = $_SESSION['role'] ?? 'user';
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-1">
+                <?php if (!isViewer()): ?>
                 <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     <i class="fas fa-home w-5"></i>
                     <span class="text-sm">Dashboard</span>
                 </a>
+                <?php endif; ?>
 
+                <?php if (!isViewer()): ?>
                 <div class="pt-4">
                     <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
                     <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
@@ -779,6 +782,7 @@ $role = $_SESSION['role'] ?? 'user';
                         <span class="text-sm">Kategori</span>
                     </a>
                 </div>
+                <?php endif; ?>
 
                 <div class="pt-4">
                     <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
@@ -786,10 +790,12 @@ $role = $_SESSION['role'] ?? 'user';
                         <i class="fas fa-calendar w-5"></i>
                         <span class="text-sm">Kegiatan</span>
                     </a>
+                    <?php if (!isViewer()): ?>
                     <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                         <i class="fas fa-user-friends w-5"></i>
                         <span class="text-sm">Peserta</span>
                     </a>
+                    <?php endif; ?>
                     <a href="statistik.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
                         <i class="fas fa-chart-bar w-5"></i>
                         <span class="text-sm font-medium">Statistik</span>
@@ -839,9 +845,15 @@ $role = $_SESSION['role'] ?? 'user';
                     <div class="px-6 py-4 border-b border-slate-100 dark:border-zinc-800">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div class="flex items-center gap-3">
+                                <?php if (!isViewer()): ?>
                                 <a href="dashboard.php" class="p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
                                     <i class="fas fa-arrow-left"></i>
                                 </a>
+                                <?php else: ?>
+                                <a href="kegiatan.view.php" class="p-2 rounded-lg text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
+                                    <i class="fas fa-arrow-left"></i>
+                                </a>
+                                <?php endif; ?>
                                 <div>
                                     <h1 class="text-lg font-semibold text-slate-900 dark:text-white">Statistik & Penilaian</h1>
                                     <p class="text-sm text-slate-500 dark:text-zinc-400">Analisis performa peserta turnamen</p>
@@ -1298,10 +1310,13 @@ $role = $_SESSION['role'] ?? 'user';
             </button>
         </div>
         <nav class="px-4 py-6 space-y-1">
+            <?php if (!isViewer()): ?>
             <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                 <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
             </a>
+            <?php endif; ?>
 
+            <?php if (!isViewer()): ?>
             <div class="pt-4">
                 <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
                 <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
@@ -1311,15 +1326,18 @@ $role = $_SESSION['role'] ?? 'user';
                     <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
                 </a>
             </div>
+            <?php endif; ?>
 
             <div class="pt-4">
                 <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
                 <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     <i class="fas fa-calendar w-5"></i><span class="text-sm">Kegiatan</span>
                 </a>
+                <?php if (!isViewer()): ?>
                 <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
                 </a>
+                <?php endif; ?>
                 <a href="statistik.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
                     <i class="fas fa-chart-bar w-5"></i><span class="text-sm font-medium">Statistik</span>
                 </a>

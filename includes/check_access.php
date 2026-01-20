@@ -24,6 +24,17 @@ function isPetugas() {
     return isset($_SESSION['role']) && $_SESSION['role'] === 'petugas';
 }
 
+// Fungsi untuk cek apakah user adalah viewer (read-only/guest access)
+function isViewer() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'viewer';
+}
+
+// Fungsi untuk cek apakah user bisa melakukan aksi (bukan viewer)
+function canPerformActions() {
+    // Viewer tidak bisa melakukan input/edit/delete
+    return isset($_SESSION['role']) && $_SESSION['role'] !== 'viewer';
+}
+
 // Fungsi untuk cek apakah user bisa input score (admin, operator, petugas)
 function canInputScore() {
     $allowedRoles = ['admin', 'operator', 'petugas'];
@@ -53,8 +64,21 @@ function requireAdmin() {
 // Fungsi untuk cek akses halaman
 function checkPageAccess($currentPage) {
     requireLogin(); // Pastikan user sudah login
-    
-    // Daftar halaman yang bisa diakses semua user
+
+    // Jika admin, bisa akses semua halaman
+    if (isAdmin()) {
+        return true;
+    }
+
+    // Halaman yang bisa diakses viewer (read-only)
+    $viewerAllowed = [
+        'kegiatan.view.php',
+        'statistik.php',
+        'detail.php',
+        'logout.php'
+    ];
+
+    // Daftar halaman yang bisa diakses semua user (kecuali viewer yang lebih terbatas)
     $allowedForAll = [
         'kegiatan.view.php',
         'peserta.view.php',
@@ -63,18 +87,23 @@ function checkPageAccess($currentPage) {
         'logout.php',
         'profile.php' // jika ada halaman profile
     ];
-    
-    // Jika admin, bisa akses semua halaman
-    if (isAdmin()) {
+
+    // Jika viewer, hanya bisa akses halaman tertentu
+    if (isViewer()) {
+        if (!in_array($currentPage, $viewerAllowed)) {
+            session_write_close();
+            header('Location: kegiatan.view.php');
+            exit;
+        }
         return true;
     }
-    
-    // Jika bukan admin, cek apakah halaman diizinkan
+
+    // Jika bukan admin dan bukan viewer, cek apakah halaman diizinkan
     if (!in_array($currentPage, $allowedForAll)) {
         session_write_close();
         header('Location: kegiatan.view.php');
         exit;
     }
-    
+
     return true;
 }

@@ -258,11 +258,14 @@ $role = $_SESSION['role'] ?? 'user';
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-1">
+                <?php if (!isViewer()): ?>
                 <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     <i class="fas fa-home w-5"></i>
                     <span class="text-sm">Dashboard</span>
                 </a>
+                <?php endif; ?>
 
+                <?php if (!isViewer()): ?>
                 <div class="pt-4">
                     <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
                     <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
@@ -274,6 +277,7 @@ $role = $_SESSION['role'] ?? 'user';
                         <span class="text-sm">Kategori</span>
                     </a>
                 </div>
+                <?php endif; ?>
 
                 <div class="pt-4">
                     <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
@@ -281,10 +285,12 @@ $role = $_SESSION['role'] ?? 'user';
                         <i class="fas fa-calendar w-5"></i>
                         <span class="text-sm font-medium">Kegiatan</span>
                     </a>
+                    <?php if (!isViewer()): ?>
                     <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                         <i class="fas fa-user-friends w-5"></i>
                         <span class="text-sm">Peserta</span>
                     </a>
+                    <?php endif; ?>
                     <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                         <i class="fas fa-chart-bar w-5"></i>
                         <span class="text-sm">Statistik</span>
@@ -489,9 +495,11 @@ $role = $_SESSION['role'] ?? 'user';
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center justify-center gap-1">
 
+                                                    <?php if (canPerformActions()): ?>
                                                     <a href="peserta.view.php?add_peserta=1&kegiatan_id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors">
                                                         <i class="fas fa-user-plus text-xs"></i> Daftar
                                                     </a>
+                                                    <?php endif; ?>
 
                                                     <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
                                                         <i class="fas fa-eye text-xs"></i> Detail
@@ -583,9 +591,11 @@ $role = $_SESSION['role'] ?? 'user';
                                 </div>
                                 <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
 
+                                    <?php if (canPerformActions()): ?>
                                     <a href="peserta.view.php?add_peserta=1&kegiatan_id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium">
                                         <i class="fas fa-user-plus"></i> Daftar
                                     </a>
+                                    <?php endif; ?>
 
                                     <a href="detail.php?id=<?php echo $item['id']?>" class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium">
                                         <i class="fas fa-eye"></i> Detail
@@ -700,10 +710,13 @@ $role = $_SESSION['role'] ?? 'user';
             </button>
         </div>
         <nav class="px-4 py-6 space-y-1">
+            <?php if (!isViewer()): ?>
             <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                 <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
             </a>
+            <?php endif; ?>
 
+            <?php if (!isViewer()): ?>
             <div class="pt-4">
                 <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
                 <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
@@ -713,15 +726,18 @@ $role = $_SESSION['role'] ?? 'user';
                     <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
                 </a>
             </div>
+            <?php endif; ?>
 
             <div class="pt-4">
                 <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
                 <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30">
                     <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
                 </a>
+                <?php if (!isViewer()): ?>
                 <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
                 </a>
+                <?php endif; ?>
                 <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
                 </a>

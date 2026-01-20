@@ -475,6 +475,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     </div>
                 </div>
                 <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+                    <?php if (!isViewer()): ?>
                     <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                         <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
                     </a>
@@ -487,14 +488,17 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                             <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
                         </a>
                     </div>
+                    <?php endif; ?>
                     <div class="pt-4">
                         <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
                         <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30 transition-colors">
                             <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
                         </a>
+                        <?php if (!isViewer()): ?>
                         <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                             <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
                         </a>
+                        <?php endif; ?>
                         <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                             <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
                         </a>
@@ -564,6 +568,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                         </div>
 
                         <!-- Setup Container -->
+            <?php if (canPerformActions()): ?>
             <div class="bg-zinc-800 rounded-xl p-8 text-center max-w-md mx-auto border border-zinc-700" id="setupContainer">
                 <p class="text-slate-400 mb-6">Pilih ukuran bracket</p>
 
@@ -579,9 +584,16 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                     Mulai Bracket
                 </button>
             </div>
+            <?php else: ?>
+            <div class="bg-zinc-800 rounded-xl p-8 text-center max-w-md mx-auto border border-zinc-700">
+                <i class="fas fa-eye text-slate-500 text-4xl mb-4"></i>
+                <p class="text-slate-400">Mode tampilan saja. Anda tidak memiliki akses untuk mengelola bracket.</p>
+            </div>
+            <?php endif; ?>
 
             <!-- Bracket Container -->
             <div class="hidden mt-6 overflow-x-auto custom-scrollbar" id="bracketContainer">
+                <?php if (canPerformActions()): ?>
                 <div class="flex items-center justify-between mb-6 no-print">
                     <button class="px-4 py-2 rounded-lg text-sm font-medium bg-archery-600 text-white hover:bg-archery-700 transition-colors"
                             id="generateBtn" onclick="generateBracket()">
@@ -592,6 +604,7 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                         <i class="fas fa-redo mr-2"></i> Reset
                     </button>
                 </div>
+                <?php endif; ?>
 
                 <div id="bracketContent">
                     <!-- Bracket akan di-generate di sini -->
@@ -627,10 +640,13 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                 </button>
             </div>
             <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+                <?php if (!isViewer()): ?>
                 <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
                 </a>
+                <?php endif; ?>
 
+                <?php if (!isViewer()): ?>
                 <div class="pt-4">
                     <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Master Data</p>
                     <a href="users.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
@@ -640,15 +656,18 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
                         <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
                     </a>
                 </div>
+                <?php endif; ?>
 
                 <div class="pt-4">
                     <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
                     <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30 transition-colors">
                         <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
                     </a>
+                    <?php if (!isViewer()): ?>
                     <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                         <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
                     </a>
+                    <?php endif; ?>
                     <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                         <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
                     </a>
@@ -1297,8 +1316,8 @@ if (isset($_GET['aduan']) && $_GET['aduan'] == 'true') {
 // HANDLER UNTUK SCORECARD SETUP
 // ============================================
 if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
-    // Allow public access for ranking view, require auth for everything else
-    if (!$isPublicRankingView && !canInputScore()) {
+    // Allow public access for ranking view, viewers for read-only access, require auth for everything else
+    if (!$isPublicRankingView && !canInputScore() && !isViewer()) {
         header("Location: detail.php?id=" . intval($_GET['kegiatan_id'] ?? 0));
         exit;
     }
@@ -1730,6 +1749,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                     </div>
                 </div>
                 <nav class="flex-1 px-4 py-6 space-y-1">
+                    <?php if (!isViewer()): ?>
                     <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                         <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
                     </a>
@@ -1742,14 +1762,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                             <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
                         </a>
                     </div>
+                    <?php endif; ?>
                     <div class="pt-4">
                         <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
                         <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30 transition-colors">
                             <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
                         </a>
+                        <?php if (!isViewer()): ?>
                         <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                             <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
                         </a>
+                        <?php endif; ?>
                         <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                             <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
                         </a>
@@ -1943,10 +1966,17 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors">
                                                             <i class="fas fa-trophy text-xs"></i> Ranking
                                                         </a>
+                                                        <?php if (canInputScore()): ?>
                                                         <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>"
                                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-archery-600 text-white text-xs font-medium hover:bg-archery-700 transition-colors">
                                                             <i class="fas fa-edit text-xs"></i> Input
                                                         </a>
+                                                        <?php else: ?>
+                                                        <a href="detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>&rangking=true"
+                                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-archery-600 text-white text-xs font-medium hover:bg-archery-700 transition-colors">
+                                                            <i class="fas fa-eye text-xs"></i> Lihat Data
+                                                        </a>
+                                                        <?php endif; ?>
                                                         <a href="detail.php?aduan=true&kegiatan_id=<?= $kegiatan_id ?>&category_id=<?= $category_id ?>&scoreboard=<?= $a['id'] ?>"
                                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors">
                                                             <i class="fas fa-sitemap text-xs"></i> Aduan
@@ -3226,6 +3256,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 </button>
             </div>
             <nav class="flex-1 px-4 py-6 space-y-1">
+                <?php if (!isViewer()): ?>
                 <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                     <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
                 </a>
@@ -3235,12 +3266,15 @@ if (isset($_GET['action']) && $_GET['action'] == 'scorecard') {
                 <a href="categori.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                     <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
                 </a>
+                <?php endif; ?>
                 <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400">
                     <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
                 </a>
+                <?php if (!isViewer()): ?>
                 <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                     <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
                 </a>
+                <?php endif; ?>
                 <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800">
                     <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
                 </a>
@@ -3548,6 +3582,7 @@ function buildPaginationUrl($page, $params = []) {
             </div>
 
             <nav class="flex-1 px-4 py-6 space-y-1">
+                <?php if (!isViewer()): ?>
                 <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     <i class="fas fa-home w-5"></i>
                     <span class="text-sm">Dashboard</span>
@@ -3564,6 +3599,7 @@ function buildPaginationUrl($page, $params = []) {
                         <span class="text-sm">Kategori</span>
                     </a>
                 </div>
+                <?php endif; ?>
 
                 <div class="pt-4">
                     <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
@@ -3571,10 +3607,12 @@ function buildPaginationUrl($page, $params = []) {
                         <i class="fas fa-calendar w-5"></i>
                         <span class="text-sm font-medium">Kegiatan</span>
                     </a>
+                    <?php if (!isViewer()): ?>
                     <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                         <i class="fas fa-user-friends w-5"></i>
                         <span class="text-sm">Peserta</span>
                     </a>
+                    <?php endif; ?>
                     <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                         <i class="fas fa-chart-bar w-5"></i>
                         <span class="text-sm">Statistik</span>
@@ -3723,9 +3761,12 @@ function buildPaginationUrl($page, $params = []) {
                                 <i class="fas fa-search mr-1.5"></i> Filter
                             </button>
                             <?php if (canInputScore()): ?>
-                            <a href="#" id="inputBtn" class="btn-input <?= $filter_kategori > 0 ? 'show' : '' ?> px-3 py-2 rounded-lg border border-amber-400 dark:border-amber-600 text-amber-600 dark:text-amber-400 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
-                                onclick="goToInput(event)">
+                            <a href="javascript:void(0)" id="inputBtn" class="btn-input <?= $filter_kategori > 0 ? 'show' : '' ?> px-3 py-2 rounded-lg border border-amber-400 dark:border-amber-600 text-amber-600 dark:text-amber-400 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors">
                                 <i class="fas fa-edit mr-1"></i> Input
+                            </a>
+                            <?php elseif (isViewer()): ?>
+                            <a href="javascript:void(0)" id="inputBtn" class="btn-input <?= $filter_kategori > 0 ? 'show' : '' ?> px-3 py-2 rounded-lg border border-blue-400 dark:border-blue-600 text-blue-600 dark:text-blue-400 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                                <i class="fas fa-eye mr-1"></i> Lihat Data
                             </a>
                             <?php endif; ?>
                         </div>
@@ -4004,6 +4045,7 @@ function buildPaginationUrl($page, $params = []) {
             </button>
         </div>
         <nav class="px-4 py-6 space-y-1 overflow-y-auto">
+            <?php if (!isViewer()): ?>
             <a href="dashboard.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                 <i class="fas fa-home w-5"></i><span class="text-sm">Dashboard</span>
             </a>
@@ -4017,15 +4059,18 @@ function buildPaginationUrl($page, $params = []) {
                     <i class="fas fa-tags w-5"></i><span class="text-sm">Kategori</span>
                 </a>
             </div>
+            <?php endif; ?>
 
             <div class="pt-4">
                 <p class="px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Tournament</p>
                 <a href="kegiatan.view.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-archery-600/20 text-archery-400 border border-archery-600/30 transition-colors">
                     <i class="fas fa-calendar w-5"></i><span class="text-sm font-medium">Kegiatan</span>
                 </a>
+                <?php if (!isViewer()): ?>
                 <a href="peserta.view.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     <i class="fas fa-user-friends w-5"></i><span class="text-sm">Peserta</span>
                 </a>
+                <?php endif; ?>
                 <a href="statistik.php" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
                     <i class="fas fa-chart-bar w-5"></i><span class="text-sm">Statistik</span>
                 </a>
@@ -4100,8 +4145,14 @@ function buildPaginationUrl($page, $params = []) {
             const kategoriSelect = document.getElementById('filter_kategori');
             const inputBtn = document.getElementById('inputBtn');
 
+            if (!inputBtn) return; // Guard against null element
+
+            const isViewerRole = <?= isViewer() ? 'true' : 'false' ?>;
+
             if (kategoriSelect.value && kategoriSelect.value !== '') {
                 inputBtn.classList.add('show');
+                // For viewers, go directly to scorecard list (they'll see Lihat Data buttons there)
+                // For other roles, go to scorecard input
                 inputBtn.href = 'detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=' + kategoriSelect.value;
             } else {
                 inputBtn.classList.remove('show');
@@ -4113,6 +4164,18 @@ function buildPaginationUrl($page, $params = []) {
 
             if (!kategoriSelect.value || kategoriSelect.value === '') {
                 e.preventDefault();
+                alert('Silakan pilih kategori terlebih dahulu!');
+                return false;
+            }
+
+            window.location.href = 'detail.php?action=scorecard&resource=index&kegiatan_id=<?= $kegiatan_id ?>&category_id=' + kategoriSelect.value;
+        }
+
+        function goToViewData(e) {
+            e.preventDefault();
+            const kategoriSelect = document.getElementById('filter_kategori');
+
+            if (!kategoriSelect.value || kategoriSelect.value === '') {
                 alert('Silakan pilih kategori terlebih dahulu!');
                 return false;
             }
